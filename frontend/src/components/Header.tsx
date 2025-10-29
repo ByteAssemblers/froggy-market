@@ -87,7 +87,7 @@ export default function Header() {
           className="tiny:px-4 -mt-[0.7rem] -mb-[0.7rem] flex shrink-0 items-center"
         >
           <Image
-            src="https://doggy.market/assets/logo-D71O-L__.png"
+            src="assets/Logo.png"
             alt="logo"
             width={40}
             height={40}
@@ -140,7 +140,7 @@ export default function Header() {
                     <div>
                       <div className="flex text-right whitespace-nowrap">
                         <Image
-                          src="/assets/coin.svg"
+                          src="/assets/coin.gif"
                           alt="coin"
                           width={18}
                           height={18}
@@ -177,7 +177,7 @@ export default function Header() {
                     <div>
                       <div className="flex text-right whitespace-nowrap">
                         <Image
-                          src="/assets/coin.svg"
+                          src="/assets/coin.gif"
                           alt="coin"
                           width={18}
                           height={18}
@@ -228,10 +228,10 @@ export default function Header() {
                     {walletState === "empty" && (
                       <>
                         <div className="mb-4 text-center text-[1.4rem]">
-                          DoggyMarket Wallet
+                          FroggyMarket Wallet
                         </div>
                         <div className="text-[90%] leading-[1.2]">
-                          DoggyMarket comes with built-in wallet, there is no
+                          FroggyMarket comes with built-in wallet, there is no
                           need to download any browser extension. Your private
                           keys are stored in the browser and are never sent to
                           the server.
@@ -330,7 +330,7 @@ export default function Header() {
                         <div className="mt-2 mb-2 rounded-xl bg-[#ffe10026] px-[0.8rem] py-[0.4rem] text-[0.85rem] leading-[1.2] font-semibold text-[gold]">
                           Before you enter your seed phrase always verify that
                           URL address is&#xA0;
-                          <span className="font-bold">doggy.market</span>
+                          <span className="font-bold">froggy.market</span>
                         </div>
                         <Textarea
                           className="font-inherit my-2 h-32 w-full resize-none rounded-lg border-none bg-white/10 p-2.5 text-sm font-light"
@@ -463,7 +463,7 @@ export default function Header() {
                           <div>
                             <span className="flex font-bold">
                               <Image
-                                src="/assets/coin.svg"
+                                src="/assets/coin.gif"
                                 alt="coin"
                                 width={18}
                                 height={18}
@@ -519,7 +519,7 @@ export default function Header() {
                         <div className="mb-[0.1rem] rounded-[12px] rounded-b-none bg-[#00000026] px-4 py-3">
                           <div className="flex items-center gap-x-[0.75em]">
                             <Image
-                              src="/assets/coin.svg"
+                              src="/assets/coin.gif"
                               alt="logo"
                               width={40}
                               height={40}
@@ -531,7 +531,7 @@ export default function Header() {
                               <div className="flex text-[0.9rem]">
                                 Balance:&#xA0;
                                 <Image
-                                  src="/assets/coin.svg"
+                                  src="/assets/coin.gif"
                                   alt="logo"
                                   width={16}
                                   height={16}
@@ -582,7 +582,7 @@ export default function Header() {
                           <div>Network fee</div>
                           <div className="flex">
                             <Image
-                              src="/assets/coin.svg"
+                              src="/assets/coin.gif"
                               alt="coin"
                               width={18}
                               height={18}

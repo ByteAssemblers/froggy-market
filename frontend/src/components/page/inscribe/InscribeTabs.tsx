@@ -107,7 +107,7 @@ export default function InscribeTabs() {
             <div className="flex">
               Estimated fee: ~
               <Image
-                src="/assets/coin.svg"
+                src="/assets/coin.gif"
                 alt="coin"
                 width={18}
                 height={18}

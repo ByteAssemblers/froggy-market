@@ -64,7 +64,7 @@ export default function TickInfo({ tick }: { tick: string }) {
             <div className="mb-2 ml-12">
               <div className="flex font-bold">
                 <Image
-                  src="/assets/coin.svg"
+                  src="/assets/coin.gif"
                   alt="coin"
                   width={18}
                   height={18}
@@ -93,7 +93,7 @@ export default function TickInfo({ tick }: { tick: string }) {
             <div className="mb-2 ml-12">
               <div className="flex font-bold">
                 <Image
-                  src="/assets/coin.svg"
+                  src="/assets/coin.gif"
                   alt="coin"
                   width={18}
                   height={18}
@@ -109,7 +109,7 @@ export default function TickInfo({ tick }: { tick: string }) {
             <div className="mb-2 ml-12">
               <div className="flex font-bold">
                 <Image
-                  src="/assets/coin.svg"
+                  src="/assets/coin.gif"
                   alt="coin"
                   width={18}
                   height={18}
@@ -160,7 +160,7 @@ export default function TickInfo({ tick }: { tick: string }) {
                 <div className="my-1 flex justify-between px-1 text-[1.05rem] font-medium">
                   <div className="flex">
                     <Image
-                      src="/assets/coin.svg"
+                      src="/assets/coin.gif"
                       alt="coin"
                       width={18}
                       height={18}
@@ -179,7 +179,7 @@ export default function TickInfo({ tick }: { tick: string }) {
                     <div className="ml-1">
                       <div className="flex font-medium">
                         <Image
-                          src="/assets/coin.svg"
+                          src="/assets/coin.gif"
                           alt="coin"
                           width={18}
                           height={18}
@@ -218,7 +218,7 @@ export default function TickInfo({ tick }: { tick: string }) {
                     <div className="ml-1">
                       <div className="flex font-medium">
                         <Image
-                          src="/assets/coin.svg"
+                          src="/assets/coin.gif"
                           alt="coin"
                           width={18}
                           height={18}

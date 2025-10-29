@@ -18,8 +18,8 @@ const jetbrainMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DoggyMarket",
-  description: "Dogecoin Market Platform",
+  title: "Froggy Market",
+  description: "Pepecoin Market Platform",
 };
 
 export default function RootLayout({

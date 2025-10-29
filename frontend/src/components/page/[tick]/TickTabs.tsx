@@ -84,7 +84,7 @@ export default function TickTabs({ tick }: { tick: string }) {
                 <TableCell>
                   <div className="flex">
                     <Image
-                      src="/assets/coin.svg"
+                      src="/assets/coin.gif"
                       alt="coin"
                       width={18}
                       height={18}
@@ -95,7 +95,7 @@ export default function TickTabs({ tick }: { tick: string }) {
                   </div>
                   <div className="flex text-[0.9rem]">
                     <Image
-                      src="/assets/coin.svg"
+                      src="/assets/coin.gif"
                       alt="coin"
                       width={16}
                       height={16}

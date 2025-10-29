@@ -159,7 +159,7 @@ export default function Collections() {
                 Floor price:&#xA0;
                 <span className="flex font-medium whitespace-nowrap text-[#fffffff2]">
                   <Image
-                    src="/assets/coin.svg"
+                    src="/assets/coin.gif"
                     alt="coin"
                     width={16}
                     height={16}
@@ -208,7 +208,7 @@ export default function Collections() {
             </div>
             <div className="ml-auto flex pl-6 whitespace-nowrap">
               <Image
-                src="/assets/coin.svg"
+                src="/assets/coin.gif"
                 alt="coin"
                 width={18}
                 height={18}

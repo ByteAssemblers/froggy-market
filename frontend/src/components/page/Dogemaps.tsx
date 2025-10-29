@@ -68,7 +68,7 @@ export default function Dogemaps() {
           <div className="flex">
             Floor price:&#xA0;
             <Image
-              src="/assets/coin.svg"
+              src="/assets/coin.gif"
               alt="coin"
               width={18}
               height={18}

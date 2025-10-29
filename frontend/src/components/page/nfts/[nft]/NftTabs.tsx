@@ -219,7 +219,7 @@ export default function NftTabs() {
                       <div className="mt-auto border-t border-white/10 py-1">
                         <div className="flex justify-center text-center">
                           <Image
-                            src="/assets/coin.svg"
+                            src="/assets/coin.gif"
                             alt="coin"
                             width={18}
                             height={18}
@@ -268,7 +268,7 @@ export default function NftTabs() {
                               </div>
                               <div className="flex text-[1rem] text-white">
                                 <Image
-                                  src="/assets/coin.svg"
+                                  src="/assets/coin.gif"
                                   alt="coin"
                                   width={18}
                                   height={18}
@@ -288,7 +288,7 @@ export default function NftTabs() {
                               </div>
                               <div className="flex text-[1rem] text-white">
                                 <Image
-                                  src="/assets/coin.svg"
+                                  src="/assets/coin.gif"
                                   alt="coin"
                                   width={18}
                                   height={18}
@@ -305,7 +305,7 @@ export default function NftTabs() {
                               </div>
                               <div className="mt-5 flex text-[1rem] font-bold text-white">
                                 <Image
-                                  src="/assets/coin.svg"
+                                  src="/assets/coin.gif"
                                   alt="coin"
                                   width={18}
                                   height={18}
@@ -326,7 +326,7 @@ export default function NftTabs() {
                               </div>
                               <div className="mt-2 flex text-[1rem] text-white">
                                 <Image
-                                  src="/assets/coin.svg"
+                                  src="/assets/coin.gif"
                                   alt="coin"
                                   width={18}
                                   height={18}

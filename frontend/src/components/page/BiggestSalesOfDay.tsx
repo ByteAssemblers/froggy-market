@@ -212,7 +212,7 @@ export default function BiggestSalesOfDay() {
                   <div className="mt-auto border-t border-white/10 py-1">
                     <div className="flex justify-center text-center">
                       <Image
-                        src="/assets/coin.svg"
+                        src="/assets/coin.gif"
                         alt="coin"
                         width={18}
                         height={18}

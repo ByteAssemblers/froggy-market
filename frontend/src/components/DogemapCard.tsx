@@ -71,7 +71,7 @@ const DogemapCard: React.FC<DogemapCardProps> = ({ item, dogecoinPrice }) => {
           <div>
             <div className="flex justify-center text-center">
               <Image
-                src="/assets/coin.svg"
+                src="/assets/coin.gif"
                 alt="coin"
                 width={18}
                 height={18}
@@ -118,7 +118,7 @@ const DogemapCard: React.FC<DogemapCardProps> = ({ item, dogecoinPrice }) => {
                 </div>
                 <div className="flex text-[1rem] text-white">
                   <Image
-                    src="/assets/coin.svg"
+                    src="/assets/coin.gif"
                     alt="coin"
                     width={18}
                     height={18}
@@ -133,7 +133,7 @@ const DogemapCard: React.FC<DogemapCardProps> = ({ item, dogecoinPrice }) => {
                 <div className="text-[0.95rem] text-white">Network fee</div>
                 <div className="flex text-[1rem] text-white">
                   <Image
-                    src="/assets/coin.svg"
+                    src="/assets/coin.gif"
                     alt="coin"
                     width={18}
                     height={18}
@@ -150,7 +150,7 @@ const DogemapCard: React.FC<DogemapCardProps> = ({ item, dogecoinPrice }) => {
                 </div>
                 <div className="mt-5 flex text-[1rem] font-bold text-white">
                   <Image
-                    src="/assets/coin.svg"
+                    src="/assets/coin.gif"
                     alt="coin"
                     width={18}
                     height={18}
@@ -167,7 +167,7 @@ const DogemapCard: React.FC<DogemapCardProps> = ({ item, dogecoinPrice }) => {
                 </div>
                 <div className="mt-2 flex text-[1rem] text-white">
                   <Image
-                    src="/assets/coin.svg"
+                    src="/assets/coin.gif"
                     alt="coin"
                     width={18}
                     height={18}

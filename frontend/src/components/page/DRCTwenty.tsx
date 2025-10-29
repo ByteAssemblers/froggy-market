@@ -192,7 +192,7 @@ export default function DRCTwenty() {
                 <TableCell>
                   <div className="flex">
                     <Image
-                      src="/assets/coin.svg"
+                      src="/assets/coin.gif"
                       alt="coin"
                       width={18}
                       height={18}
@@ -249,7 +249,7 @@ export default function DRCTwenty() {
                     <>
                       <div className="flex">
                         <Image
-                          src="/assets/coin.svg"
+                          src="/assets/coin.gif"
                           alt="coin"
                           width={18}
                           height={18}
@@ -268,7 +268,7 @@ export default function DRCTwenty() {
                 <TableCell>
                   <div className="flex">
                     <Image
-                      src="/assets/coin.svg"
+                      src="/assets/coin.gif"
                       alt="coin"
                       width={18}
                       height={18}
@@ -287,7 +287,7 @@ export default function DRCTwenty() {
                 <TableCell>
                   <div className="flex">
                     <Image
-                      src="/assets/coin.svg"
+                      src="/assets/coin.gif"
                       alt="coin"
                       width={18}
                       height={18}

@@ -7,7 +7,7 @@ export default function DogemapsInfo() {
         <div className="mb-2 ml-12">
           <div className="flex font-bold">
             <Image
-              src="/assets/coin.svg"
+              src="/assets/coin.gif"
               alt="coin"
               width={18}
               height={18}
@@ -23,7 +23,7 @@ export default function DogemapsInfo() {
         <div className="mb-2 ml-12">
           <div className="flex font-bold">
             <Image
-              src="/assets/coin.svg"
+              src="/assets/coin.gif"
               alt="coin"
               width={18}
               height={18}
@@ -39,7 +39,7 @@ export default function DogemapsInfo() {
         <div className="mb-2 ml-12">
           <div className="flex font-bold">
             <Image
-              src="/assets/coin.svg"
+              src="/assets/coin.gif"
               alt="coin"
               width={18}
               height={18}

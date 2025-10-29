@@ -10,42 +10,39 @@ export default function Footer() {
         <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-2">
           <div className="flex items-center">
             <Image
-              src="/assets/logo.png"
+              src="/assets/Logo.png"
               alt="logo"
               width={32}
               height={32}
               priority
-              style={{ width: "auto", height: "auto" }}
             />
             <div className="mr-6 ml-4 text-[1.2rem] leading-[1.2] font-semibold">
-              <span>Doggy</span>
+              <span>Froggy</span>
               <span className="ml-[0.25em]">Market</span>
             </div>
             <Link
-              href="https://x.com/doggy_market"
+              href="https://twitter.com/pepecoin"
               className="mx-1 flex items-center rounded-[12px] border-0 p-[0.4rem_0.6rem] text-[0.8rem] leading-none text-white transition-all duration-150 ease-in-out"
             >
               <span>
                 <svg
-                  data-v-22f1ed45=""
-                  viewBox="0 0 20 20"
-                  fill="none"
                   xmlns="http://www.w3.org/2000/svg"
                   width="18"
                   height="18"
-                  className="gb-blur-svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 >
-                  <path
-                    strokeWidth="1.5"
-                    d="M11.3032 9.42806L16.4029 3.5H15.1945L10.7663 8.64725L7.2296 3.5H3.15039L8.49863 11.2836L3.15039 17.5H4.35894L9.03516 12.0644L12.7702 17.5H16.8494L11.3029 9.42806H11.3032ZM9.6479 11.3521L9.10601 10.5771L4.7944 4.40978H6.65066L10.1302 9.38698L10.6721 10.162L15.195 16.6316H13.3388L9.6479 11.3524V11.3521Z"
-                    fill="currentColor"
-                  ></path>
+                  <path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z" />
                 </svg>
               </span>
-              <span className="ml-[0.3rem]">X</span>
+              <span className="ml-[0.3rem]">Twitter</span>
             </Link>
             <Link
-              href="https://t.me/doggymarket"
+              href="https://t.me/pepecoin"
               className="mx-1 flex items-center rounded-[12px] border-0 p-[0.4rem_0.6rem] text-[0.8rem] leading-none text-white transition-all duration-150 ease-in-out"
             >
               <span>
@@ -55,7 +52,6 @@ export default function Footer() {
                   xmlns="http://www.w3.org/2000/svg"
                   width="18"
                   height="18"
-                  className="gb-blur-svg"
                 >
                   <path
                     stroke="currentColor"
