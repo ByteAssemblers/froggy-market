@@ -1,6 +1,6 @@
 import Image from "next/image";
 
-export default function DogemapsInfo() {
+export default function PepemapsInfo() {
   return (
     <div className="mb-8">
       <div className="-ml-12 flex flex-wrap">

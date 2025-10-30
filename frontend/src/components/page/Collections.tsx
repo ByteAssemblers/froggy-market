@@ -6,11 +6,11 @@ import Link from "next/link";
 const database = [
   {
     id: 1,
-    name: "Doginal Mini Doges",
+    name: "Pepinal Mini Pepes",
     floorPrice: 340,
     percent: -2.6,
     volume: 1103,
-    addressurl: "minidoges",
+    addressurl: "minipepes",
     imageurl:
       "https://api.doggy.market/inscriptions/4f7b03a66f49a21ec4391eaad0073c41799b461ab28cde0ccf809c0a8b5c997ci0/content",
     verify: true,
@@ -28,18 +28,18 @@ const database = [
   },
   {
     id: 3,
-    name: "Taproot Doges",
+    name: "Taproot Pepes",
     floorPrice: 28,
     percent: 75,
     volume: 387.5,
-    addressurl: "taprootdoges",
+    addressurl: "taprootpepes",
     imageurl:
       "https://api.doggy.market/inscriptions/55395def5df99b7f6d8827e40c19c9c86d497fc411281d6483bb2405f3facbb5i0/content",
     verify: false,
   },
   {
     id: 4,
-    name: "Doginal Maxi Biz",
+    name: "Pepinal Maxi Biz",
     floorPrice: 280,
     percent: 0,
     volume: 280,
@@ -49,22 +49,22 @@ const database = [
   },
   {
     id: 5,
-    name: "DU$TINAL DOGS",
+    name: "DU$TINAL PEPS",
     floorPrice: 19,
     percent: 0,
     volume: 114,
-    addressurl: "dustinal-dogs",
+    addressurl: "dustinal-peps",
     imageurl:
       "https://api.doggy.market/inscriptions/004a0578dc472e9a791a6c6daf1aa6d32143f84497ef779453f7379264686077i0/content",
     verify: false,
   },
   {
     id: 6,
-    name: "WOW! Doginalcoin!",
+    name: "WOW! Pepinalcoin!",
     floorPrice: 15,
     percent: 16.3,
     volume: 67.69,
-    addressurl: "wow-doginalcoin",
+    addressurl: "wow-pepinalcoin",
     imageurl:
       "https://api.doggy.market/inscriptions/8a091c886814f5eaa6f56f8e0848f5b1ac92ce56966ee58a30a421ccb019f9e9i0/content",
     verify: false,
@@ -82,22 +82,22 @@ const database = [
   },
   {
     id: 8,
-    name: "DoginalMfers",
+    name: "PepinalMfers",
     floorPrice: 16.99,
     percent: 0,
     volume: 52.22,
-    addressurl: "doginalmfers",
+    addressurl: "pepinalmfers",
     imageurl:
       "https://api.doggy.market/inscriptions/e54d8e39221551747923e9871e7667fe2443b07e2d3fdd2e504e310414dbc3d2i0/content",
     verify: false,
   },
   {
     id: 9,
-    name: "Dogecats",
+    name: "Pepecats",
     floorPrice: 20,
     percent: 17.6,
     volume: 51,
-    addressurl: "dogecats",
+    addressurl: "pepecats",
     imageurl:
       "https://api.doggy.market/inscriptions/d2e85b8d110e27f77371783f8e6406f132a05b2aa102e49163bb279178dcf967i0/content",
     verify: false,

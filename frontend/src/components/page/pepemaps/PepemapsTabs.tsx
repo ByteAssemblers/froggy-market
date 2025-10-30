@@ -12,7 +12,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { Filter } from "lucide-react";
-import DogemapCard from "@/components/DogemapCard";
+import PepemapCard from "@/components/PepemapCard";
 
 const database = [
   {
@@ -49,9 +49,9 @@ const repeatedDatabase = Array(279274)
     id: 1000000 + index, // Ensure unique IDs 279274
   }));
 
-const dogecoinPrice = 0.1957;
+const pepecoinPrice = 0.1957;
 
-export default function DogemapsTabs() {
+export default function PepemapsTabs() {
   const ITEMS_PER_PAGE = 30;
   const totalPages = Math.ceil(repeatedDatabase.length / ITEMS_PER_PAGE);
 
@@ -94,10 +94,10 @@ export default function DogemapsTabs() {
       <TabsContent value="listings">
         <div className="tiny:gap-5 four:grid-cols-5 three:grid-cols-4 two:grid-cols-3 tiny:grid-cols-2 mt-4 grid grid-cols-2 gap-2">
           {currentItems.map((item) => (
-            <DogemapCard
+            <PepemapCard
               key={item.id}
               item={item}
-              dogecoinPrice={dogecoinPrice}
+              pepecoinPrice={pepecoinPrice}
             />
           ))}
         </div>

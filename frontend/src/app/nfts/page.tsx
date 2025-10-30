@@ -15,8 +15,8 @@ import Image from "next/image";
 
 const database = Array.from({ length: 100 }, (_, i) => ({
   id: i + 1,
-  name: `Doginal Mini Doges #${i + 1}`,
-  urlname: "minidoges",
+  name: `Pepinal Mini Pepes #${i + 1}`,
+  urlname: "minipepes",
   floorprice: Math.floor(Math.random() * 900) + 100, // 100–1000
   twentyfourhourvolume: Math.floor(Math.random() * 10000) + 500, // 500–10,000
   totalvolume: Math.floor(Math.random() * 50000000) + 100000, // 100k–50M
@@ -66,7 +66,7 @@ export default function nfts() {
                   <div className="relative mx-[1.4rem] my-0 shrink-0">
                     <Image
                       src={item.imageurl}
-                      alt={`DRC-20 #${item.name}`}
+                      alt={`PRC-20 #${item.name}`}
                       width={42}
                       height={42}
                       className="h-[42px] w-[42px] rounded-full object-cover align-middle"

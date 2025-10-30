@@ -24,17 +24,17 @@ export default function WalletAddress({
   return (
     <>
       <h1 className="leading-[1.1 ] text-3xl">{address}</h1>
-      <Tabs defaultValue="drc" className="relative">
+      <Tabs defaultValue="prc" className="relative">
         <TabsList className="my-4 flex shrink-0 flex-wrap items-center justify-between bg-transparent">
           <div className="my-2 flex list-none gap-5 overflow-x-auto p-0 select-none">
-            <TabsTrigger value="drc" className="text-md">
-              DRC-20
+            <TabsTrigger value="prc" className="text-md">
+              PRC-20
             </TabsTrigger>
             <TabsTrigger value="nfts" className="text-md">
               NFTs
             </TabsTrigger>
-            <TabsTrigger value="dogemaps" className="text-md">
-              Dogemaps
+            <TabsTrigger value="pepemaps" className="text-md">
+              Pepemaps
             </TabsTrigger>
             <TabsTrigger value="history" className="text-md">
               History
@@ -48,7 +48,7 @@ export default function WalletAddress({
               </button>
             </TabsContent>
             <TabsContent
-              value="dogemaps"
+              value="pepemaps"
               className="absolute right-0 flex items-center text-white"
             >
               <button className="rounded-xl bg-none p-1.5 leading-0">
@@ -68,7 +68,7 @@ export default function WalletAddress({
             </TabsContent>
           </div>
         </TabsList>
-        <TabsContent value="drc">
+        <TabsContent value="prc">
           <Table className="w-full max-w-full border-separate border-spacing-0 leading-[1.2]">
             <TableHeader className="text-left text-[0.95rem] font-normal text-[#8a939b]">
               <TableRow className="">
@@ -194,7 +194,7 @@ export default function WalletAddress({
                       </Link>
                     </div>
                     <div className="my-1.5 flex w-full justify-center text-[1.1rem] leading-[1.2]">
-                      <span>doginals</span>
+                      <span>pepinals</span>
                       <span className="ml-4">#277</span>
                     </div>
                     <div className="mt-auto w-full border-t border-white/10 py-2">
@@ -238,8 +238,8 @@ export default function WalletAddress({
             </div>
           </div>
         </TabsContent>
-        <TabsContent value="dogemaps">
-          <div className="flex justify-center">no dogemaps on this wallet</div>
+        <TabsContent value="pepemaps">
+          <div className="flex justify-center">no pepemaps on this wallet</div>
         </TabsContent>
         <TabsContent value="history">
           <Table className="w-full max-w-full border-separate border-spacing-0 leading-[1.2]">

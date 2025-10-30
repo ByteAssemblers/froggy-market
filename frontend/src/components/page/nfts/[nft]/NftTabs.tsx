@@ -57,7 +57,7 @@ export default function NftTabs() {
       id: 196131,
       imageurl:
         "https://cdn.doggy.market/content/1664d918636420f88bc990675b75afb4ade4a907f0c417f0a81ea85a90bb1c57i0",
-      collectionname: "Doginal Mini Doges",
+      collectionname: "Pepinal Mini Pepes",
       collectionid: 4997,
       price: 1190,
     },
@@ -73,7 +73,7 @@ export default function NftTabs() {
       id: 54326,
       imageurl:
         "https://cdn.doggy.market/content/80cb46523223f88e18f392bb47690cbb36fa439084e2bff6de63c692b34c49bdi0",
-      collectionname: "DOGE AGENT",
+      collectionname: "PEPE AGENT",
       collectionid: 7672,
       price: 1114,
     },
@@ -128,7 +128,7 @@ export default function NftTabs() {
     }
   };
 
-  const dogecoinPrice = 0.1957;
+  const pepecoinPrice = 0.1957;
 
   return (
     <>
@@ -228,7 +228,7 @@ export default function NftTabs() {
                           />
                           {item.price}&#xA0;
                           <span className="text-[0.9rem] text-[#fffc]">
-                            (${(item.price * dogecoinPrice).toFixed(2)})
+                            (${(item.price * pepecoinPrice).toFixed(2)})
                           </span>
                         </div>
                       </div>
@@ -247,7 +247,7 @@ export default function NftTabs() {
                                 <div className="flex">
                                   <Image
                                     src={item.imageurl}
-                                    alt={`Dogemaps #${item.id}`}
+                                    alt={`Pepemaps #${item.id}`}
                                     width={144}
                                     height={144}
                                     className="mx-auto h-36 w-36 rounded-md text-[0.8rem]"
@@ -279,7 +279,7 @@ export default function NftTabs() {
                               </div>
                               <span className="ml-4 text-right text-[0.9rem] text-[#fffc]">
                                 ${" "}
-                                {(item.price * 0.028 * dogecoinPrice).toFixed(
+                                {(item.price * 0.028 * pepecoinPrice).toFixed(
                                   2,
                                 )}
                               </span>
@@ -318,7 +318,7 @@ export default function NftTabs() {
                                 $
                                 {(
                                   (item.price * 1.028 + 0.5) *
-                                  dogecoinPrice
+                                  pepecoinPrice
                                 ).toFixed(2)}
                               </span>
                               <div className="mt-2 text-[0.95rem] text-white">

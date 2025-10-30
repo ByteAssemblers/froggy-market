@@ -13,7 +13,7 @@ export default function TickInfo({ tick }: { tick: string }) {
           <div className="flex items-center">
             <Image
               src="https://api.doggy.market/static/drc-20/dogi.png"
-              alt={`DRC-20`}
+              alt={`PRC-20`}
               width={48}
               height={48}
               className="mr-4 h-12 w-12 rounded-full object-cover"

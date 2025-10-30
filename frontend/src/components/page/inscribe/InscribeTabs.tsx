@@ -58,11 +58,11 @@ export default function InscribeTabs() {
             <div className="inline-flex gap-6">
               <div className="flex flex-col items-center justify-center rounded-[12px] border border-white/20 p-3 px-4 outline-1 outline-white/20">
                 <div>Recommended</div>
-                <div className="text-[0.9rem] text-[#fffc]">0.042 doge/kB</div>
+                <div className="text-[0.9rem] text-[#fffc]">0.042 pepe/kB</div>
               </div>
               <div className="flex flex-col items-center justify-center rounded-[12px] border border-white/20 p-3 px-4">
                 <div>Custom</div>
-                {/* <div className="text-[0.9rem] text-[#fffc]">0.042 doge/kB</div> */}
+                {/* <div className="text-[0.9rem] text-[#fffc]">0.042 pepe/kB</div> */}
               </div>
             </div>
           </div>

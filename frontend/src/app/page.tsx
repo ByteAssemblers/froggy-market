@@ -1,17 +1,17 @@
-import Dogemaps from "@/components/page/Dogemaps";
+import Pepemaps from "@/components/page/Pepemaps";
 import Collections from "@/components/page/Collections";
-import DRCTwenty from "@/components/page/DRCTwenty";
+import PRCTwenty from "@/components/page/PRCTwenty";
 import BiggestSalesOfDay from "@/components/page/BiggestSalesOfDay";
+
+// import Console from "./console";
 
 export default function Home() {
   return (
     <>
-      <Dogemaps />
-
+      {/* <Console /> */}
+      <Pepemaps />
       <Collections />
-
-      <DRCTwenty />
-
+      <PRCTwenty />
       <BiggestSalesOfDay />
     </>
   );

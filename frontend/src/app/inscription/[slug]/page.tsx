@@ -14,7 +14,7 @@ export default async function Inscription({
           src={
             "https://cdn.doggy.market/content/873351e7f57f111003a88c8af36f7ffb871ca771c0160551814cfd335d0d76cdi0"
           }
-          alt="Doge Inscription"
+          alt="Pepe Inscription"
           width={536}
           height={536}
           className="pixelated grow rounded-[12px] object-contain"
@@ -25,12 +25,12 @@ export default async function Inscription({
         <div className="mb-8 flex">
           <div>
             <div className="text-2xl text-[1.5rem] font-bold text-white">
-              Doginal Mini Doges #6715
+              Pepinal Mini Pepes #6715
             </div>
             <div className="leading-[1.2]">
               <span className="text-white/75">#21349</span>
-              <Link href={"/nfts/minidoges"} className="ml-4 text-[#c891ff]">
-                Doginal Mini Doges
+              <Link href={"/nfts/minipepes"} className="ml-4 text-[#c891ff]">
+                Pepinal Mini Pepes
               </Link>
             </div>
           </div>
@@ -160,7 +160,7 @@ export default async function Inscription({
               }}
             >
               <div className="text-[0.8rem] text-[#fffc]">Eyes</div>
-              <div>Doge eyes</div>
+              <div>Pepe eyes</div>
             </div>
             <div
               className="min-w-28 rounded-[12px] bg-[#ffffff0d] px-3 py-2 leading-[1.2]"

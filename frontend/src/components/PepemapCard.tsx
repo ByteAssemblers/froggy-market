@@ -13,16 +13,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
-interface DogemapCardProps {
+interface PepemapCardProps {
   item: {
     id: number;
     price: number;
     seller: string;
   };
-  dogecoinPrice: number;
+  pepecoinPrice: number;
 }
 
-const DogemapCard: React.FC<DogemapCardProps> = ({ item, dogecoinPrice }) => {
+const PepemapCard: React.FC<PepemapCardProps> = ({ item, pepecoinPrice }) => {
   const [imgError, setImgError] = useState(false);
 
   const imgUrl = `https://api.doggy.market/dogemaps/image/${item.id}`;
@@ -36,7 +36,7 @@ const DogemapCard: React.FC<DogemapCardProps> = ({ item, dogecoinPrice }) => {
         <div className="flex px-3 pt-3 pb-0">
           <Image
             src={imgUrl}
-            alt={`Dogemaps #${item.id}`}
+            alt={`Pepemaps #${item.id}`}
             width={112}
             height={112}
             className="mx-auto h-28 max-w-full object-contain"
@@ -49,11 +49,11 @@ const DogemapCard: React.FC<DogemapCardProps> = ({ item, dogecoinPrice }) => {
       <div className="flex h-full flex-col px-3 pt-1 pb-3">
         {imgError ? (
           <div className="mt-11 mb-11 text-center text-[1.1rem]">
-            {item.id}.dogemaps
+            {item.id}.pepemaps
           </div>
         ) : (
           <div className="my-1 text-center text-[1.1rem]">
-            {item.id}.dogemaps
+            {item.id}.pepemaps
           </div>
         )}
         <div className="text-[0.8rem] text-[#fffc]">
@@ -80,7 +80,7 @@ const DogemapCard: React.FC<DogemapCardProps> = ({ item, dogecoinPrice }) => {
               />
               {item.price}&#xA0;
               <span className="text-[0.9rem] text-[#fffc]">
-                (${(item.price * dogecoinPrice).toFixed(2)})
+                (${(item.price * pepecoinPrice).toFixed(2)})
               </span>
             </div>
           </div>
@@ -92,7 +92,7 @@ const DogemapCard: React.FC<DogemapCardProps> = ({ item, dogecoinPrice }) => {
           <DialogContent className="my-[50px] box-border flex min-h-[500px] w-xl max-w-[calc(100%-1rem)] shrink-0 grow-0 scale-100 flex-col overflow-visible rounded-[12px] bg-[#ffffff1f] p-6 opacity-100 backdrop-blur-xl transition-opacity duration-200 ease-linear">
             <DialogHeader>
               <DialogTitle className="mt-0 mb-2 text-center text-3xl leading-[1.1] font-semibold text-[#e6d8fe]">
-                Buy dogemaps
+                Buy pepemaps
               </DialogTitle>
               <DialogDescription></DialogDescription>
               <div className="mb-2 flex max-h-104 flex-wrap justify-center gap-2.5 overflow-y-auto">
@@ -100,7 +100,7 @@ const DogemapCard: React.FC<DogemapCardProps> = ({ item, dogecoinPrice }) => {
                   <div className="flex">
                     <Image
                       src={imgUrl}
-                      alt={`Dogemaps #${item.id}`}
+                      alt={`Pepemaps #${item.id}`}
                       width={144}
                       height={144}
                       className="mx-auto h-36 w-36 rounded-md text-[0.8rem]"
@@ -108,7 +108,7 @@ const DogemapCard: React.FC<DogemapCardProps> = ({ item, dogecoinPrice }) => {
                     />
                   </div>
                   <div className="mt-2 text-center text-[1rem] text-white">
-                    {item.id}.dogemaps
+                    {item.id}.pepemaps
                   </div>
                 </div>
               </div>
@@ -128,7 +128,7 @@ const DogemapCard: React.FC<DogemapCardProps> = ({ item, dogecoinPrice }) => {
                   {((item.price * 2.8) / 100).toFixed(2)}
                 </div>
                 <span className="ml-4 text-right text-[0.9rem] text-[#fffc]">
-                  $ {(item.price * 0.028 * dogecoinPrice).toFixed(2)}
+                  $ {(item.price * 0.028 * pepecoinPrice).toFixed(2)}
                 </span>
                 <div className="text-[0.95rem] text-white">Network fee</div>
                 <div className="flex text-[1rem] text-white">
@@ -160,7 +160,7 @@ const DogemapCard: React.FC<DogemapCardProps> = ({ item, dogecoinPrice }) => {
                   {(item.price * 1.028 + 0.5).toFixed(2)}
                 </div>
                 <span className="mt-5 ml-4 text-right text-[0.9rem] font-bold text-[#fffc]">
-                  ${((item.price * 1.028 + 0.5) * dogecoinPrice).toFixed(2)}
+                  ${((item.price * 1.028 + 0.5) * pepecoinPrice).toFixed(2)}
                 </span>
                 <div className="mt-2 text-[0.95rem] text-white">
                   Available balance
@@ -194,4 +194,4 @@ const DogemapCard: React.FC<DogemapCardProps> = ({ item, dogecoinPrice }) => {
   );
 };
 
-export default DogemapCard;
+export default PepemapCard;

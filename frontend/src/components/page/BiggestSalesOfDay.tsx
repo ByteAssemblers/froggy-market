@@ -17,7 +17,7 @@ const database = [
     id: 196131,
     imageurl:
       "https://cdn.doggy.market/content/1664d918636420f88bc990675b75afb4ade4a907f0c417f0a81ea85a90bb1c57i0",
-    collectionname: "Doginal Mini Doges",
+    collectionname: "Pepinal Mini Pepes",
     collectionid: 4997,
     price: 1190,
   },
@@ -33,7 +33,7 @@ const database = [
     id: 54326,
     imageurl:
       "https://cdn.doggy.market/content/80cb46523223f88e18f392bb47690cbb36fa439084e2bff6de63c692b34c49bdi0",
-    collectionname: "DOGE AGENT",
+    collectionname: "PEPE AGENT",
     collectionid: 7672,
     price: 1114,
   },
@@ -49,7 +49,7 @@ const database = [
     id: 3245,
     imageurl:
       "https://cdn.doggy.market/content/67ffe2e2ea372bf2bfca3e7c8dc1aadab650eed3e522e825e0fd9840e8f090cci0",
-    collectionname: "Doginal Mini Doges",
+    collectionname: "Pepinal Mini Pepes",
     collectionid: 4868,
     price: 112,
   },
@@ -57,7 +57,7 @@ const database = [
     id: 3473,
     imageurl:
       "https://cdn.doggy.market/content/1664d918636420f88bc990675b75afb4ade4a907f0c417f0a81ea85a90bb1c57i0",
-    collectionname: "DOGE AGENT",
+    collectionname: "PEPE AGENT",
     collectionid: 2798,
     price: 786,
   },
@@ -65,7 +65,7 @@ const database = [
     id: 896544,
     imageurl:
       "https://cdn.doggy.market/content/67ffe2e2ea372bf2bfca3e7c8dc1aadab650eed3e522e825e0fd9840e8f090cci0",
-    collectionname: "Doginal Mini Doges",
+    collectionname: "Pepinal Mini Pepes",
     collectionid: 4997,
     price: 1190,
   },
@@ -73,7 +73,7 @@ const database = [
     id: 753577,
     imageurl:
       "https://cdn.doggy.market/content/1664d918636420f88bc990675b75afb4ade4a907f0c417f0a81ea85a90bb1c57i0",
-    collectionname: "Doginal Mini Doges",
+    collectionname: "Pepinal Mini Pepes",
     collectionid: 4997,
     price: 1190,
   },
@@ -81,7 +81,7 @@ const database = [
     id: 196131,
     imageurl:
       "https://cdn.doggy.market/content/80cb46523223f88e18f392bb47690cbb36fa439084e2bff6de63c692b34c49bdi0",
-    collectionname: "Doginal Mini Doges",
+    collectionname: "Pepinal Mini Pepes",
     collectionid: 4997,
     price: 1190,
   },
@@ -89,7 +89,7 @@ const database = [
     id: 196131,
     imageurl:
       "https://cdn.doggy.market/content/67ffe2e2ea372bf2bfca3e7c8dc1aadab650eed3e522e825e0fd9840e8f090cci0",
-    collectionname: "Doginal Mini Doges",
+    collectionname: "Pepinal Mini Pepes",
     collectionid: 4997,
     price: 1190,
   },
@@ -97,7 +97,7 @@ const database = [
     id: 196131,
     imageurl:
       "https://cdn.doggy.market/content/1664d918636420f88bc990675b75afb4ade4a907f0c417f0a81ea85a90bb1c57i0",
-    collectionname: "Doginal Mini Doges",
+    collectionname: "Pepinal Mini Pepes",
     collectionid: 4997,
     price: 1190,
   },
@@ -105,7 +105,7 @@ const database = [
     id: 196131,
     imageurl:
       "https://cdn.doggy.market/content/67ffe2e2ea372bf2bfca3e7c8dc1aadab650eed3e522e825e0fd9840e8f090cci0",
-    collectionname: "Doginal Mini Doges",
+    collectionname: "Pepinal Mini Pepes",
     collectionid: 4997,
     price: 1190,
   },
@@ -113,7 +113,7 @@ const database = [
     id: 196131,
     imageurl:
       "https://cdn.doggy.market/content/80cb46523223f88e18f392bb47690cbb36fa439084e2bff6de63c692b34c49bdi0",
-    collectionname: "Doginal Mini Doges",
+    collectionname: "Pepinal Mini Pepes",
     collectionid: 4997,
     price: 1190,
   },
@@ -121,7 +121,7 @@ const database = [
     id: 196131,
     imageurl:
       "https://cdn.doggy.market/content/67ffe2e2ea372bf2bfca3e7c8dc1aadab650eed3e522e825e0fd9840e8f090cci0",
-    collectionname: "Doginal Mini Doges",
+    collectionname: "Pepinal Mini Pepes",
     collectionid: 4997,
     price: 1190,
   },
@@ -129,7 +129,7 @@ const database = [
     id: 196131,
     imageurl:
       "https://cdn.doggy.market/content/1664d918636420f88bc990675b75afb4ade4a907f0c417f0a81ea85a90bb1c57i0",
-    collectionname: "Doginal Mini Doges",
+    collectionname: "Pepinal Mini Pepes",
     collectionid: 4997,
     price: 1190,
   },
@@ -137,7 +137,7 @@ const database = [
     id: 196131,
     imageurl:
       "https://cdn.doggy.market/content/80cb46523223f88e18f392bb47690cbb36fa439084e2bff6de63c692b34c49bdi0",
-    collectionname: "Doginal Mini Doges",
+    collectionname: "Pepinal Mini Pepes",
     collectionid: 4997,
     price: 1190,
   },
@@ -145,7 +145,7 @@ const database = [
     id: 196131,
     imageurl:
       "https://cdn.doggy.market/content/67ffe2e2ea372bf2bfca3e7c8dc1aadab650eed3e522e825e0fd9840e8f090cci0",
-    collectionname: "Doginal Mini Doges",
+    collectionname: "Pepinal Mini Pepes",
     collectionid: 4997,
     price: 1190,
   },
@@ -153,7 +153,7 @@ const database = [
     id: 196131,
     imageurl:
       "https://cdn.doggy.market/content/1664d918636420f88bc990675b75afb4ade4a907f0c417f0a81ea85a90bb1c57i0",
-    collectionname: "Doginal Mini Doges",
+    collectionname: "Pepinal Mini Pepes",
     collectionid: 4997,
     price: 1190,
   },
@@ -161,7 +161,7 @@ const database = [
     id: 196131,
     imageurl:
       "https://cdn.doggy.market/content/80cb46523223f88e18f392bb47690cbb36fa439084e2bff6de63c692b34c49bdi0",
-    collectionname: "Doginal Mini Doges",
+    collectionname: "Pepinal Mini Pepes",
     collectionid: 4997,
     price: 1190,
   },
@@ -169,13 +169,13 @@ const database = [
     id: 196131,
     imageurl:
       "https://cdn.doggy.market/content/1664d918636420f88bc990675b75afb4ade4a907f0c417f0a81ea85a90bb1c57i0",
-    collectionname: "Doginal Mini Doges",
+    collectionname: "Pepinal Mini Pepes",
     collectionid: 4997,
     price: 1190,
   },
 ];
 
-const dogecoinPrice = 0.1957;
+const pepecoinPrice = 0.1957;
 
 export default function BiggestSalesOfDay() {
   return (
@@ -221,7 +221,7 @@ export default function BiggestSalesOfDay() {
                       />
                       {item.price}&#xA0;
                       <span className="text-[0.9rem] text-[#fffc]">
-                        (${(item.price * dogecoinPrice).toFixed(2)})
+                        (${(item.price * pepecoinPrice).toFixed(2)})
                       </span>
                     </div>
                   </div>

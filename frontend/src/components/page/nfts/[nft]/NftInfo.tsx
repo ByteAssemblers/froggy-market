@@ -19,7 +19,7 @@ export function NftInfo({ nft }: { nft: string }) {
           <div className="flex flex-wrap items-center gap-x-12 gap-y-2">
             <div className="flex items-center gap-x-4">
               <h1 className="m-0 text-[2.3rem] leading-[1.1]">
-                Doginal Mini Doges {nft}
+                Pepinal Mini Pepes {nft}
               </h1>
               <svg
                 data-v-1f7beb45=""

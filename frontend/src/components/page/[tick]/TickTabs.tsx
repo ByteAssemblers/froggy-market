@@ -54,7 +54,7 @@ export default function TickTabs({ tick }: { tick: string }) {
                     >
                       <Image
                         src="https://api.doggy.market/static/drc-20/dogi.png"
-                        alt="DRC-20"
+                        alt="PRC-20"
                         width={42}
                         height={42}
                         unoptimized

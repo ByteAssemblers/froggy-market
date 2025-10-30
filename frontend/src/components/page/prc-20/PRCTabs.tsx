@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import Image from "next/image";
+import Avatar from "@/components/Avatar";
 
 const database = [
   {
@@ -23,7 +24,6 @@ const database = [
     totalvolume: 4151015,
     marketcap: 1050000,
     holders: 1000975,
-    imageurl: "https://doggy.market/drc-20/dogx.png",
   },
   {
     id: 2,
@@ -34,7 +34,6 @@ const database = [
     totalvolume: 2924579,
     marketcap: 430500,
     holders: 4006,
-    imageurl: "https://doggy.market/drc-20/pepe.png",
   },
   {
     id: 3,
@@ -45,7 +44,6 @@ const database = [
     totalvolume: 96030778,
     marketcap: 10080000,
     holders: 11107,
-    imageurl: "https://api.doggy.market/static/drc-20/dogi.png",
   },
   {
     id: 4,
@@ -56,7 +54,6 @@ const database = [
     totalvolume: 37200497,
     marketcap: 630000,
     holders: 7347,
-    imageurl: "https://doggy.market/drc-20/dbit.jpg",
   },
   {
     id: 5,
@@ -67,7 +64,6 @@ const database = [
     totalvolume: 23614553,
     marketcap: 186000,
     holders: 2806,
-    imageurl: "https://doggy.market/drc-20/dcex.png",
   },
   {
     id: 6,
@@ -78,7 +74,6 @@ const database = [
     totalvolume: 18856294,
     marketcap: 273000,
     holders: 3055,
-    imageurl: "https://doggy.market/drc-20/$hub.jpg",
   },
   {
     id: 7,
@@ -89,7 +84,6 @@ const database = [
     totalvolume: 12173877,
     marketcap: 5679315,
     holders: 3107,
-    imageurl: "https://doggy.market/drc-20/dosu.jpg",
   },
   {
     id: 8,
@@ -100,7 +94,6 @@ const database = [
     totalvolume: 11847939,
     marketcap: 154000,
     holders: 1696,
-    imageurl: "https://doggy.market/drc-20/wufi.png",
   },
   {
     id: 9,
@@ -111,7 +104,6 @@ const database = [
     totalvolume: 10431556,
     marketcap: 77000,
     holders: 1449,
-    imageurl: "https://doggy.market/drc-20/dubi.jpg",
   },
   {
     id: 10,
@@ -122,13 +114,33 @@ const database = [
     totalvolume: 10265870,
     marketcap: 302400,
     holders: 18123,
-    imageurl: "https://doggy.market/drc-20/oink.jpg",
   },
 ];
 
-const dogecoinPrice = 0.1957;
+for (let i = 11; i <= 100; i++) {
+  const randomName = `token${i}`;
+  const randomPrice = Number((Math.random() * 2).toFixed(10));
+  const randomPercent = Number((Math.random() * 20 - 10).toFixed(2));
+  const random24hVol = Math.floor(Math.random() * 10000);
+  const randomTotalVol = Math.floor(Math.random() * 100000000);
+  const randomMarketCap = Math.floor(Math.random() * 10000000);
+  const randomHolders = Math.floor(Math.random() * 50000) + 1000;
 
-export default function DRCTwenty() {
+  database.push({
+    id: i,
+    tick: randomName,
+    price: randomPrice,
+    twentyfourhourpercent: randomPercent,
+    twentyfourhourvolume: random24hVol,
+    totalvolume: randomTotalVol,
+    marketcap: randomMarketCap,
+    holders: randomHolders,
+  });
+}
+
+const pepecoinPrice = 0.1957;
+
+export default function DRCTabs() {
   const router = useRouter();
 
   function toFullNumber(value: number) {
@@ -151,9 +163,23 @@ export default function DRCTwenty() {
   }
 
   return (
-    <>
-      <h2 className="mt-8 mb-6 text-[1.6rem] leading-[1.1]">DRC-20</h2>
-      <div className="px-2.0 w-full overflow-x-auto">
+    <Tabs defaultValue="toptokens" className="relative">
+      <TabsList className="my-4 flex shrink-0 flex-wrap items-center justify-between bg-transparent">
+        <div className="my-2 flex list-none gap-5 overflow-x-auto p-0 select-none">
+          <TabsTrigger value="toptokens" className="text-md">
+            Top tokens
+          </TabsTrigger>
+          <TabsTrigger value="mintingnow" className="text-md">
+            Minting now
+          </TabsTrigger>
+        </div>
+        <TabsContent value="toptokens">
+          <div className="absolute right-0 flex gap-2 text-center text-white">
+            24h 7d 30d All
+          </div>
+        </TabsContent>
+      </TabsList>
+      <TabsContent value="toptokens">
         <Table className="w-full max-w-full border-separate border-spacing-0 leading-[1.2]">
           <TableHeader className="text-left text-[0.95rem] font-normal text-[#8a939b]">
             <TableRow className="">
@@ -179,14 +205,7 @@ export default function DRCTwenty() {
                   {item.id}
                 </TableCell>
                 <TableCell>
-                  <Image
-                    src={item.imageurl}
-                    alt={`DRC-20 #${item.tick}`}
-                    width={42}
-                    height={42}
-                    className="h-[42px] w-[42px] rounded-full object-cover align-middle"
-                    unoptimized
-                  />
+                  <Avatar text={item.tick} />
                 </TableCell>
                 <TableCell>{item.tick}</TableCell>
                 <TableCell>
@@ -202,7 +221,7 @@ export default function DRCTwenty() {
                     {toFullNumber(item.price)}
                   </div>
                   <div className="ml-5 text-[90%] leading-none font-medium text-[#fffc]">
-                    ${formatNumber(item.price * dogecoinPrice)}
+                    ${formatNumber(item.price * pepecoinPrice)}
                   </div>
                 </TableCell>
                 <TableCell>
@@ -260,7 +279,7 @@ export default function DRCTwenty() {
                       </div>
                       <div className="ml-5 text-[90%] leading-none font-medium text-[#fffc]">
                         $
-                        {(item.twentyfourhourvolume * dogecoinPrice).toFixed(2)}
+                        {(item.twentyfourhourvolume * pepecoinPrice).toFixed(2)}
                       </div>
                     </>
                   )}
@@ -280,7 +299,7 @@ export default function DRCTwenty() {
                   <div className="ml-5 text-[90%] leading-none font-medium text-[#fffc]">
                     $
                     {Number(
-                      (item.totalvolume * dogecoinPrice).toFixed(0),
+                      (item.totalvolume * pepecoinPrice).toFixed(0),
                     ).toLocaleString()}
                   </div>
                 </TableCell>
@@ -299,7 +318,7 @@ export default function DRCTwenty() {
                   <div className="ml-5 text-[90%] leading-none font-medium text-[#fffc]">
                     $
                     {Number(
-                      (item.marketcap * dogecoinPrice).toFixed(0),
+                      (item.marketcap * pepecoinPrice).toFixed(0),
                     ).toLocaleString()}
                   </div>
                 </TableCell>
@@ -308,15 +327,22 @@ export default function DRCTwenty() {
             ))}
           </TableBody>
         </Table>
-      </div>
-      <div className="my-4 flex items-center justify-center">
-        <Link
-          href="/drc-20"
-          className="flex items-center justify-center rounded-[12px] px-12 py-5 font-bold text-[#fbb9fb] transition-all duration-150 ease-in-out hover:bg-[#1D1E20] hover:text-[violet]"
-        >
-          <div className="flex items-center">Show all DRC-20 tokens</div>
-        </Link>
-      </div>
-    </>
+      </TabsContent>
+      <TabsContent value="mintingnow">
+        <Table className="w-full max-w-full border-separate border-spacing-0 leading-[1.2]">
+          <TableHeader className="text-left text-[0.95rem] font-normal text-[#8a939b]">
+            <TableRow className="">
+              <TableHead>#</TableHead>
+              <TableHead>Tick</TableHead>
+              <TableHead>% minted</TableHead>
+              <TableHead>Mints (24h)</TableHead>
+              <TableHead>Holders</TableHead>
+              <TableHead>Deployed</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody></TableBody>
+        </Table>
+      </TabsContent>
+    </Tabs>
   );
 }

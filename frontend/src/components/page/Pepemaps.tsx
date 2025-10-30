@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
-import DogemapCard from "@/components/DogemapCard";
+import PepemapCard from "@/components/PepemapCard";
 
 const database = [
   {
@@ -35,9 +35,9 @@ const database = [
   },
 ];
 
-const dogecoinPrice = 0.1957;
+const pepecoinPrice = 0.1957;
 
-export default function Dogemaps() {
+export default function Pepemaps() {
   const [visibleData, setVisibleData] = useState<
     { id: number; price: number; seller: string }[]
   >([]);
@@ -64,7 +64,7 @@ export default function Dogemaps() {
     <>
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="mt-0 mb-0 text-[1.6rem] leading-[1.1]">Dogemaps</h2>
+          <h2 className="mt-0 mb-0 text-[1.6rem] leading-[1.1]">Pepemaps</h2>
           <div className="flex">
             Floor price:&#xA0;
             <Image
@@ -76,23 +76,23 @@ export default function Dogemaps() {
               className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
               unoptimized
             />
-            <span className="text-white/95">1</span>
+            <span className="text-white/95">7</span>
           </div>
         </div>
       </div>
       <div className="tiny:gap-5 four:grid-cols-5 three:grid-cols-4 two:grid-cols-3 tiny:grid-cols-2 mt-4 grid grid-cols-2 gap-2">
         {visibleData.map((item) => (
-          <DogemapCard
+          <PepemapCard
             key={item.id}
             item={item}
-            dogecoinPrice={dogecoinPrice}
+            pepecoinPrice={pepecoinPrice}
           />
         ))}
         <Link
-          href="/dogemaps"
+          href="/pepemaps"
           className="flex min-h-56 items-center justify-center rounded-[12px] border border-transparent bg-[#4c505c33] font-bold text-[#fbb9fb] transition-all duration-250 ease-in-out hover:border-[violet] hover:text-[violet]"
         >
-          <div className="p-3 text-center">Show all listed dogemaps</div>
+          <div className="p-3 text-center">Show all listed pepemaps</div>
         </Link>
       </div>
     </>

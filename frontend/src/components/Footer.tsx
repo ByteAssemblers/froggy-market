@@ -64,7 +64,7 @@ export default function Footer() {
             </Link>
           </div>
           <div className="inline-flex flex-wrap gap-x-6 text-[0.9rem] text-[#c891d8]">
-            <Link href="/inscribe">Inscribe on doginals</Link>
+            <Link href="/inscribe">Inscribe on pepinals</Link>
             <Link href="/creators">Creators dashboard</Link>
           </div>
         </div>
