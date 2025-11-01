@@ -80,7 +80,11 @@ export default function Wallet() {
             setWalletAddress(w.address);
             setMnemonic(w.mnemonic);
             setPrivateKey(w.privateKey);
-            setWalletState("mywallet");
+            if (isLocked && hasSavedWallet) {
+              setWalletState("lock");
+            } else {
+              setWalletState("mywallet");
+            }
           })
           .catch(() => console.error("Auto-unlock failed"));
       }
@@ -99,30 +103,29 @@ export default function Wallet() {
     handleGetBalance();
   }, [wallet]);
 
-  async function handleNewWallet() {
+  async function handleNewWallet(pwd = "") {
     const w = await generateHDWallet();
     setWallet(w);
 
-    const encrypted = await encryptWallet(w, walletPassword || "");
+    const encrypted = await encryptWallet(w, pwd);
     localStorage.setItem(
       "pepecoin_wallet",
       JSON.stringify({
         ...encrypted,
-        passwordProtected: walletPassword.length > 0,
+        passwordProtected: pwd.length > 0,
       }),
     );
 
     setHasSavedWallet(true);
-    setIsLocked(walletPassword.length > 0);
+    setIsLocked(pwd.length > 0);
     setWalletAddress(w.address);
     setMnemonic(w.mnemonic);
     alert(
-      walletPassword
+      pwd
         ? "Wallet created & locked with password"
         : "Wallet created (no password, auto unlocked)",
     );
   }
-
   async function handleUnlock() {
     try {
       const stored = localStorage.getItem("pepecoin_wallet");
@@ -149,30 +152,28 @@ export default function Wallet() {
     alert("Wallet removed");
   }
 
-  async function handleImport() {
+  async function handleImport(pwd = "") {
     const value = importText.trim();
     try {
       let w;
       if (value.split(" ").length >= 12) {
-        // Mnemonic
         w = await fromMnemonic(value);
       } else {
-        // Private key
         w = fromPrivateKey(value);
       }
 
       setWallet(w);
-      const encrypted = await encryptWallet(w, walletPassword || "");
+      const encrypted = await encryptWallet(w, pwd);
       localStorage.setItem(
         "pepecoin_wallet",
         JSON.stringify({
           ...encrypted,
-          passwordProtected: walletPassword.length > 0,
+          passwordProtected: pwd.length > 0,
         }),
       );
 
       setHasSavedWallet(true);
-      setIsLocked(walletPassword.length > 0);
+      setIsLocked(pwd.length > 0);
       setWalletAddress(w.address);
       setMnemonic(w.mnemonic);
       setPrivateKey(w.privateKey);
@@ -183,8 +184,11 @@ export default function Wallet() {
     }
   }
 
-  function handleSkipPassword() {
-    importText == "" ? handleNewWallet() : handleImport();
+  function handleSkipPassword(pwd?: string) {
+    const passwordToUse = pwd || walletPassword;
+    importText === ""
+      ? handleNewWallet(passwordToUse)
+      : handleImport(passwordToUse);
     setWalletState("mywallet");
   }
 
@@ -194,22 +198,72 @@ export default function Wallet() {
       return setError("Password must be at least 6 characters");
     if (password !== confirmPassword) return setError("Passwords don't match");
 
-    console.log(password);
-    console.log(walletPassword);
-    setWalletPassword("asfd");
-    console.log(walletPassword);
-    handleSkipPassword();
-
     setError("");
+    handleSkipPassword(password); // ✅ use password immediately
   };
 
-  const handleUnlockPassword = () => {
-    if (!lockPassword) return setLockError("Please enter a password");
-    if (lockPassword) return setLockError("Incorrect password");
+  async function handleUnlockPassword() {
+    if (!lockPassword) {
+      return setLockError("Please enter a password");
+    }
 
-    setWalletState("mywallet");
-    setLockError("");
-  };
+    try {
+      const stored = localStorage.getItem("pepecoin_wallet");
+      if (!stored) {
+        return setLockError("No wallet found");
+      }
+
+      const parsed = JSON.parse(stored);
+
+      let w;
+      try {
+        w = await decryptWallet(parsed, lockPassword);
+      } catch {
+        // catch internal crypto errors silently
+        setLockError("Incorrect password");
+        return;
+      }
+
+      if (!w) {
+        setLockError("Incorrect password");
+        return;
+      }
+
+      // ✅ Success
+      setWallet(w);
+      setWalletAddress(w.address);
+      setMnemonic(w.mnemonic);
+      setPrivateKey(w.privateKey);
+      setIsLocked(false);
+      setLockPassword("");
+      setLockError("");
+      setWalletState("mywallet");
+    } catch {
+      setLockError("Something went wrong while unlocking");
+    }
+  }
+  useEffect(() => {
+    const stored = localStorage.getItem("pepecoin_wallet");
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      setHasSavedWallet(true);
+
+      if (parsed.passwordProtected) {
+        setIsLocked(true);
+        setWalletState("lock"); // ✅ add this line directly here
+      } else {
+        decryptWallet(parsed, "")
+          .then((w) => {
+            setWallet(w);
+            setWalletAddress(w.address);
+            setMnemonic(w.mnemonic);
+            setPrivateKey(w.privateKey);
+            setWalletState("mywallet");
+          })
+          .catch(() => console.error("Auto-unlock failed"));
+      }
+    }
+  }, []);
 
   return (
     <Popover>
@@ -319,7 +373,7 @@ export default function Wallet() {
                     )}
                     <div className="mt-auto">
                       <Button
-                        onClick={handleSkipPassword}
+                        onClick={() => handleSkipPassword()}
                         className="font-inherit cursor-pointer rounded-xl border-2 border-white bg-transparent bg-none px-4 py-5 text-[1em] font-medium text-white transition-all duration-200 ease-in-out hover:text-black"
                       >
                         Skip
