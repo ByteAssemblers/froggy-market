@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,134 +15,29 @@ import {
 import Image from "next/image";
 import Avatar from "@/components/Avatar";
 
-const database = [
-  {
-    id: 1,
-    tick: "dogx",
-    price: 0.00005,
-    twentyfourhourpercent: 0,
-    twentyfourhourvolume: 105,
-    totalvolume: 4151015,
-    marketcap: 1050000,
-    holders: 1000975,
-  },
-  {
-    id: 2,
-    tick: "pepe",
-    price: 0.021,
-    twentyfourhourpercent: 0,
-    twentyfourhourvolume: 21,
-    totalvolume: 2924579,
-    marketcap: 430500,
-    holders: 4006,
-  },
-  {
-    id: 3,
-    tick: "dogi",
-    price: 0.48,
-    twentyfourhourpercent: 0,
-    twentyfourhourvolume: 0,
-    totalvolume: 96030778,
-    marketcap: 10080000,
-    holders: 11107,
-  },
-  {
-    id: 4,
-    tick: "dbit",
-    price: 0.0000000003,
-    twentyfourhourpercent: 0,
-    twentyfourhourvolume: 0,
-    totalvolume: 37200497,
-    marketcap: 630000,
-    holders: 7347,
-  },
-  {
-    id: 5,
-    tick: "dcex",
-    price: 0.62,
-    twentyfourhourpercent: 0,
-    twentyfourhourvolume: 0,
-    totalvolume: 23614553,
-    marketcap: 186000,
-    holders: 2806,
-  },
-  {
-    id: 6,
-    tick: "$hub",
-    price: 0.013,
-    twentyfourhourpercent: -7.1,
-    twentyfourhourvolume: 0,
-    totalvolume: 18856294,
-    marketcap: 273000,
-    holders: 3055,
-  },
-  {
-    id: 7,
-    tick: "dosu",
-    price: 0.000000014,
-    twentyfourhourpercent: 0,
-    twentyfourhourvolume: 0,
-    totalvolume: 12173877,
-    marketcap: 5679315,
-    holders: 3107,
-  },
-  {
-    id: 8,
-    tick: "wufi",
-    price: 0.015,
-    twentyfourhourpercent: 0,
-    twentyfourhourvolume: 0,
-    totalvolume: 11847939,
-    marketcap: 154000,
-    holders: 1696,
-  },
-  {
-    id: 9,
-    tick: "dubi",
-    price: 0.077,
-    twentyfourhourpercent: 0,
-    twentyfourhourvolume: 0,
-    totalvolume: 10431556,
-    marketcap: 77000,
-    holders: 1449,
-  },
-  {
-    id: 10,
-    tick: "oink",
-    price: 0.000000000072,
-    twentyfourhourpercent: 0,
-    twentyfourhourvolume: 0,
-    totalvolume: 10265870,
-    marketcap: 302400,
-    holders: 18123,
-  },
-];
-
-for (let i = 11; i <= 100; i++) {
-  const randomName = `token${i}`;
-  const randomPrice = Number((Math.random() * 2).toFixed(10));
-  const randomPercent = Number((Math.random() * 20 - 10).toFixed(2));
-  const random24hVol = Math.floor(Math.random() * 10000);
-  const randomTotalVol = Math.floor(Math.random() * 100000000);
-  const randomMarketCap = Math.floor(Math.random() * 10000000);
-  const randomHolders = Math.floor(Math.random() * 50000) + 1000;
-
-  database.push({
-    id: i,
-    tick: randomName,
-    price: randomPrice,
-    twentyfourhourpercent: randomPercent,
-    twentyfourhourvolume: random24hVol,
-    totalvolume: randomTotalVol,
-    marketcap: randomMarketCap,
-    holders: randomHolders,
-  });
-}
-
 const pepecoinPrice = 0.1957;
 
 export default function DRCTabs() {
   const router = useRouter();
+  const [tokens, setTokens] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchTokens() {
+      try {
+        const response = await fetch("/api/belindex/tokens?page_size=100");
+        if (!response.ok) throw new Error("Failed to fetch tokens");
+        const data = await response.json();
+        setTokens(data.tokens);
+      } catch (err) {
+        console.error("Error fetching tokens:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchTokens();
+  }, []);
 
   function toFullNumber(value: number) {
     return value.toString().includes("e")
@@ -194,138 +90,142 @@ export default function DRCTabs() {
               <TableHead>Holders</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
-            {database.map((item) => (
-              <TableRow
-                key={item.id}
-                className="cursor-pointer text-[16px] text-white transition-all duration-150 ease-in-out"
-                onClick={() => router.push(`/${item.tick}`)}
-              >
-                <TableCell className="w-auto rounded-tl-[12px] rounded-bl-[12px] px-3 py-4 align-middle font-bold">
-                  {item.id}
-                </TableCell>
-                <TableCell>
-                  <Avatar text={item.tick} />
-                </TableCell>
-                <TableCell>{item.tick}</TableCell>
-                <TableCell>
-                  <div className="flex">
-                    <Image
-                      src="/assets/coin.gif"
-                      alt="coin"
-                      width={18}
-                      height={18}
-                      priority
-                      className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
-                    />
-                    {toFullNumber(item.price)}
-                  </div>
-                  <div className="ml-5 text-[90%] leading-none font-medium text-[#fffc]">
-                    ${formatNumber(item.price * pepecoinPrice)}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  {item.twentyfourhourpercent == 0 && <>0%</>}
-                  {item.twentyfourhourpercent > 0 && (
-                    <span className="flex text-[#00FF7F]">
-                      <svg
-                        viewBox="-139.52 -43.52 599.04 599.04"
-                        fill="currentColor"
-                        style={{
-                          width: "1.5em",
-                          marginBottom: "-0.35em",
-                        }}
-                      >
-                        <path d="M288.662 352H31.338c-17.818 0-26.741-21.543-14.142-34.142l128.662-128.662c7.81-7.81 20.474-7.81 28.284 0l128.662 128.662c12.6 12.599 3.676 34.142-14.142 34.142z"></path>
-                      </svg>
+          {loading ? (
+            <></>
+          ) : (
+            <TableBody>
+              {tokens.map((item, index) => (
+                <TableRow
+                  key={item.id || index}
+                  className="cursor-pointer text-[16px] text-white transition-all duration-150 ease-in-out"
+                  onClick={() => router.push(`/${item.tick}`)}
+                >
+                  <TableCell className="w-auto rounded-tl-[12px] rounded-bl-[12px] px-3 py-4 align-middle font-bold">
+                    {index + 1}
+                  </TableCell>
+                  <TableCell>
+                    <Avatar text={item.tick} />
+                  </TableCell>
+                  <TableCell>{item.tick}</TableCell>
+                  <TableCell>
+                    <div className="flex">
+                      <Image
+                        src="/assets/coin.gif"
+                        alt="coin"
+                        width={18}
+                        height={18}
+                        priority
+                        className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                      />
+                      {/* {toFullNumber(item.price)} */}
+                    </div>
+                    <div className="ml-5 text-[90%] leading-none font-medium text-[#fffc]">
+                      {/* ${formatNumber(item.price * pepecoinPrice)} */}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {item.twentyfourhourpercent == 0 && <>0%</>}
+                    {item.twentyfourhourpercent > 0 && (
+                      <span className="flex text-[#00FF7F]">
+                        <svg
+                          viewBox="-139.52 -43.52 599.04 599.04"
+                          fill="currentColor"
+                          style={{
+                            width: "1.5em",
+                            marginBottom: "-0.35em",
+                          }}
+                        >
+                          <path d="M288.662 352H31.338c-17.818 0-26.741-21.543-14.142-34.142l128.662-128.662c7.81-7.81 20.474-7.81 28.284 0l128.662 128.662c12.6 12.599 3.676 34.142-14.142 34.142z"></path>
+                        </svg>
 
-                      <span className="pt-1">
-                        <span>{item.twentyfourhourpercent}%</span>
+                        <span className="pt-1">
+                          {/* <span>{item.twentyfourhourpercent}%</span> */}
+                        </span>
                       </span>
-                    </span>
-                  )}
-                  {item.twentyfourhourpercent < 0 && (
-                    <span className="flex text-[#ff6347]">
-                      <svg
-                        viewBox="-139.52 -43.52 599.04 599.04"
-                        fill="currentColor"
-                        style={{
-                          width: "1.5em",
-                          marginBottom: "-0.35em",
-                        }}
-                      >
-                        <path d="M31.3 192h257.3c17.8 0 26.7 21.5 14.1 34.1L174.1 354.8c-7.8 7.8-20.5 7.8-28.3 0L17.2 226.1C4.6 213.5 13.5 192 31.3 192z"></path>
-                      </svg>
-                      <span className="pt-1">
-                        <span>{-item.twentyfourhourpercent}%</span>
+                    )}
+                    {item.twentyfourhourpercent < 0 && (
+                      <span className="flex text-[#ff6347]">
+                        <svg
+                          viewBox="-139.52 -43.52 599.04 599.04"
+                          fill="currentColor"
+                          style={{
+                            width: "1.5em",
+                            marginBottom: "-0.35em",
+                          }}
+                        >
+                          <path d="M31.3 192h257.3c17.8 0 26.7 21.5 14.1 34.1L174.1 354.8c-7.8 7.8-20.5 7.8-28.3 0L17.2 226.1C4.6 213.5 13.5 192 31.3 192z"></path>
+                        </svg>
+                        <span className="pt-1">
+                          {/* <span>{-item.twentyfourhourpercent}%</span> */}
+                        </span>
                       </span>
-                    </span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  {item.twentyfourhourvolume == 0 && <>-</>}
-                  {item.twentyfourhourvolume != 0 && (
-                    <>
-                      <div className="flex">
-                        <Image
-                          src="/assets/coin.gif"
-                          alt="coin"
-                          width={18}
-                          height={18}
-                          priority
-                          className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
-                        />
-                        {item.twentyfourhourvolume}
-                      </div>
-                      <div className="ml-5 text-[90%] leading-none font-medium text-[#fffc]">
-                        $
-                        {(item.twentyfourhourvolume * pepecoinPrice).toFixed(2)}
-                      </div>
-                    </>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <div className="flex">
-                    <Image
-                      src="/assets/coin.gif"
-                      alt="coin"
-                      width={18}
-                      height={18}
-                      priority
-                      className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
-                    />
-                    {item.totalvolume.toLocaleString()}
-                  </div>
-                  <div className="ml-5 text-[90%] leading-none font-medium text-[#fffc]">
-                    $
-                    {Number(
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {item.twentyfourhourvolume == 0 && <>-</>}
+                    {item.twentyfourhourvolume != 0 && (
+                      <>
+                        <div className="flex">
+                          <Image
+                            src="/assets/coin.gif"
+                            alt="coin"
+                            width={18}
+                            height={18}
+                            priority
+                            className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                          />
+                          {/* {item.twentyfourhourvolume} */}
+                        </div>
+                        <div className="ml-5 text-[90%] leading-none font-medium text-[#fffc]">
+                          $
+                          {/* {(item.twentyfourhourvolume * pepecoinPrice).toFixed(2)} */}
+                        </div>
+                      </>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex">
+                      <Image
+                        src="/assets/coin.gif"
+                        alt="coin"
+                        width={18}
+                        height={18}
+                        priority
+                        className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                      />
+                      {/* {item.totalvolume.toLocaleString()} */}
+                    </div>
+                    <div className="ml-5 text-[90%] leading-none font-medium text-[#fffc]">
+                      $
+                      {/* {Number(
                       (item.totalvolume * pepecoinPrice).toFixed(0),
-                    ).toLocaleString()}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex">
-                    <Image
-                      src="/assets/coin.gif"
-                      alt="coin"
-                      width={18}
-                      height={18}
-                      priority
-                      className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
-                    />
-                    {item.marketcap.toLocaleString()}
-                  </div>
-                  <div className="ml-5 text-[90%] leading-none font-medium text-[#fffc]">
-                    $
-                    {Number(
+                    ).toLocaleString()} */}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex">
+                      <Image
+                        src="/assets/coin.gif"
+                        alt="coin"
+                        width={18}
+                        height={18}
+                        priority
+                        className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                      />
+                      {/* {item.marketcap.toLocaleString()} */}
+                    </div>
+                    <div className="ml-5 text-[90%] leading-none font-medium text-[#fffc]">
+                      $
+                      {/* {Number(
                       (item.marketcap * pepecoinPrice).toFixed(0),
-                    ).toLocaleString()}
-                  </div>
-                </TableCell>
-                <TableCell>{item.holders.toLocaleString()}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
+                    ).toLocaleString()} */}
+                    </div>
+                  </TableCell>
+                  <TableCell>{item.holders.toLocaleString()}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          )}
         </Table>
       </TabsContent>
       <TabsContent value="mintingnow">

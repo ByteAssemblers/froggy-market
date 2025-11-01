@@ -16,111 +16,6 @@ import {
 import Image from "next/image";
 import Avatar from "../Avatar";
 
-import { belIndexerApi } from "@/lib/api/belIndexer";
-
-const database = [
-  {
-    id: 1,
-    tick: "dogx",
-    price: 0.00005,
-    twentyfourhourpercent: 0,
-    twentyfourhourvolume: 105,
-    totalvolume: 4151015,
-    marketcap: 1050000,
-    holders: 1000975,
-  },
-  {
-    id: 2,
-    tick: "pepe",
-    price: 0.021,
-    twentyfourhourpercent: 0,
-    twentyfourhourvolume: 21,
-    totalvolume: 2924579,
-    marketcap: 430500,
-    holders: 4006,
-  },
-  {
-    id: 3,
-    tick: "dogi",
-    price: 0.48,
-    twentyfourhourpercent: 0,
-    twentyfourhourvolume: 0,
-    totalvolume: 96030778,
-    marketcap: 10080000,
-    holders: 11107,
-  },
-  {
-    id: 4,
-    tick: "dbit",
-    price: 0.0000000003,
-    twentyfourhourpercent: 0,
-    twentyfourhourvolume: 0,
-    totalvolume: 37200497,
-    marketcap: 630000,
-    holders: 7347,
-  },
-  {
-    id: 5,
-    tick: "dcex",
-    price: 0.62,
-    twentyfourhourpercent: 0,
-    twentyfourhourvolume: 0,
-    totalvolume: 23614553,
-    marketcap: 186000,
-    holders: 2806,
-  },
-  {
-    id: 6,
-    tick: "$hub",
-    price: 0.013,
-    twentyfourhourpercent: -7.1,
-    twentyfourhourvolume: 0,
-    totalvolume: 18856294,
-    marketcap: 273000,
-    holders: 3055,
-  },
-  {
-    id: 7,
-    tick: "dosu",
-    price: 0.000000014,
-    twentyfourhourpercent: 0,
-    twentyfourhourvolume: 0,
-    totalvolume: 12173877,
-    marketcap: 5679315,
-    holders: 3107,
-  },
-  {
-    id: 8,
-    tick: "wufi",
-    price: 0.015,
-    twentyfourhourpercent: 0,
-    twentyfourhourvolume: 0,
-    totalvolume: 11847939,
-    marketcap: 154000,
-    holders: 1696,
-  },
-  {
-    id: 9,
-    tick: "dubi",
-    price: 0.077,
-    twentyfourhourpercent: 0,
-    twentyfourhourvolume: 0,
-    totalvolume: 10431556,
-    marketcap: 77000,
-    holders: 1449,
-  },
-  {
-    id: 10,
-    tick: "oink",
-    price: 0.000000000072,
-    twentyfourhourpercent: 0,
-    twentyfourhourvolume: 0,
-    totalvolume: 10265870,
-    marketcap: 302400,
-    holders: 18123,
-  },
-];
-
 const pepecoinPrice = 0.1957;
 
 export default function PRCTwenty() {
@@ -131,8 +26,10 @@ export default function PRCTwenty() {
   useEffect(() => {
     async function fetchTokens() {
       try {
-        const res = await belIndexerApi.getTokens();
-        setTokens(res.tokens);
+        const response = await fetch("/api/belindex/tokens?page_size=10");
+        if (!response.ok) throw new Error("Failed to fetch tokens");
+        const data = await response.json();
+        setTokens(data.tokens);
       } catch (err) {
         console.error("Error fetching tokens:", err);
       } finally {
@@ -142,8 +39,6 @@ export default function PRCTwenty() {
 
     fetchTokens();
   }, []);
-
-  // console.log(tokens);
 
   function toFullNumber(value: number) {
     return value.toString().includes("e")
@@ -186,14 +81,14 @@ export default function PRCTwenty() {
             <></>
           ) : (
             <TableBody>
-              {tokens.map((item) => (
+              {tokens.map((item, index) => (
                 <TableRow
-                  key={item.created}
+                  key={item.id || index}
                   className="cursor-pointer text-[16px] text-white transition-all duration-150 ease-in-out"
                   onClick={() => router.push(`/${item.tick}`)}
                 >
                   <TableCell className="w-auto rounded-tl-[12px] rounded-bl-[12px] px-3 py-4 align-middle font-bold">
-                    {item.id}
+                    {index + 1}
                   </TableCell>
                   <TableCell>
                     <Avatar text={item.tick} />

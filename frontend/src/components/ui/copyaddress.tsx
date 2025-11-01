@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
 import { Copy } from "lucide-react";
 import {
   Tooltip,
@@ -59,7 +58,7 @@ export function CopyAddress({
                 {showText && (
                   <>
                     <span className="mr-2 cursor-pointer text-[16px]">
-                      DA29j...pnDZf&#xA0;
+                      {`${text.slice(0, 5)}...${text.slice(-5)}`}&#xA0;
                     </span>
                     <Copy />
                   </>
