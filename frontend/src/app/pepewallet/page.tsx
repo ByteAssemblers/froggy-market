@@ -7,7 +7,6 @@ import {
 } from "@/lib/wallet/wallet";
 import { encryptWallet, decryptWallet } from "@/lib/wallet/storage";
 import { getPepecoinBalance } from "@/lib/wallet/getBalance";
-import { sendPepecoin } from "@/lib/wallet/sendPepe";
 
 export default function PepecoinWallet() {
   const [wallet, setWallet] = useState<any>(null);
@@ -130,25 +129,6 @@ export default function PepecoinWallet() {
       alert("Invalid mnemonic or private key");
     }
   }
-  async function handleSend() {
-    if (!wallet || !recipient || !amount) return alert("Missing fields");
-
-    setSending(true);
-    try {
-      const txid = await sendPepecoin(
-        wallet.address,
-        recipient,
-        Number(amount),
-        wallet.privateKey,
-      );
-      alert(`✅ Sent! TXID: ${txid}`);
-      await handleGetBalance();
-    } catch (err: any) {
-      alert(`❌ ${err.message}`);
-    } finally {
-      setSending(false);
-    }
-  }
 
   // 🧱 Locked view
   if (isLocked && hasSavedWallet) {
@@ -260,30 +240,6 @@ export default function PepecoinWallet() {
               className="mt-4 w-full rounded bg-red-600 py-2 text-white"
             >
               Remove Wallet
-            </button>
-          </div>
-          <div className="mt-6 rounded-lg border border-gray-700 p-4">
-            <h2 className="mb-2 text-lg font-bold">💸 Send Pepecoin</h2>
-            <input
-              type="text"
-              placeholder="Recipient address"
-              value={recipient}
-              onChange={(e) => setRecipient(e.target.value)}
-              className="mb-2 w-full rounded border p-2"
-            />
-            <input
-              type="number"
-              placeholder="Amount (PEPE)"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="mb-2 w-full rounded border p-2"
-            />
-            <button
-              onClick={handleSend}
-              disabled={sending}
-              className="w-full rounded bg-purple-600 py-2 text-white hover:bg-purple-500"
-            >
-              {sending ? "Sending..." : "Send Pepecoin"}
             </button>
           </div>
         </>

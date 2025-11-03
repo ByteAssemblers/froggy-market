@@ -51,7 +51,10 @@ export default function Wallet() {
   const [hasSavedWallet, setHasSavedWallet] = useState(false);
   const [balance, setBalance] = useState<number | null>(null);
   const [loadingBalance, setLoadingBalance] = useState(false);
-
+  const [pendingAction, setPendingAction] = useState<
+    null | "showSecrets" | "backup"
+  >(null);
+  const [hasBackedUp, setHasBackedUp] = useState(false);
   const [walletAddress, setWalletAddress] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -68,11 +71,16 @@ export default function Wallet() {
 
   useEffect(() => {
     const stored = localStorage.getItem("pepecoin_wallet");
+    const backedUp = localStorage.getItem("pepecoin_wallet_backed_up");
+    if (backedUp === "true") setHasBackedUp(true);
+
     if (stored) {
       const parsed = JSON.parse(stored);
       setHasSavedWallet(true);
+
       if (parsed.passwordProtected) {
         setIsLocked(true);
+        setWalletState("lock");
       } else {
         decryptWallet(parsed, "")
           .then((w) => {
@@ -80,11 +88,7 @@ export default function Wallet() {
             setWalletAddress(w.address);
             setMnemonic(w.mnemonic);
             setPrivateKey(w.privateKey);
-            if (isLocked && hasSavedWallet) {
-              setWalletState("lock");
-            } else {
-              setWalletState("mywallet");
-            }
+            setWalletState("mywallet");
           })
           .catch(() => console.error("Auto-unlock failed"));
       }
@@ -105,7 +109,9 @@ export default function Wallet() {
 
   async function handleNewWallet(pwd = "") {
     const w = await generateHDWallet();
-    setWallet(w);
+
+    // Clean any previous wallet first
+    localStorage.removeItem("pepecoin_wallet");
 
     const encrypted = await encryptWallet(w, pwd);
     localStorage.setItem(
@@ -116,40 +122,32 @@ export default function Wallet() {
       }),
     );
 
+    setWallet(w);
     setHasSavedWallet(true);
     setIsLocked(pwd.length > 0);
     setWalletAddress(w.address);
     setMnemonic(w.mnemonic);
-    alert(
-      pwd
-        ? "Wallet created & locked with password"
-        : "Wallet created (no password, auto unlocked)",
-    );
-  }
-  async function handleUnlock() {
-    try {
-      const stored = localStorage.getItem("pepecoin_wallet");
-      if (!stored) return alert("No wallet found");
-      const parsed = JSON.parse(stored);
-      const w = await decryptWallet(parsed, walletPassword || "");
-      setWallet(w);
-      setIsLocked(false);
-      alert("Wallet unlocked!");
-    } catch {
-      alert("Invalid password or corrupted data");
-    }
+    setPrivateKey(w.privateKey);
   }
 
   function handleRemove() {
     localStorage.removeItem("pepecoin_wallet");
+    localStorage.removeItem("pepecoin_wallet_backed_up");
+    setHasBackedUp(false);
     setWallet(null);
     setImportText("");
     setWalletPassword("");
     setHasSavedWallet(false);
     setIsLocked(false);
-    setWalletState("empty");
     setWalletAddress("");
-    alert("Wallet removed");
+    setMnemonic("");
+    setPrivateKey("");
+    setPassword("");
+    setConfirmPassword("");
+    setLockPassword("");
+    setError("");
+    setLockError("");
+    setWalletState("empty");
   }
 
   async function handleImport(pwd = "") {
@@ -177,10 +175,8 @@ export default function Wallet() {
       setWalletAddress(w.address);
       setMnemonic(w.mnemonic);
       setPrivateKey(w.privateKey);
-      alert("Wallet imported and saved");
     } catch {
       setError("invalid import");
-      alert("Invalid mnemonic or private key");
     }
   }
 
@@ -219,7 +215,6 @@ export default function Wallet() {
       try {
         w = await decryptWallet(parsed, lockPassword);
       } catch {
-        // catch internal crypto errors silently
         setLockError("Incorrect password");
         return;
       }
@@ -229,7 +224,7 @@ export default function Wallet() {
         return;
       }
 
-      // ✅ Success
+      // ✅ Successful unlock
       setWallet(w);
       setWalletAddress(w.address);
       setMnemonic(w.mnemonic);
@@ -237,11 +232,19 @@ export default function Wallet() {
       setIsLocked(false);
       setLockPassword("");
       setLockError("");
-      setWalletState("mywallet");
+
+      // 🔁 Check pending action
+      if (pendingAction === "showSecrets" || pendingAction === "backup") {
+        setPendingAction(null);
+        setWalletState("secret");
+      } else {
+        setWalletState("mywallet");
+      }
     } catch {
       setLockError("Something went wrong while unlocking");
     }
   }
+
   useEffect(() => {
     const stored = localStorage.getItem("pepecoin_wallet");
     if (stored) {
@@ -264,6 +267,13 @@ export default function Wallet() {
       }
     }
   }, []);
+
+  useEffect(() => {
+    if (walletState === "secret") {
+      localStorage.setItem("pepecoin_wallet_backed_up", "true");
+      setHasBackedUp(true);
+    }
+  }, [walletState]);
 
   return (
     <Popover>
@@ -465,12 +475,36 @@ export default function Wallet() {
                       protocol.
                     </div>
                     <div className="mt-auto">
-                      <button
-                        onClick={() => setWalletState("mywallet")}
-                        className="font-inherit mt-2.5 flex w-full justify-center rounded-[12px] border border-transparent bg-[#1a1a1a] px-4 py-2 text-[1em] font-bold text-white transition-all duration-200 ease-in-out hover:bg-[#222]"
-                      >
-                        Go back
-                      </button>
+                      {hasBackedUp ? (
+                        <Button
+                          onClick={() => setWalletState("mywallet")}
+                          className="font-inherit cursor-pointer rounded-xl border border-transparent bg-[#1a1a1a] px-6 py-3 text-[1em] font-medium text-white transition-all duration-200 ease-in-out hover:bg-[#222]"
+                        >
+                          Go back
+                        </Button>
+                      ) : (
+                        <>
+                          <Button
+                            onClick={() => setWalletState("mywallet")}
+                            className="font-inherit cursor-pointer rounded-xl border-2 border-white bg-transparent bg-none px-6 py-3 text-[1em] font-medium text-white transition-all duration-200 ease-in-out hover:text-black"
+                          >
+                            Go back
+                          </Button>
+                          <Button
+                            onClick={() => {
+                              localStorage.setItem(
+                                "pepecoin_wallet_backed_up",
+                                "true",
+                              );
+                              setHasBackedUp(true);
+                              setWalletState("mywallet");
+                            }}
+                            className="font-inherit ml-3 cursor-pointer rounded-xl border border-transparent bg-white px-6 py-3 text-[1em] font-medium text-black transition-all duration-200 ease-in-out"
+                          >
+                            I’ve saved these words
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </>
                 )}
@@ -510,7 +544,19 @@ export default function Wallet() {
                               <span>Send pepe</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              onClick={() => setWalletState("secret")}
+                              onClick={() => {
+                                const stored =
+                                  localStorage.getItem("pepecoin_wallet");
+                                if (!stored) return;
+
+                                const parsed = JSON.parse(stored);
+                                if (parsed.passwordProtected) {
+                                  setPendingAction("showSecrets");
+                                  setWalletState("lock");
+                                } else {
+                                  setWalletState("secret");
+                                }
+                              }}
                               className="text-md cursor-pointer rounded-md px-1 py-2 transition-all duration-150 ease-linear"
                             >
                               <Key className="h-4 w-4" />
@@ -545,15 +591,29 @@ export default function Wallet() {
                         </span>
                       </div>
                     </div>
-                    <div className="text-[90%]">
-                      Your wallet needs backup&#xA0;
-                      <span
-                        onClick={() => setWalletState("secret")}
-                        className="cursor-pointer font-semibold text-[#c891ff] decoration-inherit"
-                      >
-                        Backup now
-                      </span>
-                    </div>
+                    {!hasBackedUp && (
+                      <div className="text-[90%]">
+                        Your wallet needs backup&#xA0;
+                        <span
+                          onClick={() => {
+                            const stored =
+                              localStorage.getItem("pepecoin_wallet");
+                            if (!stored) return;
+
+                            const parsed = JSON.parse(stored);
+                            if (parsed.passwordProtected) {
+                              setPendingAction("backup");
+                              setWalletState("lock"); // go to password input first
+                            } else {
+                              setWalletState("secret"); // open secrets directly if unlocked
+                            }
+                          }}
+                          className="cursor-pointer font-semibold text-[#c891ff] decoration-inherit"
+                        >
+                          Backup now
+                        </span>
+                      </div>
+                    )}
                     <Tabs defaultValue="assets">
                       <TabsList className="m-1 flex shrink-0 flex-wrap items-center justify-between bg-transparent">
                         <div className="scrollbar-none my-1 flex overflow-x-auto text-[90%] select-none">
