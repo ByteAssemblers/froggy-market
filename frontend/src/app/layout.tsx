@@ -4,8 +4,8 @@ import { Toaster } from "@/components/ui/sonner";
 import type { Metadata } from "next";
 import { JetBrains_Mono, Noto_Serif } from "next/font/google";
 import "./globals.css";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
+import Header from "@/components/page/Header";
+import Footer from "@/components/page/Footer";
 
 const serifSans = Noto_Serif({
   variable: "--font-serif-sans",

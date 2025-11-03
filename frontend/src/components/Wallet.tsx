@@ -184,8 +184,8 @@ export default function Wallet() {
   }
 
   async function handleSend() {
-    if (!wallet?.privateKey) return alert("Unlock your wallet first");
-    if (!recipient || !amount) return alert("Enter recipient and amount");
+    if (!wallet?.privateKey) return;
+    if (!recipient || !amount) return;
 
     setSending(true);
     try {
@@ -194,12 +194,12 @@ export default function Wallet() {
         recipient,
         parseFloat(amount),
       );
-      alert(`✅ Transaction sent!\nTXID: ${txid}`);
+      // alert(`✅ Transaction sent!\nTXID: ${txid}`);
       setRecipient("");
       setAmount("");
       await handleGetBalance(); // refresh after sending
     } catch (err: any) {
-      alert(`❌ Send failed: ${err.message}`);
+      // alert(`❌ Send failed: ${err.message}`);
     } finally {
       setSending(false);
     }
@@ -633,7 +633,9 @@ export default function Wallet() {
                             className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
                           />
                           {balance?.toFixed(2)}&#xA0;
-                          <span className="text-[#fffc]">($0)</span>
+                          <span className="text-[#fffc]">
+                            (${(Number(balance) * pepecoinPrice).toFixed(2)})
+                          </span>
                         </span>
                       </div>
                     </div>
