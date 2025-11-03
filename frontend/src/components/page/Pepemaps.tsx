@@ -35,12 +35,28 @@ const database = [
   },
 ];
 
-const pepecoinPrice = 0.1957;
-
 export default function Pepemaps() {
   const [visibleData, setVisibleData] = useState<
     { id: number; price: number; seller: string }[]
   >([]);
+
+  const [pepecoinPrice, setPepecoinPrice] = useState<number>(0);
+
+  useEffect(() => {
+    const fetchPepecoinPrice = async () => {
+      try {
+        const response = await fetch(
+          "https://pepeblocks.com/ext/getcurrentprice",
+        );
+        const data = await response.json();
+        setPepecoinPrice(Number(data));
+      } catch (error) {
+        console.error("Failed to fetch Pepecoin price:", error);
+      }
+    };
+
+    fetchPepecoinPrice();
+  }, []);
 
   useEffect(() => {
     const updateData = () => {

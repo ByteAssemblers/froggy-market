@@ -40,8 +40,6 @@ import { encryptWallet, decryptWallet } from "@/lib/wallet/storage";
 import { getPepecoinBalance } from "@/lib/wallet/getBalance";
 import { sendPepeTransaction } from "@/lib/wallet/sendPepe";
 
-const pepecoinPrice = 0.1957;
-
 export default function Wallet() {
   const [wallet, setWallet] = useState<any>(null);
   const [mnemonic, setMnemonic] = useState("");
@@ -71,6 +69,23 @@ export default function Wallet() {
   const [walletState, setWalletState] = useState<
     "empty" | "password" | "import" | "secret" | "mywallet" | "send" | "lock"
   >("empty");
+  const [pepecoinPrice, setPepecoinPrice] = useState<number>(0);
+
+  useEffect(() => {
+    const fetchPepecoinPrice = async () => {
+      try {
+        const response = await fetch(
+          "https://pepeblocks.com/ext/getcurrentprice",
+        );
+        const data = await response.json();
+        setPepecoinPrice(Number(data));
+      } catch (error) {
+        console.error("Failed to fetch Pepecoin price:", error);
+      }
+    };
+
+    fetchPepecoinPrice();
+  }, []);
 
   useEffect(() => {
     const stored = localStorage.getItem("pepecoin_wallet");

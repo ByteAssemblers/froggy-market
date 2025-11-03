@@ -15,12 +15,28 @@ import {
 import Image from "next/image";
 import Avatar from "@/components/Avatar";
 
-const pepecoinPrice = 0.1957;
-
 export default function DRCTabs() {
   const router = useRouter();
   const [tokens, setTokens] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const [pepecoinPrice, setPepecoinPrice] = useState<number>(0);
+
+  useEffect(() => {
+    const fetchPepecoinPrice = async () => {
+      try {
+        const response = await fetch(
+          "https://pepeblocks.com/ext/getcurrentprice",
+        );
+        const data = await response.json();
+        setPepecoinPrice(Number(data));
+      } catch (error) {
+        console.error("Failed to fetch Pepecoin price:", error);
+      }
+    };
+
+    fetchPepecoinPrice();
+  }, []);
 
   useEffect(() => {
     async function fetchTokens() {

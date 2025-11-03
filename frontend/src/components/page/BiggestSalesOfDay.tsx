@@ -1,5 +1,7 @@
 "use client";
 
+import { useState, useEffect } from "react";
+
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -175,9 +177,25 @@ const database = [
   },
 ];
 
-const pepecoinPrice = 0.1957;
-
 export default function BiggestSalesOfDay() {
+  const [pepecoinPrice, setPepecoinPrice] = useState<number>(0);
+
+  useEffect(() => {
+    const fetchPepecoinPrice = async () => {
+      try {
+        const response = await fetch(
+          "https://pepeblocks.com/ext/getcurrentprice",
+        );
+        const data = await response.json();
+        setPepecoinPrice(Number(data));
+      } catch (error) {
+        console.error("Failed to fetch Pepecoin price:", error);
+      }
+    };
+
+    fetchPepecoinPrice();
+  }, []);
+
   return (
     <>
       <h2 className="mt-8 mb-6 text-[1.6rem] leading-[1.1]">

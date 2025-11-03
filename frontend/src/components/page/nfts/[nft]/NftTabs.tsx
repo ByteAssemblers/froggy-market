@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -79,6 +79,24 @@ export default function NftTabs() {
     },
   ];
 
+  const [pepecoinPrice, setPepecoinPrice] = useState<number>(0);
+
+  useEffect(() => {
+    const fetchPepecoinPrice = async () => {
+      try {
+        const response = await fetch(
+          "https://pepeblocks.com/ext/getcurrentprice",
+        );
+        const data = await response.json();
+        setPepecoinPrice(Number(data));
+      } catch (error) {
+        console.error("Failed to fetch Pepecoin price:", error);
+      }
+    };
+
+    fetchPepecoinPrice();
+  }, []);
+
   const [selectedSort, setSelectedSort] = useState("Price: lowest first");
   const [selectedFilter, setSelectedFilter] = useState(false);
 
@@ -127,8 +145,6 @@ export default function NftTabs() {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
-
-  const pepecoinPrice = 0.1957;
 
   return (
     <>
