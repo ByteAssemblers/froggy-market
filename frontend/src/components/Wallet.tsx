@@ -38,6 +38,7 @@ import {
 } from "@/lib/wallet/wallet";
 import { encryptWallet, decryptWallet } from "@/lib/wallet/storage";
 import { getPepecoinBalance } from "@/lib/wallet/getBalance";
+import { sendPepeTransaction } from "@/lib/wallet/sendPepe";
 
 const pepecoinPrice = 0.1957;
 
@@ -55,6 +56,9 @@ export default function Wallet() {
     null | "showSecrets" | "backup"
   >(null);
   const [hasBackedUp, setHasBackedUp] = useState(false);
+  const [recipient, setRecipient] = useState("");
+  const [amount, setAmount] = useState("");
+  const [sending, setSending] = useState(false);
   const [walletAddress, setWalletAddress] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -64,7 +68,6 @@ export default function Wallet() {
   const [lockPassword, setLockPassword] = useState("");
   const [lockError, setLockError] = useState("");
   const [showLockPassword, setShowLockPassword] = useState(false);
-  const [amount, setAmount] = useState(0);
   const [walletState, setWalletState] = useState<
     "empty" | "password" | "import" | "secret" | "mywallet" | "send" | "lock"
   >("empty");
@@ -180,6 +183,28 @@ export default function Wallet() {
     }
   }
 
+  async function handleSend() {
+    if (!wallet?.privateKey) return alert("Unlock your wallet first");
+    if (!recipient || !amount) return alert("Enter recipient and amount");
+
+    setSending(true);
+    try {
+      const txid = await sendPepeTransaction(
+        wallet.privateKey,
+        recipient,
+        parseFloat(amount),
+      );
+      alert(`✅ Transaction sent!\nTXID: ${txid}`);
+      setRecipient("");
+      setAmount("");
+      await handleGetBalance(); // refresh after sending
+    } catch (err: any) {
+      alert(`❌ Send failed: ${err.message}`);
+    } finally {
+      setSending(false);
+    }
+  }
+
   function handleSkipPassword(pwd?: string) {
     const passwordToUse = pwd || walletPassword;
     importText === ""
@@ -274,6 +299,27 @@ export default function Wallet() {
       setHasBackedUp(true);
     }
   }, [walletState]);
+
+  const isValidAddress =
+    recipient.startsWith("P") &&
+    recipient.length >= 26 &&
+    recipient.length <= 64;
+  const isValidAmount = Number(amount) > 0;
+  const hasEnoughBalance = balance !== null && Number(amount) <= balance;
+
+  let sendButtonText = "Send";
+  let sendButtonDisabled = false;
+
+  if (!isValidAddress) {
+    sendButtonText = "Enter valid address";
+    sendButtonDisabled = true;
+  } else if (!isValidAmount) {
+    sendButtonText = "Enter valid amount";
+    sendButtonDisabled = true;
+  } else if (!hasEnoughBalance) {
+    sendButtonText = "Not enough balance";
+    sendButtonDisabled = true;
+  }
 
   return (
     <Popover>
@@ -663,7 +709,7 @@ export default function Wallet() {
                               priority
                               className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
                             />
-                            0
+                            {balance?.toFixed(2)}
                           </div>
                         </div>
                       </div>
@@ -678,7 +724,7 @@ export default function Wallet() {
                             type="number"
                             placeholder="Enter amount"
                             value={amount}
-                            onChange={(e) => setAmount(Number(e.target.value))}
+                            onChange={(e) => setAmount(e.target.value)}
                             className="mr-0 w-full border-0 px-[0.6em] py-[0.3em] text-left outline-none"
                           />
                         </div>
@@ -686,7 +732,7 @@ export default function Wallet() {
                       <div className="mt-1 flex items-center">
                         {amount ? (
                           <div className="text-[0.9rem] text-white/90">
-                            ${(amount * pepecoinPrice).toFixed(2)}
+                            ${(Number(amount) * pepecoinPrice).toFixed(2)}
                           </div>
                         ) : (
                           ""
@@ -698,6 +744,8 @@ export default function Wallet() {
                       <input
                         type="text"
                         placeholder="Enter address"
+                        value={recipient}
+                        onChange={(e) => setRecipient(e.target.value)}
                         className="font-inherit mr-2 w-full border-0 bg-transparent px-[0.6em] py-[0.3em] text-left text-inherit outline-none"
                       />
                     </div>
@@ -712,15 +760,23 @@ export default function Wallet() {
                           priority
                           className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
                         />
-                        0.1
+                        0.01
                         <span className="text-[#fffc]">($0.02)</span>
                       </div>
                     </div>
                     <button
-                      disabled
-                      className="font-inherit mt-2.5 flex w-full justify-center rounded-[12px] border border-transparent px-4 py-2 text-[1em] font-bold transition-all duration-200 ease-in-out disabled:bg-[#1a1a1a] disabled:text-white"
+                      onClick={handleSend}
+                      disabled={sending || sendButtonDisabled}
+                      className="font-inherit mt-2.5 flex w-full justify-center rounded-[12px] border border-transparent bg-[#1a1a1a] px-4 py-2 text-[1em] font-bold text-white transition-all duration-200 ease-in-out"
                     >
-                      Enter valid address
+                      {sending ? (
+                        <>
+                          <Spinner className="size-6" />
+                          <>&#xA0;Broadcasting transaction</>
+                        </>
+                      ) : (
+                        sendButtonText
+                      )}
                     </button>
                   </>
                 )}
