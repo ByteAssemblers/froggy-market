@@ -1,6 +1,21 @@
-/* global BigInt */
-import { pepeNetwork as PEPE_NETWORK } from "./wallet/pepeNetwork";
+import * as bitcoinjs from "bitcoinjs-lib";
+import { ECPairFactory } from "ecpair";
+import * as ecc from "@bitcoinerlab/secp256k1";
+import { pepeNetwork } from "./wallet/pepeNetwork";
 import axios from "axios";
+import {
+  CONTENT_TYPE_BY_EXTENSION,
+  REVEAL_EXTRA_FLAT_FEE_SATS,
+  DEFAULT_SIGNATURE_PUSH_BYTES,
+  MAX_SCRIPT_CHUNK_BYTES,
+  MAX_PARTIAL_SCRIPT_BYTES,
+  FileExtension,
+} from "@/constants/inscription";
+
+let readyPromise: Promise<{ btc: any; ecc: any; ECPair: any }> | undefined;
+let BTC: any;
+let ECC: any;
+let ECPair: any;
 
 function extractHexField(data: any) {
   if (typeof data === "string") return data.trim();
@@ -51,16 +66,6 @@ export async function fetchUtxos(address: string) {
   }));
 }
 
-let readyPromise: Promise<{ btc: any; ecc: any; ECPair: any }> | undefined;
-let BTC: any;
-let ECC: any;
-let ECPair: any;
-
-export const REVEAL_EXTRA_FLAT_FEE_SATS = 1_000_000; // 0.01 PEP/DOGE in koinu
-export const REVEAL_FEE_PADDING_SATS = REVEAL_EXTRA_FLAT_FEE_SATS; // backwards compatibility alias
-const DEFAULT_SIGNATURE_PUSH_BYTES = 73;
-const MAX_SCRIPT_CHUNK_BYTES = 240; // match legacy pepinals chunking to stay indexable
-const MAX_PARTIAL_SCRIPT_BYTES = 1_500; // limit scriptSig payload to avoid policy rejection
 
 export function ensureCryptoReady(): Promise<{
   btc: any;
@@ -83,8 +88,8 @@ export function ensureCryptoReady(): Promise<{
   return readyPromise;
 }
 
-export const getBtc = async () => (await ensureCryptoReady()).btc;
-export const getECPair = async () => (await ensureCryptoReady()).ECPair;
+const getBtc = async () => (await ensureCryptoReady()).btc;
+const getECPair = async () => (await ensureCryptoReady()).ECPair;
 
 interface NormalizeSatsOptions {
   allowZero?: boolean;
@@ -154,7 +159,7 @@ function compileScriptLength(items: any[]): number {
 
 export const buildEPH = async () => {
   const pair = await getECPair();
-  return pair.makeRandom({ network: PEPE_NETWORK });
+  return pair.makeRandom({ network: pepeNetwork });
 };
 
 export async function finalizeAndExtractPsbtBase64(
@@ -471,7 +476,7 @@ export async function buildCommitPsbtMulti({
   commitOutputValueOverride?: number;
 }) {
   const btc = await getBtc();
-  const psbt = new btc.Psbt({ network: PEPE_NETWORK });
+  const psbt = new btc.Psbt({ network: pepeNetwork });
   psbt.setVersion(1);
 
   if (!utxos?.length) throw new Error("No UTXOs provided");
@@ -601,7 +606,7 @@ export async function buildChainedCommitTx({
 }) {
   const btc = await getBtc();
   const pair = await getECPair();
-  const keyPair = pair.fromWIF(ephemeralWIF, PEPE_NETWORK);
+  const keyPair = pair.fromWIF(ephemeralWIF, pepeNetwork);
 
   const inputTxId = typeof prevTxId === "string" ? prevTxId : "";
   if (!/^[0-9a-fA-F]{64}$/.test(inputTxId)) {
@@ -614,7 +619,7 @@ export async function buildChainedCommitTx({
     throw new Error("buildChainedCommitTx: nextLockScript is required");
   }
 
-  const psbt = new btc.Psbt({ network: PEPE_NETWORK });
+  const psbt = new btc.Psbt({ network: pepeNetwork });
   psbt.setVersion(1);
 
   psbt.addInput({
@@ -671,26 +676,16 @@ export async function buildAndSignRevealTx({
   feeRate: number;
   revealFeePadding?: number;
 }) {
-  // console.log(prevTxId);
-  // console.log(prevVout);
-  // console.log(prevRawTx);
-  // console.log(lockScript);
-  // console.log(partialItems);
-  // console.log(revealOutputValue);
-  // console.log(toAddress);
-  // console.log(ephemeralWIF);
-  // console.log(feeRate);
-  // console.log(revealFeePadding);
   const btc = await getBtc();
   const pair = await getECPair();
-  const keyPair = pair.fromWIF(ephemeralWIF, PEPE_NETWORK);
+  const keyPair = pair.fromWIF(ephemeralWIF, pepeNetwork);
   const { address: p2pkh } = btc.payments.p2pkh({
     pubkey: keyPair.publicKey,
-    network: PEPE_NETWORK,
+    network: pepeNetwork,
   });
   if (!p2pkh) throw new Error("Failed to derive ephemeral P2PKH");
 
-  const psbt = new btc.Psbt({ network: PEPE_NETWORK });
+  const psbt = new btc.Psbt({ network: pepeNetwork });
   psbt.setVersion(1);
 
   const revealOutputSats = normalizeSats(
@@ -725,7 +720,7 @@ export async function buildAndSignRevealTx({
     nonWitnessUtxo: Buffer.from(prevRawTx, "hex"),
     redeemScript: lockScript,
   });
-  
+
   psbt.addOutput({
     address: toAddress,
     value: BigInt(revealOutputSats),
@@ -749,4 +744,196 @@ export async function buildAndSignRevealTx({
 
   const tx = psbt.extractTransaction();
   return tx.toHex();
+}
+
+const ECPairFac = ECPairFactory(ecc);
+
+function withCharsetIfNeeded(type: any) {
+  const normalized = typeof type === "string" ? type.trim() : "";
+  if (!normalized) return "application/octet-stream";
+  const lower = normalized.toLowerCase();
+  const needsCharset =
+    lower.startsWith("text/") ||
+    lower === "application/json" ||
+    lower === "application/javascript";
+  if (needsCharset && !lower.includes("charset=")) {
+    return `${normalized};charset=utf-8`;
+  }
+  return normalized;
+}
+
+export function resolveFileContentType(file: any) {
+  if (!file) return "application/octet-stream";
+  const declared = typeof file.type === "string" ? file.type.trim() : "";
+  if (declared) {
+    return withCharsetIfNeeded(declared);
+  }
+  const name = typeof file.name === "string" ? file.name.trim() : "";
+  if (name) {
+    const dotIndex = name.lastIndexOf(".");
+    if (dotIndex !== -1 && dotIndex < name.length - 1) {
+      const ext:FileExtension = name.slice(dotIndex + 1).toLowerCase();
+      if (
+        Object.prototype.hasOwnProperty.call(CONTENT_TYPE_BY_EXTENSION, ext)
+      ) {
+        return CONTENT_TYPE_BY_EXTENSION[ext];
+      }
+    }
+  }
+  return "application/octet-stream";
+}
+
+function normalizeRawHexPayload(rawHex: any, label: string): string {
+  const trimmed = String(rawHex ?? "").trim();
+  if (!trimmed) {
+    throw new Error(`${label}: raw hex payload is empty`);
+  }
+  return trimmed;
+}
+
+// Function to broadcast the raw hex transaction to the Pepecoin node
+async function broadcastRawHex(
+  path: string,
+  rawHex: any,
+  { label = "broadcast", query }: { label?: string; query?: string } = {},
+) {
+  const trimmed = normalizeRawHexPayload(rawHex, label);
+  const endpoint = query
+    ? `${path}${query.startsWith("?") ? query : `?${query}`}`
+    : path;
+
+  return axios.post(endpoint, trimmed, {
+    headers: { "Content-Type": "text/plain" },
+  });
+}
+
+// Pepecoin API object with a method to broadcast a transaction
+function broadcastTransaction(rawHex: any, opts: any = {}) {
+  const query = opts.allowHighFees ? "?allowHighFees=true" : "";
+  return broadcastRawHex(`api/inscribe`, rawHex, {
+    label: "pepecoinApi.broadcastTransaction",
+    query,
+  });
+}
+
+// Function to post the transaction to the Pepecoin node
+async function postPepecoinTransaction(rawHex: any, options = {}) {
+  return broadcastTransaction(rawHex, options);
+}
+
+// Function to broadcast the raw transaction core to Pepecoin
+export async function broadcastRawTxCore(hex: any) {
+  const bodyHex = String(hex ?? "")
+    .trim()
+    .replace(/^"|"$/g, "");
+
+  if (!/^[0-9a-fA-F]+$/.test(bodyHex) || bodyHex.length % 2 !== 0) {
+    throw new Error("broadcastRawTxCore: invalid raw tx hex");
+  }
+  if (bodyHex.startsWith("70736274ff") || bodyHex.startsWith("cHNidP")) {
+    throw new Error("broadcastRawTxCore: got PSBT, need signed raw tx hex");
+  }
+
+  // Broadcasting the raw transaction
+  const res: any = await postPepecoinTransaction(bodyHex);
+  const data: any = res.data;
+  // Handle the response
+  if (data && typeof data === "object") {
+    if (typeof data.txid === "string" && data.txid.length === 64) {
+      return data.txid;
+    }
+    if (typeof data.result === "string" && data.result.length === 64) {
+      return data.result;
+    }
+  }
+  if (typeof data === "string" && data.length === 64) {
+    return data;
+  }
+
+  throw new Error(
+    `Pepecoin broadcast failed: unexpected response ${JSON.stringify(res)}`,
+  );
+}
+
+async function isTxConfirmed(txid: any) {
+  try {
+    const res = await axios
+      .get(`https://api2.dogepaywallet.space/tx/${txid}/status`)
+      .then((r) => r.data);
+
+    if (res && typeof res === "object") {
+      if (typeof res.confirmed === "boolean") return res.confirmed;
+      if (res.status && typeof res.status.confirmed === "boolean") {
+        return res.status.confirmed;
+      }
+    }
+  } catch (_err) {
+    return false;
+  }
+  return false;
+}
+
+function wait(ms: any) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export async function waitForRawTx(
+  txid: any,
+  {
+    timeoutMs = 60_000,
+    intervalMs = 1_500,
+    jitterMs = 300,
+    confirmed = false,
+  } = {},
+) {
+  const deadline = Date.now() + timeoutMs;
+  let lastErr;
+
+  while (Date.now() < deadline) {
+    try {
+      const hex = await fetchRawTransaction(txid);
+      if (typeof hex === "string" && /^[0-9a-fA-F]+$/.test(hex)) {
+        if (!confirmed) {
+          return hex;
+        }
+        const txConfirmed = await isTxConfirmed(txid);
+        if (txConfirmed) return hex;
+      }
+    } catch (e) {
+      lastErr = e;
+    }
+
+    const waitMs = intervalMs + Math.floor(Math.random() * jitterMs);
+    await wait(waitMs);
+  }
+
+  throw new Error(
+    `Raw tx not available for ${txid} after ${timeoutMs}ms. Last error: ${String(lastErr)}`,
+  );
+}
+
+export async function signPsbtWithWallet(
+  psbtBase64: any,
+  privateKey: String,
+  opts: any = {},
+) {
+  const wif: any = privateKey;
+  const toSignInputs = Array.isArray(opts?.toSignInputs)
+    ? opts.toSignInputs
+        .map((entry: any) => (typeof entry === "number" ? entry : entry?.index))
+        .filter((idx: any) => Number.isInteger(idx) && idx >= 0)
+    : [];
+
+  const psbt = bitcoinjs.Psbt.fromBase64(psbtBase64, { network: pepeNetwork });
+  const keyPair = ECPairFac.fromWIF(wif.trim(), pepeNetwork);
+
+  if (toSignInputs.length) {
+    toSignInputs.forEach((idx: any) => {
+      psbt.signInput(idx, keyPair);
+    });
+  } else {
+    psbt.signAllInputs(keyPair);
+  }
+
+  return psbt.toBase64();
 }

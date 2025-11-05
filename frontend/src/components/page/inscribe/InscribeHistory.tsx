@@ -1,4 +1,4 @@
-import { RefreshCcw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 
 export default function InscribeHistory() {
   return (
@@ -8,7 +8,7 @@ export default function InscribeHistory() {
           History
         </h3>
         <div className="inline-flex cursor-pointer items-center gap-2">
-          <RefreshCcw />
+          <RefreshCw />
           <span>Refresh</span>
         </div>
       </div>
