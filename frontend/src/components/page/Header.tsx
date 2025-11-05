@@ -15,7 +15,7 @@ export default function Header() {
           className="tiny:px-4 -mt-[0.7rem] -mb-[0.7rem] flex shrink-0 items-center"
         >
           <Image
-            src="assets/Logo.png"
+            src="/assets/Logo.png"
             alt="logo"
             width={40}
             height={40}

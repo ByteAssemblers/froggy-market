@@ -1,4 +1,6 @@
 "use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,8 +12,33 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import Avatar from "@/components/Avatar";
 
 export default function TickTabs({ tick }: { tick: string }) {
+  const [info, setInfo] = useState<any>();
+  const [holders, setHolders] = useState<any[]>([]);
+  useEffect(() => {
+    const fetchData = async () => {
+      const response = await fetch(`/api/belindex/token?tick=${tick}`);
+      const data = await response.json();
+      setInfo(data);
+    };
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    const fetchHolders = async () => {
+      const response = await fetch(`/api/belindex/holders?tick=${tick}&page=1`);
+      const data = await response.json();
+      setHolders(data.holders);
+    };
+    fetchHolders();
+  }, []);
+
+  if (!info) {
+    return <div>Loading...</div>;
+  }
+
   return (
     <Tabs defaultValue="activity" className="relative">
       <TabsList className="my-4 flex shrink-0 flex-wrap items-center justify-between bg-transparent">
@@ -52,13 +79,7 @@ export default function TickTabs({ tick }: { tick: string }) {
                       href={`/${tick}`}
                       className="flex-none basis-[42px] leading-0 text-inherit"
                     >
-                      <Image
-                        src="https://api.doggy.market/static/drc-20/dogi.png"
-                        alt="PRC-20"
-                        width={42}
-                        height={42}
-                        unoptimized
-                      />
+                      <Avatar text={tick} />
                     </Link>
                     <div>
                       <span className="leading-[1.1]">{tick}</span>
@@ -144,21 +165,21 @@ export default function TickTabs({ tick }: { tick: string }) {
             </TableRow>
           </TableHeader>
           <TableBody className="text-[16px]">
-            {[...Array(20)].map((_, i) => (
-              <TableRow key={i}>
-                <TableCell>{i + 1}</TableCell>
+            {holders.map((item: any) => (
+              <TableRow key={item.rank}>
+                <TableCell>{item.rank}</TableCell>
                 <TableCell>
                   <Link
-                    href="wallet/DU8vFnq97hFhD6RG9kgaeu9avVbBgNxkFa"
+                    href={`wallet/${item.address}`}
                     className="cursor-pointer font-medium text-[#c891ff] decoration-inherit"
                   >
-                    DU8vFnq97hFhD6RG9kgaeu9avVbBgNxkFa
+                    {item.address}
                   </Link>
                 </TableCell>
-                <TableCell>1,000,000</TableCell>
-                <TableCell>4.8%</TableCell>
-                <TableCell>0</TableCell>
-                <TableCell>1,000,000</TableCell>
+                <TableCell>{Number(item.balance).toLocaleString()}</TableCell>
+                <TableCell>{Number(item.percent).toFixed(2)}%</TableCell>
+                <TableCell>-</TableCell>
+                <TableCell>-,---,---</TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -224,28 +245,35 @@ export default function TickTabs({ tick }: { tick: string }) {
               <div className="text-[90%] leading-none">Inscription</div>
               <div className="font-bold">
                 <Link
-                  href="/inscription/0bd32d69ca2221f3fc34d99aa14bccc2af10eedc7514770ae842ab9a72468743i0"
+                  href={`/inscription/${info.genesis}`}
                   className="cursor-pointer font-medium text-[#c891ff] decoration-inherit"
                 >
-                  0bd32...743i0
+                  {info.genesis.slice(0, 5)}...{info.genesis.slice(-5)}
                 </Link>
               </div>
             </div>
             <div className="mb-2 whitespace-nowrap">
               <div className="text-[90%] leading-none">Total supply</div>
-              <div className="font-bold">21,000,000</div>
+              <div className="font-bold">
+                {Number(info.max).toLocaleString()}
+              </div>
             </div>
             <div className="mb-2 whitespace-nowrap">
               <div className="text-[90%] leading-none">Minted</div>
-              <div className="font-bold">21,000,000 | 100%</div>
+              <div className="font-bold">
+                {Number(info.max).toLocaleString()} |
+                {Number(info.mint_percent).toFixed(2)}%
+              </div>
             </div>
             <div className="mb-2 whitespace-nowrap">
               <div className="text-[90%] leading-none">Mint limit</div>
-              <div className="font-bold">1,000</div>
+              <div className="font-bold">
+                {Number(info.lim).toLocaleString()}
+              </div>
             </div>
             <div className="mb-2 whitespace-nowrap">
               <div className="text-[90%] leading-none">Decimals</div>
-              <div className="font-bold">18</div>
+              <div className="font-bold">{info.dec}</div>
             </div>
           </div>
           <div>
@@ -253,28 +281,32 @@ export default function TickTabs({ tick }: { tick: string }) {
               <div className="text-[90%] leading-none">Deployer address</div>
               <div className="font-bold">
                 <Link
-                  href="/wallet/DAiBiq6oNcUZZV7xVUxJ59Skbovx8NkLwu"
+                  href={`/wallet/${info.deployer}`}
                   className="cursor-pointer font-medium text-[#c891ff] decoration-inherit"
                 >
-                  DAiBi...NkLwu
+                  {info.deployer.slice(0, 5)}...{info.deployer.slice(-5)}
                 </Link>
               </div>
             </div>
             <div className="mb-2 whitespace-nowrap">
               <div className="text-[90%] leading-none">Deployed at</div>
-              <div className="font-bold">11.03.2023 10:22:28</div>
+              <div className="font-bold">
+                {new Date(info.created).toLocaleString("en-GB")}
+              </div>
             </div>
             <div className="mb-2 whitespace-nowrap">
               <div className="text-[90%] leading-none">Holders</div>
-              <div className="font-bold">11,107</div>
+              <div className="font-bold">{info.holders.toLocaleString()}</div>
             </div>
             <div className="mb-2 whitespace-nowrap">
               <div className="text-[90%] leading-none">Transfers</div>
-              <div className="font-bold">120,236</div>
+              <div className="font-bold">{info.height.toLocaleString()}</div>
             </div>
             <div className="mb-2 whitespace-nowrap">
               <div className="text-[90%] leading-none">Mint transactions</div>
-              <div className="font-bold">21,113</div>
+              <div className="font-bold">
+                {info.transactions.toLocaleString()}
+              </div>
             </div>
           </div>
         </div>

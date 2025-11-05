@@ -1,25 +1,35 @@
 "use client";
+
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { FloorPriceChart } from "@/components/FloorPriceChart";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import Avatar from "@/components/Avatar";
 
 export default function TickInfo({ tick }: { tick: string }) {
+  const [info, setInfo] = useState<any>();
+  useEffect(() => {
+    const fetchData = async () => {
+      const response = await fetch(`/api/belindex/token?tick=${tick}`);
+      const data = await response.json();
+      setInfo(data);
+    };
+    fetchData();
+  }, []);
+
+  if (!info) {
+    return <div>Loading...</div>;
+  }
+
   return (
     <div className="flex gap-x-8">
       <div className="w-0 grow basis-105">
         <div className="mt-4 mb-8 flex items-center justify-between">
           <div className="flex items-center">
-            <Image
-              src="https://api.doggy.market/static/drc-20/dogi.png"
-              alt={`PRC-20`}
-              width={48}
-              height={48}
-              className="mr-4 h-12 w-12 rounded-full object-cover"
-              unoptimized
-            />
-            <div className="flex flex-wrap items-center gap-x-12 gap-y-[0.2rem]">
+            <Avatar text={tick} />
+            <div className="ml-4 flex flex-wrap items-center gap-x-12 gap-y-[0.2rem]">
               <h1 className="m-0 text-[2.3rem] leading-[1.1]">{tick}</h1>
               <div className="flex">
                 <Link
@@ -71,7 +81,7 @@ export default function TickInfo({ tick }: { tick: string }) {
                   priority
                   className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
                 />
-                0.52
+                -
               </div>
               <div className="text-[90%] leading-none text-[#fffc]">Price</div>
             </div>
@@ -85,7 +95,7 @@ export default function TickInfo({ tick }: { tick: string }) {
                   >
                     <path d="M288.662 352H31.338c-17.818 0-26.741-21.543-14.142-34.142l128.662-128.662c7.81-7.81 20.474-7.81 28.284 0l128.662 128.662c12.6 12.599 3.676 34.142-14.142 34.142z"></path>
                   </svg>
-                  <span>8.1%</span>
+                  <span>-%</span>
                 </span>
               </div>
               <div className="text-[90%] leading-none text-[#fffc]">24h %</div>
@@ -100,7 +110,7 @@ export default function TickInfo({ tick }: { tick: string }) {
                   priority
                   className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
                 />
-                11,025
+                -
               </div>
               <div className="text-[90%] leading-none text-[#fffc]">
                 Volume (24h)
@@ -116,14 +126,14 @@ export default function TickInfo({ tick }: { tick: string }) {
                   priority
                   className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
                 />
-                96,042,454
+                -
               </div>
               <div className="text-[90%] leading-none text-[#fffc]">
                 Total volume
               </div>
             </div>
             <div className="mb-2 ml-12">
-              <div className="font-bold">$2.2M</div>
+              <div className="font-bold">$-</div>
               <div className="text-[90%] leading-none text-[#fffc]">
                 Market cap
               </div>
@@ -131,17 +141,19 @@ export default function TickInfo({ tick }: { tick: string }) {
           </div>
           <div className="-ml-12 flex flex-wrap">
             <div className="mb-2 ml-12">
-              <div className="font-bold">21,000,000</div>
+              <div className="font-bold">
+                {Number(info.max).toLocaleString()}
+              </div>
               <div className="text-[90%] leading-none text-[#fffc]">
                 Total supply
               </div>
             </div>
             <div className="mb-2 ml-12">
-              <div className="font-bold">100%</div>
+              <div className="font-bold">{info.mint_percent}%</div>
               <div className="text-[90%] leading-none text-[#fffc]">Minted</div>
             </div>
             <div className="mb-2 ml-12">
-              <div className="font-bold">11,108</div>
+              <div className="font-bold">{info.holders.toLocaleString()}</div>
               <div className="text-[90%] leading-none text-[#fffc]">
                 Holders
               </div>

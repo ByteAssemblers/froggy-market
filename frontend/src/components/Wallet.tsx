@@ -39,6 +39,7 @@ import {
 import { encryptWallet, decryptWallet } from "@/lib/wallet/storage";
 import { getPepecoinBalance } from "@/lib/wallet/getBalance";
 import { sendPepeTransaction } from "@/lib/wallet/sendPepe";
+import { ca, tr } from "date-fns/locale";
 
 export default function Wallet() {
   const [wallet, setWallet] = useState<any>(null);
@@ -70,6 +71,7 @@ export default function Wallet() {
     "empty" | "password" | "import" | "secret" | "mywallet" | "send" | "lock"
   >("empty");
   const [pepecoinPrice, setPepecoinPrice] = useState<number>(0);
+  const [tick, setTick] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchPepecoinPrice = async () => {
@@ -112,6 +114,20 @@ export default function Wallet() {
       }
     }
   }, []);
+
+  // useEffect(() => {
+  //   const fetchTick = async () => {
+  //     try {
+  //       const response = await fetch(
+  //         `http://localhost:8000/address/${wallet.address}`,
+  //       );
+  //       const data = await response.json();
+  //       setTick(data);
+  //     } catch (error) {}
+  //   };
+  //   fetchTick();
+  // }, [wallet]);
+  // console.log(tick);
 
   async function handleGetBalance() {
     if (!wallet?.address) return;

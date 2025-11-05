@@ -1,6 +1,68 @@
-import { RefreshCw } from "lucide-react";
+"use client";
+
+import { useEffect, useState } from "react";
+import { decryptWallet } from "@/lib/wallet/storage";
+import { ChevronUp, ChevronDown, Link, RefreshCw } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 
 export default function InscribeHistory() {
+  const [hasSavedWallet, setHasSavedWallet] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
+  const [wallet, setWallet] = useState<any>(null);
+  const [walletAddress, setWalletAddress] = useState("");
+  const [inscriptions, setInscriptions] = useState<any[]>([]);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("pepecoin_wallet");
+
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      setHasSavedWallet(true);
+
+      if (parsed.passwordProtected) {
+        setIsLocked(true);
+      } else {
+        decryptWallet(parsed, "")
+          .then((w) => {
+            setWallet(w);
+            const fetchWallet = async () => {
+              let page = 1;
+              let allInscriptions: any = [];
+              let continueFetching = true;
+              
+              while (continueFetching) {
+                const response = await fetch(
+                  `http://localhost:7777/inscriptions/balance/${w.address}/${page}`,
+                );
+                const data = await response.json();
+                if (data.inscriptions && data.inscriptions.length > 0) {
+                  // Add the new inscriptions to the list
+                  allInscriptions = [...allInscriptions, ...data.inscriptions];
+
+                  // Move to the next page
+                  page++;
+                } else {
+                  // Stop if no more inscriptions are found
+                  continueFetching = false;
+                }
+              }
+
+              // Sort inscriptions by timestamp in descending order
+              allInscriptions.sort(
+                (a: any, b: any) => b.timestamp - a.timestamp,
+              );
+
+              // Update the state with the sorted inscriptions
+              setInscriptions(allInscriptions);
+            };
+
+            fetchWallet();
+          })
+          .catch(() => console.error("Auto-unlock failed"));
+      }
+    }
+  }, []);
+
   return (
     <>
       <div className="mt-6 mb-4 flex items-center justify-between">
@@ -12,7 +74,44 @@ export default function InscribeHistory() {
           <span>Refresh</span>
         </div>
       </div>
-      <div>Empty</div>
+      <div>
+        {inscriptions.map((item, index) => (
+          <div key={index}>
+            <div className="flex items-center gap-4">
+              <div>{item.utxo.txid}</div>
+              <div className="mr-auto text-[0.9rem]">
+                {formatDistanceToNow(
+                  new Date(item.timestamp * 1000).toLocaleString(),
+                )}
+              </div>
+              <a
+                href="#"
+                className="cursor-pointer text-[0.9rem] font-medium text-[#c891ff] [text-decoration:inherit]"
+              >
+                copy metadata
+              </a>
+              <div className="text-right text-green-500">
+                <div>inscribed</div>
+                <div>1/1</div>
+              </div>
+              <ChevronUp />
+            </div>
+            <div className="flex gap-2 text-[0.9rem]">
+              <div>{item.content_type}</div>
+              <div>{item.content_length} bytes</div>
+              <div className="ml-auto flex">
+                <Link
+                  href={`inscription/${item.inscription_id}`}
+                  className="mr-4 cursor-pointer font-medium text-[#dfc0fd] [text-decoration:inherit]"
+                >
+                  {item.inscription_id}
+                </Link>
+                <span className="text-green-500">confirmed</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </>
   );
 }
