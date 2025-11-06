@@ -56,7 +56,7 @@ export function NftInfo({ nft }: { nft: any }) {
             </div>
             <div className="flex">
               <Link
-                href={selectedCollection.onlineUrl}
+                href={selectedCollection.socialLink}
                 className="mr-4 leading-none text-[#fffc]"
               >
                 <svg

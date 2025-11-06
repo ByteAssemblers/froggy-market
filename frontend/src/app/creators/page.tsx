@@ -9,20 +9,28 @@ export default function Creators() {
   const [creatorState, setCreatorState] = useState<
     "setup" | "dashboard" | "list"
   >("setup");
-  const { walletInfo, isLocked, hasSavedWallet, walletAddress } = useProfile();
+  const {
+    walletInfo,
+    isLocked,
+    hasSavedWallet,
+    walletAddress,
+    collections,
+    isCollectionsLoading,
+    collectionsError,
+  } = useProfile();
 
   const [collectionData, setCollectionData] = useState({
     name: "",
     symbol: "",
     description: "",
     profileInscriptionId: "",
-    onlineUrl: "",
-    myUrl: "",
+    socialLink: "",
+    personalLink: "",
     totalSupply: "",
     inscriptionsList: "",
   });
 
-  const [collections, setCollections] = useState<any[]>([]);
+  const [collectionList, setCollectionList] = useState<any[]>([]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -36,22 +44,18 @@ export default function Creators() {
   }, []);
 
   useEffect(() => {
-    const fetchCollections = async () => {
-      if (walletAddress) {
-        try {
-          const response = await fetch(
-            `http://localhost:5555/api/collections/${walletAddress}`,
-          );
-          const data = await response.json();
-          setCollections(data);
-        } catch (error) {
-          console.error("Failed to fetch collections:", error);
-        }
-      }
-    };
+    if (collections && !isCollectionsLoading) {
+      const userCollections = collections.filter(
+        (col: any) => col.walletAddress === walletAddress,
+      );
+      setCollectionList(userCollections);
+    }
+  }, [collections, isCollectionsLoading, walletAddress]);
 
-    fetchCollections();
-  }, [walletAddress]);
+  if (isCollectionsLoading) return <div>Loading...</div>;
+  if (collectionsError) return <div>Error loading collections</div>;
+
+  if (!collectionList.length) return <div>No collections found</div>;
 
   const handleSubmit = async () => {
     if (
@@ -60,7 +64,7 @@ export default function Creators() {
       !collectionData.description ||
       !collectionData.totalSupply ||
       !collectionData.profileInscriptionId ||
-      !collectionData.onlineUrl
+      !collectionData.socialLink
     ) {
       alert("Please fill out all required fields.");
       return;
@@ -90,11 +94,11 @@ export default function Creators() {
           symbol: collectionData.symbol,
           description: collectionData.description,
           profileInscriptionId: collectionData.profileInscriptionId,
-          onlineUrl: collectionData.onlineUrl,
-          myUrl: collectionData.myUrl,
+          socialLink: collectionData.socialLink,
+          personalLink: collectionData.personalLink,
           totalSupply: Number(collectionData.totalSupply),
-          inscriptionsList: JSON.parse(collectionData.inscriptionsList || "[]"),
-          walletAddress: walletAddress,
+          inscriptions: JSON.parse(collectionData.inscriptionsList || "[]"),
+          wallet: walletAddress,
         }),
       });
 
@@ -139,7 +143,7 @@ export default function Creators() {
                 </button>
               </div>
               <div className="flex flex-wrap gap-8">
-                {collections.map((item, index) => (
+                {collectionList.map((item: any, index: any) => (
                   <div
                     key={index}
                     className="flex w-40 flex-col overflow-hidden"
@@ -225,10 +229,10 @@ export default function Creators() {
                 <div className="mb-6">
                   <div className="mb-2">X (twitter) link:</div>
                   <input
-                    name="onlineUrl"
+                    name="socialLink"
                     type="text"
                     placeholder="https://x.com/mycollection"
-                    value={collectionData.onlineUrl}
+                    value={collectionData.socialLink}
                     onChange={handleChange}
                     className="font-inherit mr-2 w-80 max-w-full border-b border-[tan] bg-transparent p-1.5 text-center text-inherit outline-none focus:border-[violet]"
                   />
@@ -236,10 +240,10 @@ export default function Creators() {
                 <div className="mb-6">
                   <div className="mb-2">Website url (optional):</div>
                   <input
-                    name="myUrl"
+                    name="personalLink"
                     type="text"
                     placeholder="https://mycollection.com"
-                    value={collectionData.myUrl}
+                    value={collectionData.personalLink}
                     onChange={handleChange}
                     className="font-inherit mr-2 w-80 max-w-full border-b border-[tan] bg-transparent p-1.5 text-center text-inherit outline-none focus:border-[violet]"
                   />

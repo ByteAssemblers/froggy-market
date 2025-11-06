@@ -54,7 +54,7 @@ export function NftTabs({ nft }: { nft: string }) {
   useEffect(() => {
     if (collections && !isCollectionsLoading) {
       const collection = collections.find((col: any) => col.symbol === nft);
-      setInscriptionList(collection.inscriptionsList);
+      setInscriptionList(collection.inscriptions);
     }
   }, [collections, isCollectionsLoading, nft]);
 
@@ -154,9 +154,9 @@ export function NftTabs({ nft }: { nft: string }) {
                 {currentItems.map((item: any, index: any) => (
                   <Card
                     key={index}
-                    className="relative w-56 gap-0! pt-0 pb-0 hover:border-[#8c45ff] hover:[&_div]:[&_button]:bg-[#8c45ff] hover:[&_div]:[&_button]:text-white"
+                    className={`relative w-56 gap-0! pt-0 pb-0 ${item.activities[item.activities.length - 1]?.state == "listed" && "hover:border-[#8c45ff] hover:[&_div]:[&_button]:bg-[#8c45ff] hover:[&_div]:[&_button]:text-white"} `}
                   >
-                    <div className="pointer-events-none absolute top-0 right-0 rounded-bl-[12px] bg-[#0000006b] px-2 py-0 text-[0.9rem] font-semibold text-white">
+                    <div className="pointer-events-none absolute top-0 right-0 rounded-tr-[12px] rounded-bl-[12px] bg-[#0000006b] px-2 py-0 text-[0.9rem] font-semibold text-white">
                       #{item.name}
                     </div>
                     <Link href={`/inscription/${item.inscriptionId}`}>
@@ -174,138 +174,153 @@ export function NftTabs({ nft }: { nft: string }) {
                         <span>{item.name}</span>
                         <span>#{item.name}</span>
                       </div>
-                      <div className="mt-auto border-t border-white/10 py-1">
-                        <div className="flex justify-center text-center">
-                          <Image
-                            src="/assets/coin.gif"
-                            alt="coin"
-                            width={18}
-                            height={18}
-                            priority
-                            className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
-                          />
-                          {item.name}&#xA0;
-                          <span className="text-[0.9rem] text-[#fffc]">
-                            {/* (${(item.price * pepecoinPrice).toFixed(2)}) */}
-                          </span>
+                      {item.activities[item.activities.length - 1]?.state ==
+                      "listed" ? (
+                        <div className="mt-auto border-t border-white/10 py-1">
+                          <div className="flex justify-center text-center">
+                            <Image
+                              src="/assets/coin.gif"
+                              alt="coin"
+                              width={18}
+                              height={18}
+                              priority
+                              className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                            />
+                            {item.name}&#xA0;
+                            <span className="text-[0.9rem] text-[#fffc]">
+                              {/* (${(item.price * pepecoinPrice).toFixed(2)}) */}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                      <Dialog>
-                        <DialogTrigger className="font-inherit w-full cursor-pointer rounded-[12px] border-0 bg-[#e6d8fe] px-4 py-2 text-[1em] font-extrabold text-[#9c63fa] transition-all duration-250 ease-in-out">
-                          Buy
-                        </DialogTrigger>
-                        <DialogContent className="my-[50px] box-border flex min-h-[500px] w-xl max-w-[calc(100%-1rem)] shrink-0 grow-0 scale-100 flex-col overflow-visible rounded-[12px] bg-[#ffffff1f] p-6 opacity-100 backdrop-blur-xl transition-opacity duration-200 ease-linear">
-                          <DialogHeader>
-                            <DialogTitle className="mt-0 mb-2 text-center text-3xl leading-[1.1] font-semibold text-[#e6d8fe]">
-                              Buy {item.name}
-                            </DialogTitle>
-                            <DialogDescription></DialogDescription>
-                            <div className="mb-2 flex max-h-104 flex-wrap justify-center gap-2.5 overflow-y-auto">
-                              <div className="rounded-[12px] bg-[#00000080] p-2">
-                                <div className="flex">
-                                  <Image
-                                    src={`http://localhost:7777/content/${item.inscriptionId}`}
-                                    alt={`Inscription #${item.inscriptionId}`}
-                                    width={144}
-                                    height={144}
-                                    className="mx-auto h-36 w-36 rounded-md text-[0.8rem]"
-                                    unoptimized
-                                  />
-                                </div>
-                                <div className="mt-2 text-center text-[1rem] text-white">
-                                  {/* {item.collectionname} #{item.collectionid} */}
-                                  <div className="text-center text-[0.8rem] text-[#dfc0fd]">
-                                    {/* #{item.id} */}
+                      ) : (
+                        <div className="mt-auto h-1"></div>
+                      )}
+                      {item.activities[item.activities.length - 1]?.state ==
+                      "listed" ? (
+                        <Dialog>
+                          <DialogTrigger className="font-inherit w-full cursor-pointer rounded-[12px] border-0 bg-[#e6d8fe] px-4 py-2 text-[1em] font-extrabold text-[#9c63fa] transition-all duration-250 ease-in-out">
+                            Buy
+                          </DialogTrigger>
+                          <DialogContent className="my-[50px] box-border flex min-h-[500px] w-xl max-w-[calc(100%-1rem)] shrink-0 grow-0 scale-100 flex-col overflow-visible rounded-[12px] bg-[#ffffff1f] p-6 opacity-100 backdrop-blur-xl transition-opacity duration-200 ease-linear">
+                            <DialogHeader>
+                              <DialogTitle className="mt-0 mb-2 text-center text-3xl leading-[1.1] font-semibold text-[#e6d8fe]">
+                                Buy {item.name}
+                              </DialogTitle>
+                              <DialogDescription></DialogDescription>
+                              <div className="mb-2 flex max-h-104 flex-wrap justify-center gap-2.5 overflow-y-auto">
+                                <div className="rounded-[12px] bg-[#00000080] p-2">
+                                  <div className="flex">
+                                    <Image
+                                      src={`http://localhost:7777/content/${item.inscriptionId}`}
+                                      alt={`Inscription #${item.inscriptionId}`}
+                                      width={144}
+                                      height={144}
+                                      className="mx-auto h-36 w-36 rounded-md text-[0.8rem]"
+                                      unoptimized
+                                    />
+                                  </div>
+                                  <div className="mt-2 text-center text-[1rem] text-white">
+                                    {/* {item.collectionname} #{item.collectionid} */}
+                                    <div className="text-center text-[0.8rem] text-[#dfc0fd]">
+                                      {/* #{item.id} */}
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                            </div>
-                            <div className="mt-auto grid grid-cols-[1fr_auto_auto] leading-[1.6]">
-                              <div className="text-[0.95rem] text-white">
-                                Taker fee (2.8%)
+                              <div className="mt-auto grid grid-cols-[1fr_auto_auto] leading-[1.6]">
+                                <div className="text-[0.95rem] text-white">
+                                  Taker fee (2.8%)
+                                </div>
+                                <div className="flex text-[1rem] text-white">
+                                  <Image
+                                    src="/assets/coin.gif"
+                                    alt="coin"
+                                    width={18}
+                                    height={18}
+                                    priority
+                                    className="mt-[0.1rem] mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                                  />
+                                  {/* {((item.price * 2.8) / 100).toFixed(2)} */}
+                                </div>
+                                <span className="ml-4 text-right text-[0.9rem] text-[#fffc]">
+                                  $
+                                  {/* {(item.price * 0.028 * pepecoinPrice).toFixed(
+                                2,
+                              )} */}
+                                </span>
+                                <div className="text-[0.95rem] text-white">
+                                  Network fee
+                                </div>
+                                <div className="flex text-[1rem] text-white">
+                                  <Image
+                                    src="/assets/coin.gif"
+                                    alt="coin"
+                                    width={18}
+                                    height={18}
+                                    priority
+                                    className="mt-[0.1rem] mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                                  />
+                                  ≈0.5
+                                </div>
+                                <span className="ml-4 text-right text-[0.9rem] text-[#fffc]">
+                                  $0.099
+                                </span>
+                                <div className="mt-5 text-[1rem] font-bold text-white">
+                                  Total
+                                </div>
+                                <div className="mt-5 flex text-[1rem] font-bold text-white">
+                                  <Image
+                                    src="/assets/coin.gif"
+                                    alt="coin"
+                                    width={18}
+                                    height={18}
+                                    priority
+                                    className="mt-[0.1rem] mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                                  />
+                                  {/* {(item.price * 1.028 + 0.5).toFixed(2)} */}
+                                </div>
+                                <span className="mt-5 ml-4 text-right text-[0.9rem] font-bold text-[#fffc]">
+                                  $
+                                  {/* {(
+                                (item.price * 1.028 + 0.5) *
+                                pepecoinPrice
+                              ).toFixed(2)} */}
+                                </span>
+                                <div className="mt-2 text-[0.95rem] text-white">
+                                  Available balance
+                                </div>
+                                <div className="mt-2 flex text-[1rem] text-white">
+                                  <Image
+                                    src="/assets/coin.gif"
+                                    alt="coin"
+                                    width={18}
+                                    height={18}
+                                    priority
+                                    className="mt-[0.1rem] mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                                  />
+                                  0
+                                </div>
+                                <span className="mt-2 ml-4 text-right text-[0.9rem] text-[#fffc]">
+                                  $0
+                                </span>
                               </div>
-                              <div className="flex text-[1rem] text-white">
-                                <Image
-                                  src="/assets/coin.gif"
-                                  alt="coin"
-                                  width={18}
-                                  height={18}
-                                  priority
-                                  className="mt-[0.1rem] mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
-                                />
-                                {/* {((item.price * 2.8) / 100).toFixed(2)} */}
-                              </div>
-                              <span className="ml-4 text-right text-[0.9rem] text-[#fffc]">
-                                $
-                                {/* {(item.price * 0.028 * pepecoinPrice).toFixed(
-                                  2,
-                                )} */}
-                              </span>
-                              <div className="text-[0.95rem] text-white">
-                                Network fee
-                              </div>
-                              <div className="flex text-[1rem] text-white">
-                                <Image
-                                  src="/assets/coin.gif"
-                                  alt="coin"
-                                  width={18}
-                                  height={18}
-                                  priority
-                                  className="mt-[0.1rem] mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
-                                />
-                                ≈0.5
-                              </div>
-                              <span className="ml-4 text-right text-[0.9rem] text-[#fffc]">
-                                $0.099
-                              </span>
-                              <div className="mt-5 text-[1rem] font-bold text-white">
-                                Total
-                              </div>
-                              <div className="mt-5 flex text-[1rem] font-bold text-white">
-                                <Image
-                                  src="/assets/coin.gif"
-                                  alt="coin"
-                                  width={18}
-                                  height={18}
-                                  priority
-                                  className="mt-[0.1rem] mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
-                                />
-                                {/* {(item.price * 1.028 + 0.5).toFixed(2)} */}
-                              </div>
-                              <span className="mt-5 ml-4 text-right text-[0.9rem] font-bold text-[#fffc]">
-                                $
-                                {/* {(
-                                  (item.price * 1.028 + 0.5) *
-                                  pepecoinPrice
-                                ).toFixed(2)} */}
-                              </span>
-                              <div className="mt-2 text-[0.95rem] text-white">
-                                Available balance
-                              </div>
-                              <div className="mt-2 flex text-[1rem] text-white">
-                                <Image
-                                  src="/assets/coin.gif"
-                                  alt="coin"
-                                  width={18}
-                                  height={18}
-                                  priority
-                                  className="mt-[0.1rem] mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
-                                />
-                                0
-                              </div>
-                              <span className="mt-2 ml-4 text-right text-[0.9rem] text-[#fffc]">
-                                $0
-                              </span>
-                            </div>
-                            <button
-                              disabled
-                              className="font-inherit mt-4 flex w-full justify-center rounded-[12px] border border-transparent px-4 py-2 text-[1em] font-bold text-white transition-all duration-200 ease-in-out disabled:bg-[#1a1a1a]"
-                            >
-                              Insufficient balance
-                            </button>
-                          </DialogHeader>
-                        </DialogContent>
-                      </Dialog>
+                              <button
+                                disabled
+                                className="font-inherit mt-4 flex w-full justify-center rounded-[12px] border border-transparent px-4 py-2 text-[1em] font-bold text-white transition-all duration-200 ease-in-out disabled:bg-[#1a1a1a]"
+                              >
+                                Insufficient balance
+                              </button>
+                            </DialogHeader>
+                          </DialogContent>
+                        </Dialog>
+                      ) : (
+                        <button
+                          className="font-inherit w-full rounded-lg border-none bg-[#ffffff12] px-4 py-2 text-base font-extrabold text-[#cacaca] transition-all duration-200 ease-in-out"
+                          disabled
+                        >
+                          Not listed
+                        </button>
+                      )}
                     </div>
                   </Card>
                 ))}

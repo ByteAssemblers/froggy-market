@@ -1,63 +1,58 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { CreateCollectionDto } from './dto/create-collection.dto';
 
 @Injectable()
 export class CollectionsService {
   constructor(private prisma: PrismaService) {}
 
-  // Create a collection
-  async createCollection(
-    name: string,
-    symbol: string,
-    description: string,
-    profileInscriptionId: string,
-    onlineUrl: string,
-    myUrl: string | null,
-    totalSupply: number,
-    inscriptionsList: any,
-    walletAddress: string,
-  ) {
-    return this.prisma.collection.create({
-      data: {
-        name,
-        symbol,
-        description,
-        profileInscriptionId,
-        onlineUrl,
-        myUrl,
-        totalSupply,
-        inscriptionsList,
-        walletAddress,
+  async create(dto: CreateCollectionDto) {
+    return this.prisma.$transaction(async (tx) => {
+      const collection = await tx.collections.create({
+        data: {
+          name: dto.name,
+          symbol: dto.symbol,
+          description: dto.description,
+          profileInscriptionId: dto.profileInscriptionId,
+          socialLink: dto.socialLink,
+          personalLink: dto.personalLink,
+          totalSupply: dto.totalSupply,
+          walletAddress: dto.wallet,
+        },
+      });
+
+      for (const item of dto.inscriptions) {
+        const inscription = await tx.inscriptions.create({
+          data: {
+            collectionId: collection.id,
+            inscriptionId: item.inscriptionId,
+            name: item.name,
+            attributes: item.attributes,
+          },
+        });
+
+        await tx.inscription_activities.create({
+          data: {
+            inscriptionId: inscription.id,
+            state: 'unlisted',
+            sellerAddress: dto.wallet,
+          },
+        });
+      }
+
+      return collection;
+    });
+  }
+
+  async findAll() {
+    return this.prisma.collections.findMany({
+      include: {
+        inscriptions: {
+          include: {
+            activities: true,
+          },
+        },
       },
-    });
-  }
-
-  // Get all collections
-  async getCollections() {
-    return this.prisma.collection.findMany();
-  }
-
-  // Get collections by wallet address
-  async getCollectionsByWalletAddress(walletAddress: string) {
-    return this.prisma.collection.findMany({
-      where: {
-        walletAddress: walletAddress,
-      },
-    });
-  }
-
-  // Update a collection
-  async updateCollection(id: number, data: any) {
-    return this.prisma.collection.update({
-      where: { id },
-      data,
-    });
-  }
-
-  // Delete a collection
-  async deleteCollection(id: number) {
-    return this.prisma.collection.delete({
-      where: { id },
     });
   }
 }

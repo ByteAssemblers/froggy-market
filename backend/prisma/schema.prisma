@@ -8,17 +8,52 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Collection {
-  id                 Int       @id @default(autoincrement())  // Unique identifier
-  name               String    // Name of the collection
-  symbol             String    // Minimum 4 characters, lowercase letters and hyphen only
-  description        String    // Description of the collection
-  profileInscriptionId String  // Inscription ID for the profile
-  onlineUrl          String    // Online URL
-  myUrl              String?   // Optional personal URL
-  totalSupply        Int       // Total supply of the collection
-  inscriptionsList   Json      // List of inscriptions (JSON format)
-  walletAddress      String    // Foreign key to user wallet address
-  createdAt          DateTime  @default(now())  // Timestamp for when the collection is created
-  updatedAt          DateTime  @updatedAt         // Timestamp for when the collection was last updated
+model collections {
+  id                   String   @id @default(cuid())
+  name                 String
+  symbol               String
+  description          String?
+  profileInscriptionId String?
+  socialLink           String?
+  personalLink         String?
+  totalSupply          Int?
+  walletAddress        String
+  approve              Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  inscriptions inscriptions[]
+}
+
+model inscriptions {
+  id            String   @id @default(cuid())
+  collectionId  String
+  inscriptionId String   @unique
+  name          String?
+  attributes    Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  collection collections            @relation(fields: [collectionId], references: [id])
+  activities inscription_activities[]
+}
+
+model inscription_activities {
+  id            String   @id @default(cuid())
+  inscriptionId String
+  state         State
+  sellerAddress String
+  price         Float?
+  buyerAddress  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  inscription inscriptions @relation(fields: [inscriptionId], references: [id])
+}
+
+enum State {
+  unlisted
+  listed
+  sold
+  sent
 }

@@ -269,7 +269,7 @@ export default function WalletAddress({
                           </svg>
                           <span className="ml-2">List</span>
                         </button>
-                        <button className="font-inherit inline-flex grow-0 cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#3c1295] px-4 py-2 text-base font-bold text-[#d94fff] transition-all duration-200 ease-in-out">
+                        <button className="font-inherit inline-flex grow-0 cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#3c1295] px-4 py-2 text-base font-bold text-[#d94fff] transition-all duration-200 ease-in-out hover:bg-[#9d12c8] hover:text-white">
                           <svg
                             data-v-51cc9e0e=""
                             xmlns="http://www.w3.org/2000/svg"
