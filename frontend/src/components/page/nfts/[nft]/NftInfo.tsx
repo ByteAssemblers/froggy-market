@@ -3,32 +3,25 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useProfile } from "@/hooks/useProfile";
 
-export function NftInfo({ nft }: { nft: string }) {
-  const [collections, setCollections] = useState<any[]>([]);
-  const [selectedCollection, setSelectedCollection] = useState<any | null>(
-    null,
-  );
+export function NftInfo({ nft }: { nft: any }) {
+  const [selectedCollection, setSelectedCollection] = useState<any>(null);
+
+  const { collections, isCollectionsLoading, collectionsError } = useProfile();
 
   useEffect(() => {
-    const fetchCollections = async () => {
-      try {
-        const response = await fetch(`http://localhost:5555/api/collections`);
-        const data = await response.json();
-        setCollections(data);
-        const collection = data.find((col: any) => col.symbol === nft);
-        setSelectedCollection(collection);
-      } catch (error) {
-        console.error("Failed to fetch collections:", error);
-      }
-    };
+    if (collections && !isCollectionsLoading) {
+      const collection = collections.find((col: any) => col.symbol === nft);
+      setSelectedCollection(collection);
+    }
+  }, [collections, isCollectionsLoading, nft]);
 
-    fetchCollections();
-  }, []);
+  if (isCollectionsLoading) return <div>Loading...</div>;
+  if (collectionsError) return <div>Error loading collections</div>;
 
-  if (!selectedCollection) {
-    return;
-  }
+  if (!selectedCollection) return <div>Loading NFT info...</div>;
+
   return (
     <>
       <div className="mt-4 mb-8 flex items-center">

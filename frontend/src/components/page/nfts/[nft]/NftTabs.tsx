@@ -42,47 +42,30 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useProfile } from "@/hooks/useProfile";
 
 export function NftTabs({ nft }: { nft: string }) {
-  const [collections, setCollections] = useState<any[]>([]);
+  const { pepecoinPrice } = useProfile();
+
   const [inscriptionsList, setInscriptionList] = useState<any | null>(null);
 
-  const [pepecoinPrice, setPepecoinPrice] = useState<number>(0);
+  const { collections, isCollectionsLoading, collectionsError } = useProfile();
 
   useEffect(() => {
-    const fetchCollections = async () => {
-      try {
-        const response = await fetch(`http://localhost:5555/api/collections`);
-        const data = await response.json();
-        setCollections(data);
-        const collection = data.find((col: any) => col.symbol === nft);
-        setInscriptionList(collection.inscriptionsList);
-      } catch (error) {
-        console.error("Failed to fetch collections:", error);
-      }
-    };
-
-    fetchCollections();
-  }, []);
-
-  useEffect(() => {
-    const fetchPepecoinPrice = async () => {
-      try {
-        const response = await fetch(
-          "https://pepeblocks.com/ext/getcurrentprice",
-        );
-        const data = await response.json();
-        setPepecoinPrice(Number(data));
-      } catch (error) {
-        console.error("Failed to fetch Pepecoin price:", error);
-      }
-    };
-
-    fetchPepecoinPrice();
-  }, []);
+    if (collections && !isCollectionsLoading) {
+      const collection = collections.find((col: any) => col.symbol === nft);
+      setInscriptionList(collection.inscriptionsList);
+    }
+  }, [collections, isCollectionsLoading, nft]);
 
   const [selectedSort, setSelectedSort] = useState("Price: lowest first");
   const [selectedFilter, setSelectedFilter] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  if (isCollectionsLoading) return <div>Loading...</div>;
+  if (collectionsError) return <div>Error loading collections</div>;
+
+  if (!inscriptionsList) return <div>Loading NFT info...</div>;
 
   const sortOptions = [
     "Price: lowest first",
@@ -90,15 +73,9 @@ export function NftTabs({ nft }: { nft: string }) {
     "Recently listed",
     "Inscription number: lowest first",
   ];
-  const [currentPage, setCurrentPage] = useState(1);
 
-  if (!inscriptionsList) {
-    return;
-  }
-   
   const ITEMS_PER_PAGE = 30;
   const totalPages = Math.ceil(inscriptionsList.length / ITEMS_PER_PAGE);
-
 
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;

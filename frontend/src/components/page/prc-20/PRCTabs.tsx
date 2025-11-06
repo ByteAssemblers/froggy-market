@@ -14,46 +14,12 @@ import {
 } from "@/components/ui/table";
 import Image from "next/image";
 import Avatar from "@/components/Avatar";
+import { useProfile } from "@/hooks/useProfile";
 
 export default function DRCTabs() {
+  const { pepecoinPrice, tokens, isTokensLoading } = useProfile();
+
   const router = useRouter();
-  const [tokens, setTokens] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const [pepecoinPrice, setPepecoinPrice] = useState<number>(0);
-
-  useEffect(() => {
-    const fetchPepecoinPrice = async () => {
-      try {
-        const response = await fetch(
-          "https://pepeblocks.com/ext/getcurrentprice",
-        );
-        const data = await response.json();
-        setPepecoinPrice(Number(data));
-      } catch (error) {
-        console.error("Failed to fetch Pepecoin price:", error);
-      }
-    };
-
-    fetchPepecoinPrice();
-  }, []);
-
-  useEffect(() => {
-    async function fetchTokens() {
-      try {
-        const response = await fetch("/api/belindex/tokens?page_size=100");
-        if (!response.ok) throw new Error("Failed to fetch tokens");
-        const data = await response.json();
-        setTokens(data.tokens);
-      } catch (err) {
-        console.error("Error fetching tokens:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchTokens();
-  }, []);
 
   function toFullNumber(value: number) {
     return value.toString().includes("e")
@@ -73,6 +39,8 @@ export default function DRCTabs() {
     const formatted = value.toFixed(decimals).replace(/\.?0+$/, "");
     return formatted;
   }
+
+  if (isTokensLoading) return <div>Loading...</div>;
 
   return (
     <Tabs defaultValue="toptokens" className="relative">
@@ -106,11 +74,11 @@ export default function DRCTabs() {
               <TableHead>Holders</TableHead>
             </TableRow>
           </TableHeader>
-          {loading ? (
+          {isTokensLoading ? (
             <></>
           ) : (
             <TableBody>
-              {tokens.map((item, index) => (
+              {tokens.map((item: any, index: any) => (
                 <TableRow
                   key={item.id || index}
                   className="cursor-pointer text-[16px] text-white transition-all duration-150 ease-in-out"

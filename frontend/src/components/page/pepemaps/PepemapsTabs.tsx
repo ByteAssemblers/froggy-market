@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/pagination";
 import { Filter } from "lucide-react";
 import PepemapCard from "@/components/PepemapCard";
+import { useProfile } from "@/hooks/useProfile";
 
 const database = [
   {
@@ -50,6 +51,8 @@ const repeatedDatabase = Array(279274)
   }));
 
 export default function PepemapsTabs() {
+  const { pepecoinPrice } = useProfile();
+
   const ITEMS_PER_PAGE = 30;
   const totalPages = Math.ceil(repeatedDatabase.length / ITEMS_PER_PAGE);
 
@@ -58,24 +61,6 @@ export default function PepemapsTabs() {
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
   const currentItems = repeatedDatabase.slice(startIndex, endIndex);
-
-  const [pepecoinPrice, setPepecoinPrice] = useState<number>(0);
-
-  useEffect(() => {
-    const fetchPepecoinPrice = async () => {
-      try {
-        const response = await fetch(
-          "https://pepeblocks.com/ext/getcurrentprice",
-        );
-        const data = await response.json();
-        setPepecoinPrice(Number(data));
-      } catch (error) {
-        console.error("Failed to fetch Pepecoin price:", error);
-      }
-    };
-
-    fetchPepecoinPrice();
-  }, []);
 
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages) {

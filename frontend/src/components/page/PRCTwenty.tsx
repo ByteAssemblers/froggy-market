@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 
 import {
   Table,
@@ -12,48 +13,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-import Image from "next/image";
+import { useProfile } from "@/hooks/useProfile";
 import Avatar from "../Avatar";
 
 export default function PRCTwenty() {
   const router = useRouter();
-  const [tokens, setTokens] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [pepecoinPrice, setPepecoinPrice] = useState<number>(0);
-
-  useEffect(() => {
-    const fetchPepecoinPrice = async () => {
-      try {
-        const response = await fetch(
-          "https://pepeblocks.com/ext/getcurrentprice",
-        );
-        const data = await response.json();
-        setPepecoinPrice(Number(data));
-      } catch (error) {
-        console.error("Failed to fetch Pepecoin price:", error);
-      }
-    };
-
-    fetchPepecoinPrice();
-  }, []);
-
-  useEffect(() => {
-    async function fetchTokens() {
-      try {
-        const response = await fetch("/api/belindex/tokens?page_size=10");
-        if (!response.ok) throw new Error("Failed to fetch tokens");
-        const data = await response.json();
-        setTokens(data.tokens);
-      } catch (err) {
-        console.error("Error fetching tokens:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchTokens();
-  }, []);
+  const { pepecoinPrice, tokens, isTokensLoading } = useProfile();
 
   function toFullNumber(value: number) {
     return value.toString().includes("e")
@@ -74,6 +39,8 @@ export default function PRCTwenty() {
     return formatted;
   }
 
+  if (isTokensLoading) return <div>Loading...</div>;
+
   return (
     <>
       <h2 className="mt-8 mb-6 text-[1.6rem] leading-[1.1]">PRC-20</h2>
@@ -92,11 +59,11 @@ export default function PRCTwenty() {
               <TableHead>Holders</TableHead>
             </TableRow>
           </TableHeader>
-          {loading ? (
+          {isTokensLoading ? (
             <></>
           ) : (
             <TableBody>
-              {tokens.map((item, index) => (
+              {tokens.slice(0, 10).map((item: any, index: any) => (
                 <TableRow
                   key={item.id || index}
                   className="cursor-pointer text-[16px] text-white transition-all duration-150 ease-in-out"

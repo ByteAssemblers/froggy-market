@@ -39,7 +39,7 @@ import {
 import { encryptWallet, decryptWallet } from "@/lib/wallet/storage";
 import { getPepecoinBalance } from "@/lib/wallet/getBalance";
 import { sendPepeTransaction } from "@/lib/wallet/sendPepe";
-import { ca, tr } from "date-fns/locale";
+import { useProfile } from "@/hooks/useProfile";
 
 export default function Wallet() {
   const [wallet, setWallet] = useState<any>(null);
@@ -70,24 +70,8 @@ export default function Wallet() {
   const [walletState, setWalletState] = useState<
     "empty" | "password" | "import" | "secret" | "mywallet" | "send" | "lock"
   >("empty");
-  const [pepecoinPrice, setPepecoinPrice] = useState<number>(0);
-  const [tick, setTick] = useState<any[]>([]);
 
-  useEffect(() => {
-    const fetchPepecoinPrice = async () => {
-      try {
-        const response = await fetch(
-          "https://pepeblocks.com/ext/getcurrentprice",
-        );
-        const data = await response.json();
-        setPepecoinPrice(Number(data));
-      } catch (error) {
-        console.error("Failed to fetch Pepecoin price:", error);
-      }
-    };
-
-    fetchPepecoinPrice();
-  }, []);
+  const { pepecoinPrice } = useProfile();
 
   useEffect(() => {
     const stored = localStorage.getItem("pepecoin_wallet");
@@ -114,20 +98,6 @@ export default function Wallet() {
       }
     }
   }, []);
-
-  // useEffect(() => {
-  //   const fetchTick = async () => {
-  //     try {
-  //       const response = await fetch(
-  //         `http://localhost:8000/address/${wallet.address}`,
-  //       );
-  //       const data = await response.json();
-  //       setTick(data);
-  //     } catch (error) {}
-  //   };
-  //   fetchTick();
-  // }, [wallet]);
-  // console.log(tick);
 
   async function handleGetBalance() {
     if (!wallet?.address) return;

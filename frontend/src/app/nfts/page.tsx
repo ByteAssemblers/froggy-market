@@ -12,40 +12,21 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import Image from "next/image";
-
-const database = Array.from({ length: 100 }, (_, i) => ({
-  id: i + 1,
-  name: `Pepinal Mini Pepes #${i + 1}`,
-  urlname: "minipepes",
-  floorprice: Math.floor(Math.random() * 900) + 100, // 100–1000
-  twentyfourhourvolume: Math.floor(Math.random() * 10000) + 500, // 500–10,000
-  totalvolume: Math.floor(Math.random() * 50000000) + 100000, // 100k–50M
-  trades: Math.floor(Math.random() * 50) + 1, // 1–50
-  items: Math.floor(Math.random() * 10000) + 1000, // 1k–10k
-  owners: Math.floor(Math.random() * 3000) + 500, // 500–3k
-  imageurl: `https://api.doggy.market/static/drc-20/dogi.png`,
-  verify: Math.random() > 0.3, // 70% chance true
-}));
+import { useProfile } from "@/hooks/useProfile";
 
 export default function nfts() {
   const router = useRouter();
+  const [nfts, setNfts] = useState<any[]>([]);
+  const { collections, isCollectionsLoading, collectionsError } = useProfile();
 
-  const [collections, setCollections] = useState<any[]>([]);
   useEffect(() => {
-    const fetchCollections = async () => {
-      try {
-        const response = await fetch(`http://localhost:5555/api/collections`);
-        const data = await response.json();
-        setCollections(data);
-      } catch (error) {
-        console.error("Failed to fetch collections:", error);
-      }
-    };
+    if (collections && !isCollectionsLoading) {
+      setNfts(collections);
+    }
+  }, [collections, isCollectionsLoading]);
 
-    fetchCollections();
-  }, []);
-
-  console.log(collections);
+  if (isCollectionsLoading) return <div>Loading...</div>;
+  if (collectionsError) return <div>Error loading collections</div>;
 
   return (
     <>
@@ -70,7 +51,7 @@ export default function nfts() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {collections.map((item, index) => (
+            {nfts.map((item, index) => (
               <TableRow
                 key={index}
                 className="cursor-pointer text-[16px] text-white transition-all duration-150 ease-in-out"

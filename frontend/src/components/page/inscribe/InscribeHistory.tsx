@@ -1,67 +1,50 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { decryptWallet } from "@/lib/wallet/storage";
+import { useProfile } from "@/hooks/useProfile";
 import { ChevronUp, ChevronDown, Link, RefreshCw } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 export default function InscribeHistory() {
-  const [hasSavedWallet, setHasSavedWallet] = useState(false);
-  const [isLocked, setIsLocked] = useState(false);
-  const [wallet, setWallet] = useState<any>(null);
-  const [walletAddress, setWalletAddress] = useState("");
   const [inscriptions, setInscriptions] = useState<any[]>([]);
+  const { walletInfo, walletAddress } = useProfile();
 
   useEffect(() => {
-    const stored = localStorage.getItem("pepecoin_wallet");
-
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      setHasSavedWallet(true);
-
-      if (parsed.passwordProtected) {
-        setIsLocked(true);
-      } else {
-        decryptWallet(parsed, "")
-          .then((w) => {
-            setWallet(w);
-            const fetchWallet = async () => {
-              let page = 1;
-              let allInscriptions: any = [];
-              let continueFetching = true;
-              
-              while (continueFetching) {
-                const response = await fetch(
-                  `http://localhost:7777/inscriptions/balance/${w.address}/${page}`,
-                );
-                const data = await response.json();
-                if (data.inscriptions && data.inscriptions.length > 0) {
-                  // Add the new inscriptions to the list
-                  allInscriptions = [...allInscriptions, ...data.inscriptions];
-
-                  // Move to the next page
-                  page++;
-                } else {
-                  // Stop if no more inscriptions are found
-                  continueFetching = false;
-                }
-              }
-
-              // Sort inscriptions by timestamp in descending order
-              allInscriptions.sort(
-                (a: any, b: any) => b.timestamp - a.timestamp,
-              );
-
-              // Update the state with the sorted inscriptions
-              setInscriptions(allInscriptions);
-            };
-
-            fetchWallet();
-          })
-          .catch(() => console.error("Auto-unlock failed"));
-      }
-    }
+    walletInfo();
   }, []);
+
+  useEffect(() => {
+    const fetchWallet = async () => {
+      let page = 1;
+      let allInscriptions: any = [];
+      let continueFetching = true;
+
+      while (continueFetching) {
+        const response = await fetch(
+          `http://localhost:7777/inscriptions/balance/${walletAddress}/${page}`,
+        );
+        const data = await response.json();
+        if (data.inscriptions && data.inscriptions.length > 0) {
+          // Add the new inscriptions to the list
+          allInscriptions = [...allInscriptions, ...data.inscriptions];
+
+          // Move to the next page
+          page++;
+        } else {
+          // Stop if no more inscriptions are found
+          continueFetching = false;
+        }
+      }
+
+      // Sort inscriptions by timestamp in descending order
+      allInscriptions.sort((a: any, b: any) => b.timestamp - a.timestamp);
+
+      // Update the state with the sorted inscriptions
+      setInscriptions(allInscriptions);
+    };
+
+    fetchWallet();
+  }, [walletAddress]);
 
   return (
     <>

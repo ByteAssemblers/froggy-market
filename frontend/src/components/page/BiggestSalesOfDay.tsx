@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/carousel";
 import Image from "next/image";
 import Link from "next/link";
+import { useProfile } from "@/hooks/useProfile";
 
 const database = [
   {
@@ -178,23 +179,7 @@ const database = [
 ];
 
 export default function BiggestSalesOfDay() {
-  const [pepecoinPrice, setPepecoinPrice] = useState<number>(0);
-
-  useEffect(() => {
-    const fetchPepecoinPrice = async () => {
-      try {
-        const response = await fetch(
-          "https://pepeblocks.com/ext/getcurrentprice",
-        );
-        const data = await response.json();
-        setPepecoinPrice(Number(data));
-      } catch (error) {
-        console.error("Failed to fetch Pepecoin price:", error);
-      }
-    };
-
-    fetchPepecoinPrice();
-  }, []);
+  const { pepecoinPrice } = useProfile();
 
   return (
     <>

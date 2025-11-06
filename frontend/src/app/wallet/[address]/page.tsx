@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { EllipsisVertical, Filter } from "lucide-react";
-import { decryptWallet } from "@/lib/wallet/storage";
+import { useProfile } from "@/hooks/useProfile";
 
 export default function WalletAddress({
   params,
@@ -21,30 +21,12 @@ export default function WalletAddress({
   params: Promise<{ address: string }>;
 }) {
   const { address } = use(params);
-  const [hasSavedWallet, setHasSavedWallet] = useState(false);
-  const [isLocked, setIsLocked] = useState(false);
-  const [wallet, setWallet] = useState<any>(null);
-  const [walletAddress, setWalletAddress] = useState("");
   const [inscriptions, setInscriptions] = useState<any[]>([]);
 
+  const { walletInfo, walletAddress } = useProfile();
+
   useEffect(() => {
-    const stored = localStorage.getItem("pepecoin_wallet");
-
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      setHasSavedWallet(true);
-
-      if (parsed.passwordProtected) {
-        setIsLocked(true);
-      } else {
-        decryptWallet(parsed, "")
-          .then((w) => {
-            setWallet(w);
-            setWalletAddress(w.address);
-          })
-          .catch(() => console.error("Auto-unlock failed"));
-      }
-    }
+    walletInfo();
   }, []);
 
   useEffect(() => {

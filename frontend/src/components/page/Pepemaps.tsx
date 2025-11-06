@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 import Image from "next/image";
 import Link from "next/link";
-
+import { useProfile } from "@/hooks/useProfile";
 import PepemapCard from "@/components/PepemapCard";
 
 const database = [
@@ -36,27 +36,11 @@ const database = [
 ];
 
 export default function Pepemaps() {
+  const { pepecoinPrice } = useProfile();
   const [visibleData, setVisibleData] = useState<
     { id: number; price: number; seller: string }[]
   >([]);
 
-  const [pepecoinPrice, setPepecoinPrice] = useState<number>(0);
-
-  useEffect(() => {
-    const fetchPepecoinPrice = async () => {
-      try {
-        const response = await fetch(
-          "https://pepeblocks.com/ext/getcurrentprice",
-        );
-        const data = await response.json();
-        setPepecoinPrice(Number(data));
-      } catch (error) {
-        console.error("Failed to fetch Pepecoin price:", error);
-      }
-    };
-
-    fetchPepecoinPrice();
-  }, []);
 
   useEffect(() => {
     const updateData = () => {

@@ -2,17 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { ChevronLeft } from "lucide-react";
-import { decryptWallet } from "@/lib/wallet/storage";
 import Image from "next/image";
+import { useProfile } from "@/hooks/useProfile";
 
 export default function Creators() {
   const [creatorState, setCreatorState] = useState<
     "setup" | "dashboard" | "list"
   >("setup");
-  const [hasSavedWallet, setHasSavedWallet] = useState(false);
-  const [isLocked, setIsLocked] = useState(false);
-  const [wallet, setWallet] = useState<any>(null);
-  const [walletAddress, setWalletAddress] = useState("");
+  const { walletInfo, isLocked, hasSavedWallet, walletAddress } = useProfile();
 
   const [collectionData, setCollectionData] = useState({
     name: "",
@@ -35,23 +32,7 @@ export default function Creators() {
   };
 
   useEffect(() => {
-    const stored = localStorage.getItem("pepecoin_wallet");
-
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      setHasSavedWallet(true);
-
-      if (parsed.passwordProtected) {
-        setIsLocked(true);
-      } else {
-        decryptWallet(parsed, "")
-          .then((w) => {
-            setWallet(w);
-            setWalletAddress(w.address);
-          })
-          .catch(() => console.error("Auto-unlock failed"));
-      }
-    }
+    walletInfo();
   }, []);
 
   useEffect(() => {
@@ -125,7 +106,7 @@ export default function Creators() {
       alert("Error creating collection");
     }
   };
-  console.log(collections);
+
   return (
     <>
       {hasSavedWallet && !isLocked ? (

@@ -34,6 +34,7 @@ import {
   MAX_INSCRIPTION_SIZE,
   REVEAL_FEE_PADDING_SATS,
 } from "@/constants/inscription";
+import { useProfile } from "@/hooks/useProfile";
 
 export default function InscribeTabs() {
   const [isInscribing, setIsInscribing] = useState(false);
@@ -45,27 +46,11 @@ export default function InscribeTabs() {
     "recommended",
   );
   const [successTx, setSuccessTx] = useState<any>(null);
-  const [wallet, setWallet] = useState<any>(null);
-  const [hasSavedWallet, setHasSavedWallet] = useState(false);
-  const [isLocked, setIsLocked] = useState(false);
+
+  const { walletInfo, wallet, isLocked, hasSavedWallet } = useProfile();
 
   useEffect(() => {
-    const stored = localStorage.getItem("pepecoin_wallet");
-
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      setHasSavedWallet(true);
-
-      if (parsed.passwordProtected) {
-        setIsLocked(true);
-      } else {
-        decryptWallet(parsed, "")
-          .then((w) => {
-            setWallet(w);
-          })
-          .catch(() => console.error("Auto-unlock failed"));
-      }
-    }
+    walletInfo();
   }, []);
 
   const computeFeeRate = () => {
