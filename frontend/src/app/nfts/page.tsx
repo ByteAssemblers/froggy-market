@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { useEffect, useState } from "react";
 
 import {
   Table,
@@ -30,6 +30,23 @@ const database = Array.from({ length: 100 }, (_, i) => ({
 export default function nfts() {
   const router = useRouter();
 
+  const [collections, setCollections] = useState<any[]>([]);
+  useEffect(() => {
+    const fetchCollections = async () => {
+      try {
+        const response = await fetch(`http://localhost:5555/api/collections`);
+        const data = await response.json();
+        setCollections(data);
+      } catch (error) {
+        console.error("Failed to fetch collections:", error);
+      }
+    };
+
+    fetchCollections();
+  }, []);
+
+  console.log(collections);
+
   return (
     <>
       <div className="mb-6 flex items-center justify-between">
@@ -53,47 +70,25 @@ export default function nfts() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {database.map((item) => (
+            {collections.map((item, index) => (
               <TableRow
-                key={item.id}
+                key={index}
                 className="cursor-pointer text-[16px] text-white transition-all duration-150 ease-in-out"
-                onClick={() => router.push(`/nfts/${item.urlname}`)}
+                onClick={() => router.push(`/nfts/${item.symbol}`)}
               >
                 <TableCell className="w-auto rounded-tl-[12px] rounded-bl-[12px] px-3 py-4 align-middle font-bold">
-                  {item.id}
+                  {index + 1}
                 </TableCell>
                 <TableCell>
                   <div className="relative mx-[1.4rem] my-0 shrink-0">
                     <Image
-                      src={item.imageurl}
-                      alt={`PRC-20 #${item.name}`}
+                      src={`http://localhost:7777/content/${item.profileInscriptionId}`}
+                      alt={`Inscription #${item.profileInscriptionId}`}
                       width={42}
                       height={42}
                       className="h-[42px] w-[42px] rounded-full object-cover align-middle"
                       unoptimized
                     />
-                    {item.verify && (
-                      <svg
-                        viewBox="0 0 20 20"
-                        fill="#f2c511"
-                        width="24"
-                        height="24"
-                        stroke="#000000"
-                        strokeWidth="1"
-                        className=""
-                        style={{
-                          position: "absolute",
-                          top: 0,
-                          right: "-0.4rem",
-                        }}
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                          clipRule="evenodd"
-                        ></path>
-                      </svg>
-                    )}
                   </div>
                 </TableCell>
                 <TableCell>{item.name}</TableCell>
@@ -107,7 +102,7 @@ export default function nfts() {
                       priority
                       className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
                     />
-                    {item.floorprice.toLocaleString()}
+                    {/* {item.floorprice.toLocaleString()} */}
                   </div>
                 </TableCell>
                 <TableCell>
@@ -120,7 +115,7 @@ export default function nfts() {
                       priority
                       className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
                     />
-                    {item.twentyfourhourvolume.toLocaleString()}
+                    {/* {item.twentyfourhourvolume.toLocaleString()} */}
                   </div>
                 </TableCell>
                 <TableCell>
@@ -133,12 +128,12 @@ export default function nfts() {
                       priority
                       className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
                     />
-                    {item.totalvolume.toLocaleString()}
+                    {/* {item.totalvolume.toLocaleString()} */}
                   </div>
                 </TableCell>
-                <TableCell>{item.trades.toLocaleString()}</TableCell>
-                <TableCell>{item.items.toLocaleString()}</TableCell>
-                <TableCell>{item.owners.toLocaleString()}</TableCell>
+                <TableCell>{/* {item.trades.toLocaleString()} */}</TableCell>
+                <TableCell>{/* {item.items.toLocaleString()} */}</TableCell>
+                <TableCell>{/* {item.owners.toLocaleString()} */}</TableCell>
               </TableRow>
             ))}
           </TableBody>

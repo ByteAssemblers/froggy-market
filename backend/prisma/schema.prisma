@@ -8,21 +8,17 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id    Int     @id @default(autoincrement())
-  email String  @unique
-  name  String?
-  posts Post[]
-}
-
-model Post {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  title     String
-  content   String?
-  published Boolean  @default(false)
-  viewCount Int      @default(0)
-  author    User?    @relation(fields: [authorId], references: [id])
-  authorId  Int?
+model Collection {
+  id                 Int       @id @default(autoincrement())  // Unique identifier
+  name               String    // Name of the collection
+  symbol             String    // Minimum 4 characters, lowercase letters and hyphen only
+  description        String    // Description of the collection
+  profileInscriptionId String  // Inscription ID for the profile
+  onlineUrl          String    // Online URL
+  myUrl              String?   // Optional personal URL
+  totalSupply        Int       // Total supply of the collection
+  inscriptionsList   Json      // List of inscriptions (JSON format)
+  walletAddress      String    // Foreign key to user wallet address
+  createdAt          DateTime  @default(now())  // Timestamp for when the collection is created
+  updatedAt          DateTime  @updatedAt         // Timestamp for when the collection was last updated
 }

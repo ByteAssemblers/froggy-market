@@ -4,6 +4,7 @@ import { WebsocketGateway } from './websocket/websocket.gateway';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DatabaseModule } from './prisma/prisma.module';
+import { CollectionsModule } from './collections/collections.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { DatabaseModule } from './prisma/prisma.module';
       envFilePath: '.env',
     }),
     DatabaseModule,
+    CollectionsModule,
   ],
   controllers: [AppController],
   providers: [AppService, WebsocketGateway],
