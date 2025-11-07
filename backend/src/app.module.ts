@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DatabaseModule } from './prisma/prisma.module';
 import { CollectionsModule } from './collections/collections.module';
+import { ListingsModule } from './listings/listings.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { CollectionsModule } from './collections/collections.module';
     }),
     DatabaseModule,
     CollectionsModule,
+    ListingsModule
   ],
   controllers: [AppController],
   providers: [AppService, WebsocketGateway],

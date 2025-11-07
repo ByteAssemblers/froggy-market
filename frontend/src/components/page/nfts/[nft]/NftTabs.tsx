@@ -87,7 +87,7 @@ export function NftTabs({ nft }: { nft: string }) {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
-
+  console.log(currentItems);
   return (
     <>
       <Tabs defaultValue="listings" className="relative">

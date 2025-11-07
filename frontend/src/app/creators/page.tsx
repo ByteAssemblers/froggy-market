@@ -55,7 +55,7 @@ export default function Creators() {
   if (isCollectionsLoading) return <div>Loading...</div>;
   if (collectionsError) return <div>Error loading collections</div>;
 
-  if (!collectionList.length) return <div>No collections found</div>;
+  // if (!collectionList.length) return <div>No collections found</div>;
 
   const handleSubmit = async () => {
     if (

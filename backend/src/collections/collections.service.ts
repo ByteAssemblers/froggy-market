@@ -7,41 +7,56 @@ export class CollectionsService {
   constructor(private prisma: PrismaService) {}
 
   async create(dto: CreateCollectionDto) {
-    return this.prisma.$transaction(async (tx) => {
-      const collection = await tx.collections.create({
-        data: {
-          name: dto.name,
-          symbol: dto.symbol,
-          description: dto.description,
-          profileInscriptionId: dto.profileInscriptionId,
-          socialLink: dto.socialLink,
-          personalLink: dto.personalLink,
-          totalSupply: dto.totalSupply,
-          walletAddress: dto.wallet,
-        },
-      });
+    // Validate symbol: minimum 4 characters, only lowercase a-z and "-"
+    if (!/^[a-z-]{4,}$/.test(dto.symbol)) {
+      throw new Error(
+        'Symbol must be at least 4 characters, only lowercase letters a-z and "-" allowed'
+      );
+    }
 
-      for (const item of dto.inscriptions) {
-        const inscription = await tx.inscriptions.create({
+    return this.prisma.$transaction(
+      async (tx) => {
+        const collection = await tx.collections.create({
           data: {
-            collectionId: collection.id,
-            inscriptionId: item.inscriptionId,
-            name: item.name,
-            attributes: item.attributes,
+            name: dto.name,
+            symbol: dto.symbol,
+            description: dto.description,
+            profileInscriptionId: dto.profileInscriptionId,
+            socialLink: dto.socialLink,
+            personalLink: dto.personalLink,
+            totalSupply: dto.totalSupply,
+            walletAddress: dto.wallet,
           },
         });
 
-        await tx.inscription_activities.create({
-          data: {
-            inscriptionId: inscription.id,
-            state: 'unlisted',
-            sellerAddress: dto.wallet,
-          },
-        });
+        // Create inscriptions and listings for each inscription
+        for (const item of dto.inscriptions) {
+          const inscription = await tx.inscriptions.create({
+            data: {
+              collectionId: collection.id,
+              inscriptionId: item.inscriptionId,
+              name: item.name,
+              attributes: item.attributes,
+            },
+          });
+
+          // Create initial listing with "unlisted" status
+          await tx.listings.create({
+            data: {
+              inscriptionId: inscription.id,
+              status: 'unlisted',
+              sellerAddress: dto.wallet,
+            },
+          });
+        }
+        
+        return collection;
+      },
+      {
+        maxWait: 10000, // 10 seconds max wait to start transaction
+        timeout: 30000, // 30 seconds timeout for transaction
       }
-
-      return collection;
-    });
+    );
   }
 
   async findAll() {
@@ -49,7 +64,7 @@ export class CollectionsService {
       include: {
         inscriptions: {
           include: {
-            activities: true,
+            listings: true,
           },
         },
       },

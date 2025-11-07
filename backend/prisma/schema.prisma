@@ -34,26 +34,20 @@ model inscriptions {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  collection collections            @relation(fields: [collectionId], references: [id])
-  activities inscription_activities[]
+  collection collections @relation(fields: [collectionId], references: [id])
+  listings   listings[]
 }
 
-model inscription_activities {
+model listings {
   id            String   @id @default(cuid())
   inscriptionId String
-  state         State
+  status        String   @default("unlisted") // unlisted, listed, sold, sent
+  psbtBase64    String?
+  priceSats     Int?
   sellerAddress String
-  price         Float?
   buyerAddress  String?
+  txid          String?
   createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
 
   inscription inscriptions @relation(fields: [inscriptionId], references: [id])
-}
-
-enum State {
-  unlisted
-  listed
-  sold
-  sent
 }
