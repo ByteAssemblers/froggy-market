@@ -43,13 +43,27 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useProfile } from "@/hooks/useProfile";
+import { getPepecoinBalance } from "@/lib/wallet/getBalance";
 
 export function NftTabs({ nft }: { nft: string }) {
   const { pepecoinPrice } = useProfile();
 
   const [inscriptionsList, setInscriptionList] = useState<any | null>(null);
+  const [balance, setBalance] = useState<number | null>(null);
+  const [loadingBalance, setLoadingBalance] = useState(false);
 
-  const { collections, isCollectionsLoading, collectionsError } = useProfile();
+  const {
+    walletInfo,
+    wallet,
+    walletAddress,
+    collections,
+    isCollectionsLoading,
+    collectionsError,
+  } = useProfile();
+
+  useEffect(() => {
+    walletInfo();
+  }, []);
 
   useEffect(() => {
     if (collections && !isCollectionsLoading) {
@@ -61,6 +75,18 @@ export function NftTabs({ nft }: { nft: string }) {
   const [selectedSort, setSelectedSort] = useState("Price: lowest first");
   const [selectedFilter, setSelectedFilter] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+
+  async function handleGetBalance() {
+    if (!walletAddress) return;
+    setLoadingBalance(true);
+    const bal = await getPepecoinBalance(walletAddress);
+    setBalance(bal);
+    setLoadingBalance(false);
+  }
+
+  useEffect(() => {
+    handleGetBalance();
+  }, [wallet]);
 
   if (isCollectionsLoading) return <div>Loading...</div>;
   if (collectionsError) return <div>Error loading collections</div>;
@@ -74,12 +100,16 @@ export function NftTabs({ nft }: { nft: string }) {
     "Inscription number: lowest first",
   ];
 
+  // Filter to show only listed items (items with at least one activity/listing)
+  const listedItems =
+    inscriptionsList?.filter((item: any) => item.activities?.length > 0) || [];
+
   const ITEMS_PER_PAGE = 30;
-  const totalPages = Math.ceil(inscriptionsList.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(listedItems.length / ITEMS_PER_PAGE);
 
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
-  const currentItems = inscriptionsList.slice(startIndex, endIndex);
+  const currentItems = listedItems.slice(startIndex, endIndex);
 
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages) {
@@ -171,7 +201,7 @@ export function NftTabs({ nft }: { nft: string }) {
                     </Link>
                     <div className="flex h-full flex-col px-3 pt-1 pb-3">
                       <div className="my-1 flex justify-center gap-4 text-[1.1rem] leading-[1.2] font-semibold text-white">
-                        <span>{item.name}</span>
+                        <span>{nft}</span>
                         <span>#{item.name}</span>
                       </div>
                       {item.activities[item.activities.length - 1]?.state ==
@@ -186,9 +216,18 @@ export function NftTabs({ nft }: { nft: string }) {
                               priority
                               className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
                             />
-                            {item.name}&#xA0;
+                            {
+                              item.activities[item.activities.length - 1]
+                                .priceSats
+                            }
+                            &#xA0;
                             <span className="text-[0.9rem] text-[#fffc]">
-                              {/* (${(item.price * pepecoinPrice).toFixed(2)}) */}
+                              ($
+                              {(
+                                item.activities[item.activities.length - 1]
+                                  .priceSats * pepecoinPrice
+                              ).toFixed(2)}
+                              )
                             </span>
                           </div>
                         </div>
@@ -220,10 +259,14 @@ export function NftTabs({ nft }: { nft: string }) {
                                     />
                                   </div>
                                   <div className="mt-2 text-center text-[1rem] text-white">
-                                    {/* {item.collectionname} #{item.collectionid} */}
-                                    <div className="text-center text-[0.8rem] text-[#dfc0fd]">
-                                      {/* #{item.id} */}
-                                    </div>
+                                    {nft} #{item.name}
+                                    {/* <div className="text-center text-[0.8rem] text-[#dfc0fd]">
+                                      <Link
+                                        href={`/inscription/${item.inscription_id}`}
+                                      >
+                                        #{item.inscription_number}
+                                      </Link>
+                                    </div> */}
                                   </div>
                                 </div>
                               </div>
@@ -240,13 +283,21 @@ export function NftTabs({ nft }: { nft: string }) {
                                     priority
                                     className="mt-[0.1rem] mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
                                   />
-                                  {/* {((item.price * 2.8) / 100).toFixed(2)} */}
+                                  {(
+                                    (item.activities[item.activities.length - 1]
+                                      .priceSats *
+                                      2.8) /
+                                    100
+                                  ).toFixed(2)}
                                 </div>
                                 <span className="ml-4 text-right text-[0.9rem] text-[#fffc]">
                                   $
-                                  {/* {(item.price * 0.028 * pepecoinPrice).toFixed(
-                                2,
-                              )} */}
+                                  {(
+                                    item.activities[item.activities.length - 1]
+                                      .priceSats *
+                                    0.028 *
+                                    pepecoinPrice
+                                  ).toFixed(2)}
                                 </span>
                                 <div className="text-[0.95rem] text-white">
                                   Network fee
@@ -263,7 +314,7 @@ export function NftTabs({ nft }: { nft: string }) {
                                   ≈0.5
                                 </div>
                                 <span className="ml-4 text-right text-[0.9rem] text-[#fffc]">
-                                  $0.099
+                                  ${(0.5 * pepecoinPrice).toFixed(2)}
                                 </span>
                                 <div className="mt-5 text-[1rem] font-bold text-white">
                                   Total
@@ -277,14 +328,22 @@ export function NftTabs({ nft }: { nft: string }) {
                                     priority
                                     className="mt-[0.1rem] mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
                                   />
-                                  {/* {(item.price * 1.028 + 0.5).toFixed(2)} */}
+                                  {(
+                                    item.activities[item.activities.length - 1]
+                                      .priceSats *
+                                      1.028 +
+                                    0.5
+                                  ).toFixed(2)}
                                 </div>
                                 <span className="mt-5 ml-4 text-right text-[0.9rem] font-bold text-[#fffc]">
                                   $
-                                  {/* {(
-                                (item.price * 1.028 + 0.5) *
-                                pepecoinPrice
-                              ).toFixed(2)} */}
+                                  {(
+                                    (item.activities[item.activities.length - 1]
+                                      .priceSats *
+                                      1.028 +
+                                      0.5) *
+                                    pepecoinPrice
+                                  ).toFixed(2)}
                                 </span>
                                 <div className="mt-2 text-[0.95rem] text-white">
                                   Available balance
@@ -298,18 +357,29 @@ export function NftTabs({ nft }: { nft: string }) {
                                     priority
                                     className="mt-[0.1rem] mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
                                   />
-                                  0
+                                  {balance?.toFixed(2)}
                                 </div>
                                 <span className="mt-2 ml-4 text-right text-[0.9rem] text-[#fffc]">
-                                  $0
+                                  $
+                                  {(Number(balance) * pepecoinPrice).toFixed(2)}
                                 </span>
                               </div>
-                              <button
-                                disabled
-                                className="font-inherit mt-4 flex w-full justify-center rounded-[12px] border border-transparent px-4 py-2 text-[1em] font-bold text-white transition-all duration-200 ease-in-out disabled:bg-[#1a1a1a]"
-                              >
-                                Insufficient balance
-                              </button>
+                              {item.activities[item.activities.length - 1]
+                                .priceSats *
+                                1.028 +
+                                0.5 <=
+                              Number(balance) ? (
+                                <button className="font-inherit mt-4 flex w-full justify-center rounded-[12px] border border-transparent bg-[#8c45ff] px-4 py-2 text-[1em] font-bold text-white transition-all duration-200 ease-in-out">
+                                  Confirm
+                                </button>
+                              ) : (
+                                <button
+                                  disabled
+                                  className="font-inherit mt-4 flex w-full justify-center rounded-[12px] border border-transparent px-4 py-2 text-[1em] font-bold text-white transition-all duration-200 ease-in-out disabled:bg-[#1a1a1a]"
+                                >
+                                  Insufficient balance
+                                </button>
+                              )}
                             </DialogHeader>
                           </DialogContent>
                         </Dialog>

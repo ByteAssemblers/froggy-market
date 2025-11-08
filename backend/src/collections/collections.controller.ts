@@ -21,6 +21,18 @@ export class CollectionsController {
 
   @Get()
   async findAll() {
-    return this.collectionsService.findAll();
+    const collections = await this.collectionsService.findAll();
+
+    // Transform listings to activities for frontend compatibility
+    return collections.map(collection => ({
+      ...collection,
+      inscriptions: collection.inscriptions.map(inscription => ({
+        ...inscription,
+        activities: inscription.listings.map(listing => ({
+          ...listing,
+          state: listing.status,
+        })),
+      })),
+    }));
   }
 }

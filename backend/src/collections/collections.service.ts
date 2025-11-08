@@ -64,7 +64,12 @@ export class CollectionsService {
       include: {
         inscriptions: {
           include: {
-            listings: true,
+            listings: {
+              orderBy: {
+                createdAt: 'desc',
+              },
+              take: 1,
+            },
           },
         },
       },

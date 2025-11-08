@@ -3,6 +3,7 @@ import { use, useEffect, useState } from "react";
 
 import Image from "next/image";
 import Link from "next/link";
+import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -22,7 +23,6 @@ import {
 } from "@/components/ui/dialog";
 import { EllipsisVertical, Filter } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
-import pepeOrdSwap from "@/lib/OrdSwap";
 
 export default function WalletAddress({
   params,
@@ -49,11 +49,11 @@ export default function WalletAddress({
       if (Array.isArray(data)) {
         setInscriptions(data);
       } else {
-        console.error('Invalid response format:', data);
+        console.error("Invalid response format:", data);
         setInscriptions([]);
       }
     } catch (error) {
-      console.error('Error fetching wallet NFTs:', error);
+      console.error("Error fetching wallet NFTs:", error);
       setInscriptions([]);
     }
   };
@@ -64,14 +64,17 @@ export default function WalletAddress({
 
   const handleUnlist = async (item: any) => {
     try {
-      const response = await fetch("http://localhost:5555/api/listings/unlist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          inscriptionId: item.inscription_id,
-          sellerAddress: walletAddress,
-        }),
-      });
+      const response = await fetch(
+        "http://localhost:5555/api/listings/unlist",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            inscriptionId: item.inscription_id,
+            sellerAddress: walletAddress,
+          }),
+        },
+      );
 
       const data = await response.json();
 
@@ -79,12 +82,12 @@ export default function WalletAddress({
         throw new Error(data.message || "Failed to unlist NFT");
       }
 
-      alert("✅ NFT unlisted successfully!");
+      toast("NFT unlisted successfully!");
       // Refresh the wallet data
       fetchWallet();
     } catch (error: any) {
       console.error(error);
-      alert(`❌ ${error.message}`);
+      toast(`${error.message}`);
     }
   };
 
@@ -97,12 +100,12 @@ export default function WalletAddress({
     async function handleList() {
       try {
         if (!price || Number(price) <= 0) {
-          alert("Please enter a valid price");
+          toast("Please enter a valid price");
           return;
         }
 
         if (!privateKey) {
-          alert("Wallet not unlocked");
+          toast("Wallet not unlocked");
           return;
         }
 
@@ -131,13 +134,13 @@ export default function WalletAddress({
           throw new Error(data.message || "Failed to list NFT");
         }
 
-        alert(`✅ NFT listed for sale!\nListing ID: ${data.id}`);
+        toast(`NFT listed for sale!\nListing ID: ${data.id}`);
 
         // Refresh the wallet data to update button state
         await fetchWallet();
       } catch (error: any) {
         console.error(error);
-        alert(`❌ ${error.message}`);
+        toast(`${error.message}`);
       } finally {
         setIsListing(false);
       }
@@ -547,10 +550,9 @@ export default function WalletAddress({
                     </div>
                     {walletAddress === address && (
                       <div className="flex w-full gap-2.5">
-                        {/* Show List button if not listed, Unlist button if listed */}
-                        {item.dbMetadata?.listings?.[0]?.status !== 'listed' ? (
+                        {item.dbMetadata?.listings?.[0]?.status !== "listed" ? (
                           <Dialog>
-                            <DialogTrigger className="font-inherit inline-flex w-full items-center justify-center rounded-xl border border-transparent bg-[#263340] px-4 py-2 text-base font-bold text-white transition-all duration-200 ease-in-out">
+                            <DialogTrigger className="font-inherit inline-flex w-full items-center justify-center rounded-xl border border-transparent bg-[#8fc5ff] px-4 py-2 text-base font-bold text-[#007aff] transition-all duration-200 ease-in-out hover:bg-[#007aff] hover:text-white">
                               <svg
                                 data-v-51cc9e0e=""
                                 xmlns="http://www.w3.org/2000/svg"
@@ -585,9 +587,10 @@ export default function WalletAddress({
                         ) : (
                           <button
                             onClick={() => handleUnlist(item)}
-                            className="font-inherit inline-flex w-full items-center justify-center rounded-xl border border-transparent bg-[#ff4444] px-4 py-2 text-base font-bold text-white transition-all duration-200 ease-in-out hover:bg-[#ff6666]"
+                            className="font-inherit inline-flex w-full items-center justify-center rounded-xl border border-transparent bg-[#1a1a1a] px-4 py-2 text-base font-bold text-white transition-all duration-200 ease-in-out hover:bg-[#222]"
                           >
                             <svg
+                              data-v-51cc9e0e=""
                               xmlns="http://www.w3.org/2000/svg"
                               viewBox="0 0 24 24"
                               fill="none"
@@ -599,7 +602,7 @@ export default function WalletAddress({
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
                                 strokeWidth="2"
-                                d="M6 18L18 6M6 6l12 12"
+                                d="m14 5-1.414-1.414A2 2 0 0 0 11.172 3H5a2 2 0 0 0-2 2v6.172a2 2 0 0 0 .586 1.414L5 14m14-4 1.586 1.586a2 2 0 0 1 0 2.828l-6.172 6.172a2 2 0 0 1-2.828 0L10 19M7 7h.001M21 3 3 21"
                               ></path>
                             </svg>
                             <span className="ml-2">Unlist</span>
