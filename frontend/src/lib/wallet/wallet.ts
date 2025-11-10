@@ -23,7 +23,7 @@ export type HDWallet = {
 // Generate a new mnemonic + wallet
 export async function generateHDWallet(): Promise<HDWallet> {
   const mnemonic = bip39.generateMnemonic(128); // 12 words
-  const seed = await bip39.mnemonicToSeed(mnemonic);
+  const seed = await bip39.mnemonicToSeed(mnemonic, "bells");
   const root = bip32.fromSeed(seed, pepeNetwork as any);
   const child = root.derivePath(PEPECOIN_PATH);
 
@@ -47,7 +47,7 @@ export async function fromMnemonic(mnemonic: string): Promise<HDWallet> {
     throw new Error("Invalid mnemonic phrase");
   }
 
-  const seed = await bip39.mnemonicToSeed(clean);
+  const seed = await bip39.mnemonicToSeed(clean, "bells");
   const root = bip32.fromSeed(seed, pepeNetwork as any);
   const child = root.derivePath(PEPECOIN_PATH);
 

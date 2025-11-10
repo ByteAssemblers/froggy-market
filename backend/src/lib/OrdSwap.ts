@@ -390,6 +390,31 @@ export async function buildSellerListingPsbt({
     );
   }
 
+  // Detect the script type of the NFT output
+  const scriptType = bitcoin.script.toASM(nftOutput.script);
+  const isP2PKH = nftOutput.script.length === 25 &&
+                   nftOutput.script[0] === 0x76 && // OP_DUP
+                   nftOutput.script[1] === 0xa9;   // OP_HASH160
+
+  // Build payment object for P2PKH
+  const payment = bitcoin.payments.p2pkh({
+    pubkey: sellerKey.publicKey,
+    network: pepeNetwork,
+  });
+
+  // Verify the seller controls this UTXO
+  const outputScript = Buffer.from(nftOutput.script).toString('hex');
+  const expectedScript = payment.output ? Buffer.from(payment.output).toString('hex') : '';
+
+  if (outputScript !== expectedScript) {
+    throw new Error(
+      `buildSellerListingPsbt: seller key does not control NFT UTXO.\n` +
+      `Expected script: ${expectedScript}\n` +
+      `Actual script: ${outputScript}\n` +
+      `Make sure you're using the correct private key for address ${derivedAddress}`
+    );
+  }
+
   const placeholderTx = createPlaceholderTransaction();
   const placeholderHex = placeholderTx.toHex();
   const placeholderTxid = placeholderTx.getId();
@@ -408,6 +433,7 @@ export async function buildSellerListingPsbt({
     nonWitnessUtxo: placeholderBytes,
   });
 
+  // Add the NFT input with proper script information
   psbt.addInput({
     hash: txid,
     index: vout,

@@ -50,68 +50,130 @@ export class ListingsService {
     }
 
     // Build the seller PSBT
-    const listing = await pepeOrdSwap.buildSellerListingPsbt({
-      sellerWif,
+    console.log('[ListNFT] Building PSBT with params:', {
       nftTxid,
       nftVout,
       priceSats,
-      sellerReceiveAddress: sellerAddress,
-      postageSats: 100_000,
+      sellerAddress,
+      inscriptionId,
     });
 
-    // Always create a NEW listing row (no update)
-    const created = await this.prisma.listings.create({
-      data: {
-        inscriptionId: inscription.id,
-        status: 'listed',
-        psbtBase64: listing.psbtBase64,
+    try {
+      const listing = await pepeOrdSwap.buildSellerListingPsbt({
+        sellerWif,
+        nftTxid,
+        nftVout,
         priceSats,
-        sellerAddress,
-        txid: nftTxid,
-      },
-    });
+        sellerReceiveAddress: sellerAddress,
+        postageSats: 100_000,
+      });
 
-    return { ...created, sellerPsbt: listing.psbtBase64 };
+      console.log('[ListNFT] PSBT built successfully:', {
+        sellerAddress: listing.sellerAddress,
+        sellerRecvAddress: listing.sellerRecvAddress,
+        priceSats: listing.priceSats,
+      });
+
+      // Always create a NEW listing row (no update)
+      const created = await this.prisma.listings.create({
+        data: {
+          inscriptionId: inscription.id,
+          status: 'listed',
+          psbtBase64: listing.psbtBase64,
+          priceSats,
+          sellerAddress: listing.sellerAddress || sellerAddress, // Use the derived address from PSBT, fallback to provided
+          txid: nftTxid,
+        },
+      });
+
+      return { ...created, sellerPsbt: listing.psbtBase64 };
+    } catch (error) {
+      // Enhanced error message for WIF mismatch
+      if (error.message.includes('seller key does not control')) {
+        throw new BadRequestException(
+          `The private key provided does not control the NFT at ${nftTxid}:${nftVout}. ` +
+            `Please make sure you're using the correct private key for the address that currently holds this NFT. ` +
+            `Error: ${error.message}`,
+        );
+      }
+      throw error;
+    }
   }
 
   // 🟡 Buy NFT
   async buyNFT(dto: {
-    sellerPsbtBase64: string;
-    buyerWif: string;
-    buyerReceiveAddress: string;
-    platformAddress: string;
-    platformFeeSats: number;
     listingId: string;
+    buyerWif: string;
+    buyerReceiveAddress?: string;
+    platformAddress?: string;
+    platformFeeSats?: number;
   }) {
     const {
-      sellerPsbtBase64,
+      listingId,
       buyerWif,
       buyerReceiveAddress,
       platformAddress,
       platformFeeSats,
-      listingId,
     } = dto;
 
-    const tx = await pepeOrdSwap.completeBuyerFromSellerPsbt({
-      sellerPsbtBase64,
-      buyerWif,
-      buyerReceiveAddress,
-      platformAddress,
-      platformFeeSats,
+    // 1. Find the active listing
+    const listing = await this.prisma.listings.findUnique({
+      where: { id: listingId },
+      include: { inscription: true },
     });
 
+    if (!listing) {
+      throw new BadRequestException('Listing not found');
+    }
+
+    if (listing.status !== 'listed') {
+      throw new BadRequestException('This listing is no longer active');
+    }
+
+    if (!listing.psbtBase64) {
+      throw new BadRequestException('Listing PSBT is missing');
+    }
+
+    // 2. Complete the buyer transaction with the seller's PSBT
+    const tx = await pepeOrdSwap.completeBuyerFromSellerPsbt({
+      sellerPsbtBase64: listing.psbtBase64,
+      buyerWif,
+      buyerReceiveAddress,
+      platformAddress: platformAddress || 'PFroggyMarketPlatformAddress123', // Replace with your platform address
+      platformFeeSats: platformFeeSats || Math.round((listing.priceSats || 0) * 0.028), // 2.8% taker fee
+      postageSats: 1_000_000,
+      feeRate: 10000,
+    });
+
+    // 3. Broadcast the transaction to the blockchain
     await broadcastRawTxCore(tx.rawHex);
 
-    const updated = await this.prisma.listings.update({
-      where: { id: listingId },
+    // 4. Create a new "sold" record (event-sourced approach)
+    const soldRecord = await this.prisma.listings.create({
       data: {
+        inscriptionId: listing.inscriptionId,
         status: 'sold',
+        psbtBase64: listing.psbtBase64,
+        priceSats: listing.priceSats,
+        sellerAddress: listing.sellerAddress,
         buyerAddress: tx.buyerAddress,
         txid: tx.txid,
       },
     });
 
-    return { txid: tx.txid, updated };
+    return {
+      txid: tx.txid,
+      listing: soldRecord,
+      transaction: {
+        buyerAddress: tx.buyerAddress,
+        buyerReceiveAddress: tx.buyerReceiveAddress,
+        sellerPriceSats: tx.sellerPriceSats,
+        platformFeeSats: tx.platformFeeSats,
+        postageSats: tx.postageSats,
+        buyerChangeSats: tx.buyerChangeSats,
+        splitTransactions: tx.splitTransactions,
+      },
+    };
   }
 
   // 🔴 Unlist NFT (old method - updates existing row)
@@ -159,8 +221,31 @@ export class ListingsService {
 
   // 🧾 Get listed (active) listings
   async getActiveListings() {
+    // Use raw SQL to get only the latest status for each inscription
+    // where the latest status is 'listed'
+    const activeListings = await this.prisma.$queryRaw`
+      WITH latest_listings AS (
+        SELECT DISTINCT ON ("inscriptionId")
+          id,
+          "inscriptionId",
+          status,
+          "createdAt"
+        FROM listings
+        ORDER BY "inscriptionId", "createdAt" DESC
+      )
+      SELECT l.*
+      FROM listings l
+      INNER JOIN latest_listings ll
+        ON l.id = ll.id
+      WHERE ll.status = 'listed'
+      ORDER BY l."createdAt" DESC
+    `;
+
+    // Fetch full details with relations
+    const listingIds = (activeListings as any[]).map((l) => l.id);
+
     return this.prisma.listings.findMany({
-      where: { status: 'listed' },
+      where: { id: { in: listingIds } },
       include: {
         inscription: {
           include: {
@@ -168,6 +253,37 @@ export class ListingsService {
           },
         },
       },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  // 🔍 Get listing by ID with full details
+  async getListingById(id: string) {
+    return this.prisma.listings.findUnique({
+      where: { id },
+      include: {
+        inscription: {
+          include: {
+            collection: true,
+          },
+        },
+      },
+    });
+  }
+
+  // 📊 Get latest status for an inscription
+  async getLatestListingStatus(inscriptionId: string) {
+    return this.prisma.listings.findFirst({
+      where: { inscriptionId },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  // 📜 Get full history for an inscription
+  async getInscriptionHistory(inscriptionId: string) {
+    return this.prisma.listings.findMany({
+      where: { inscriptionId },
+      orderBy: { createdAt: 'desc' },
     });
   }
 

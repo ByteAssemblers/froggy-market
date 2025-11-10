@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { EllipsisVertical, Filter } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
+import { useListings } from "@/hooks/useListings";
 
 export default function WalletAddress({
   params,
@@ -93,56 +94,39 @@ export default function WalletAddress({
 
   function ListDialogContent({ item }: { item: any }) {
     const [price, setPrice] = useState<Number>(0);
-
-    const [isListing, setIsListing] = useState(false);
-    const [message, setMessage] = useState("");
+    const { list, loading } = useListings();
 
     async function handleList() {
       try {
         if (!price || Number(price) <= 0) {
-          toast("Please enter a valid price");
+          toast.error("Please enter a valid price");
           return;
         }
 
-        if (!privateKey) {
-          toast("Wallet not unlocked");
+        if (!privateKey || !walletAddress) {
+          toast.error("Wallet not unlocked");
           return;
         }
 
-        setIsListing(true);
+        // Create wallet object for the hook
+        const wallet = {
+          privateKey,
+          address: walletAddress,
+          mnemonic: "",
+          publicKey: "",
+        };
 
-        // fetch full transaction data for this NFT
-        const txid = item.genesis_tx || item.inscription_id.split("i")[0]; // adapt if needed
-        const vout = Number(item.vout || 0);
-
-        const res = await fetch("http://localhost:5555/api/listings/list", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sellerWif: privateKey,
-            nftTxid: txid,
-            nftVout: vout,
-            priceSats: price,
-            sellerAddress: walletAddress,
-            inscriptionId: item.inscription_id,
-          }),
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          throw new Error(data.message || "Failed to list NFT");
-        }
-
-        toast(`NFT listed for sale!\nListing ID: ${data.id}`);
+        // ✅ Use the new listing function - it automatically:
+        // 1. Fetches inscription UTXO location
+        // 2. Verifies you own it
+        // 3. Uses correct WIF for that address
+        await list(item.inscription_id, Number(price), wallet);
 
         // Refresh the wallet data to update button state
         await fetchWallet();
       } catch (error: any) {
-        console.error(error);
-        toast(`${error.message}`);
-      } finally {
-        setIsListing(false);
+        console.error("Listing failed:", error);
+        // Error is already shown via toast in useListings hook
       }
     }
 
@@ -230,21 +214,15 @@ export default function WalletAddress({
 
         <button
           onClick={handleList}
-          disabled={isListing || Number(price) <= 0}
+          disabled={loading || Number(price) <= 0}
           className={`font-inherit mt-4 flex w-full justify-center rounded-xl border border-transparent px-4 py-2 text-base font-bold transition-all duration-200 ease-in-out ${
-            isListing || Number(price) <= 0
+            loading || Number(price) <= 0
               ? "bg-[#1a1a1a]"
               : "bg-[#007aff] hover:bg-[#3b82f6]"
           }`}
         >
-          {isListing ? "Listing..." : "Confirm Listing"}
+          {loading ? "Listing..." : "Confirm Listing"}
         </button>
-
-        {message && (
-          <div className="mt-3 text-center text-sm break-all text-[#dfc0fd]">
-            {message}
-          </div>
-        )}
       </>
     );
   }
