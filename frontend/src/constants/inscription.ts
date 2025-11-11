@@ -52,4 +52,4 @@ export const REVEAL_EXTRA_FLAT_FEE_SATS = 1_000_000; // 0.01 PEP/DOGE in koinu
 export const REVEAL_FEE_PADDING_SATS = REVEAL_EXTRA_FLAT_FEE_SATS; // backwards compatibility alias
 export const DEFAULT_SIGNATURE_PUSH_BYTES = 73;
 export const MAX_SCRIPT_CHUNK_BYTES = 240; // match legacy pepinals chunking to stay indexable
-export const MAX_PARTIAL_SCRIPT_BYTES = 1_500; // limit scriptSig payload to avoid policy rejection
+export const MAX_PARTIAL_SCRIPT_BYTES = 1_500; // limit scriptSig payload to avoid policy rejection (must stay at 1500 for indexer compatibility)

@@ -7,34 +7,16 @@ import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { X } from "lucide-react";
 
-import { decryptWallet } from "@/lib/wallet/storage";
-import {
-  ensureCryptoReady,
-  buildEPH,
-  buildPepinalsPartial,
-  buildLockForPartial,
-  buildCommitPsbtMulti,
-  finalizeAndExtractPsbtBase64,
-  buildAndSignRevealTx,
-  splitPartialForScriptSig,
-  calculateCommitChainPlan,
-  buildChainedCommitTx,
-  fetchUtxos,
-  resolveFileContentType,
-  broadcastRawTxCore,
-  waitForRawTx,
-  signPsbtWithWallet,
-} from "@/lib/inscribe";
+import { resolveFileContentType } from "@/lib/inscription/inscribe";
 import {
   PEPE_PER_KB_FEE,
   MARKET_FEE,
-  MIN_COMMIT_VALUE,
   RECOMMENDED_FEE,
-  DEFAULT_COMMIT_PEP,
   MAX_INSCRIPTION_SIZE,
-  REVEAL_FEE_PADDING_SATS,
 } from "@/constants/inscription";
 import { useProfile } from "@/hooks/useProfile";
+import { saveJob, saveFileData, type InscriptionJob } from "@/lib/inscription/indexedDB";
+import { processJob } from "@/lib/inscription/inscriptionWorker";
 
 export default function InscribeTabs() {
   const [isInscribing, setIsInscribing] = useState(false);
@@ -62,21 +44,6 @@ export default function InscribeTabs() {
     const custom = Number.parseFloat(String(pepePer));
     if (!Number.isFinite(custom) || custom <= 0) return recommended;
     return Math.max(1, Math.floor((custom * 1e8) / 1_000));
-  };
-
-  const perCommitValue = () => {
-    const fromEnv =
-      Number.isFinite(DEFAULT_COMMIT_PEP) && DEFAULT_COMMIT_PEP > 0
-        ? DEFAULT_COMMIT_PEP
-        : 0.015;
-    const baseSats = Math.max(MIN_COMMIT_VALUE, Math.floor(fromEnv * 1e8));
-    if (baseSats <= MIN_COMMIT_VALUE) {
-      return MIN_COMMIT_VALUE;
-    }
-    if (baseSats <= MIN_COMMIT_VALUE + REVEAL_FEE_PADDING_SATS) {
-      return MIN_COMMIT_VALUE;
-    }
-    return baseSats - REVEAL_FEE_PADDING_SATS;
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -119,12 +86,11 @@ export default function InscribeTabs() {
 
     try {
       setIsInscribing(true);
-      for (const file of files) {
-        let payload;
-        let contentType = "application/octet-stream";
 
-        const file = files[0];
-        setStatusMessage("Reading file payload…");
+      for (const file of files) {
+        setStatusMessage("Reading file and adding to queue…");
+
+        let payload: Uint8Array;
         try {
           const buffer = await file.arrayBuffer();
           payload = new Uint8Array(buffer);
@@ -133,151 +99,68 @@ export default function InscribeTabs() {
             "Failed to read the selected file. Please try again.",
           );
         }
-        contentType = resolveFileContentType(file);
 
-        setStatusMessage("Preparing inscription data…");
-
-        await ensureCryptoReady();
-
-        const eph = await buildEPH();
-        const partial = buildPepinalsPartial(contentType, payload);
-        const segments = splitPartialForScriptSig(partial);
-        if (!segments.length) {
-          throw new Error("Failed to prepare inscription payload segments.");
-        }
-        const locks = segments.map((segment) =>
-          buildLockForPartial(eph.publicKey, segment.length),
-        );
+        const contentType = resolveFileContentType(file);
         const feeRate = computeFeeRate();
-        const chainPlan = calculateCommitChainPlan({
-          segments,
-          locks,
-          feeRate,
-          revealOutputValue: 100_000,
-          revealFeePadding: REVEAL_FEE_PADDING_SATS,
-        });
-        const finalPartial = segments[segments.length - 1];
-        const firstLock = locks[0];
-        const segmentValues = [...chainPlan.segmentValues];
-        const targetCommitOutput = Math.max(
-          chainPlan.commitOutputValue,
-          perCommitValue() + chainPlan.revealFee,
-        );
-        if (targetCommitOutput !== chainPlan.commitOutputValue) {
-          segmentValues[0] = targetCommitOutput;
-        }
-        const baseCommitValue = Math.max(
-          MIN_COMMIT_VALUE,
-          targetCommitOutput - chainPlan.revealFee,
-        );
 
-        setStatusMessage("Fetching wallet UTXOs…");
-        let utxos;
+        // Create job in IndexedDB
+        const job: InscriptionJob = {
+          id: `job_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          fileName: file.name,
+          fileSize: file.size,
+          contentType,
+          status: "pending",
+          progress: 0,
+          currentCommit: 0,
+          totalCommits: 0,
+          createdAt: Date.now(),
+        };
+
+        // Save job and file data to IndexedDB
+        await saveJob(job);
+        await saveFileData(job.id, payload);
+
+        console.log(`📝 Job queued: ${file.name}`);
+        toast.success(`${file.name} added to inscription queue!`);
+
+        // Process the job immediately
+        setStatusMessage(`Inscribing ${file.name}...`);
+
         try {
-          utxos = await fetchUtxos(wallet.address);
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
-          if (
-            message.includes("ENOTFOUND") ||
-            message.includes("getaddrinfo")
-          ) {
-            throw new Error(
-              "Wallet not initialised on-chain. Deposit PEP to this address and wait for a confirmation before inscribing.",
-            );
-          }
-          throw err;
-        }
-
-        const spendable = utxos.filter(
-          (u) => Number.isFinite(u.value) && u.value > 0,
-        );
-        if (!spendable.length) {
-          throw new Error(
-            "No spendable UTXOs found. Add PEP to your wallet and wait for confirmation.",
+          const result = await processJob(
+            job.id,
+            wallet,
+            feeRate,
+            (update: Partial<InscriptionJob>) => {
+              // Update UI with progress
+              if (update.currentCommit && update.totalCommits) {
+                setStatusMessage(
+                  `Processing commit ${update.currentCommit}/${update.totalCommits}...`
+                );
+              }
+            }
           );
+
+          setStatusMessage("Inscription complete.");
+          setSuccessTx({ commitTxid: result.commitTxid, revealTxid: result.revealTxid });
+
+          toast.success(`${file.name} inscribed successfully!`);
+          console.log(`✅ Inscription complete: ${result.revealTxid}`);
+        } catch (error: any) {
+          // Job failed - error is already saved in IndexedDB
+          console.error(`❌ Failed to inscribe ${file.name}:`, error);
+          toast.error(`Failed to inscribe ${file.name}: ${error.message}`);
         }
-
-        setStatusMessage("Building commit transaction…");
-        const commitPsbt = await buildCommitPsbtMulti({
-          utxos: spendable,
-          lockScript: firstLock,
-          perCommitValue: baseCommitValue,
-          changeAddress: wallet.address,
-          feeRate,
-          partialItems: finalPartial,
-          revealFeePadding: REVEAL_FEE_PADDING_SATS,
-          commitOutputValueOverride: targetCommitOutput,
-        });
-
-        setStatusMessage("Signing commit transaction…");
-        const signedCommitBase64 = await signPsbtWithWallet(
-          commitPsbt.toBase64(),
-          wallet.privateKey,
-        );
-        setStatusMessage("Broadcasting commit transaction…");
-        const commitHex =
-          await finalizeAndExtractPsbtBase64(signedCommitBase64);
-        const commitTxid = await broadcastRawTxCore(commitHex);
-
-        let currentCommitTxid = commitTxid;
-        let currentCommitRaw = commitHex;
-        const ephWIF = eph.toWIF();
-
-        if (segments.length > 1) {
-          for (let idx = 1; idx < segments.length; idx += 1) {
-            setStatusMessage(
-              `Building chained commit ${idx + 1} of ${segments.length}…`,
-            );
-            const { hex: chainedHex } = await buildChainedCommitTx({
-              prevTxId: currentCommitTxid,
-              prevVout: 0,
-              prevRawTx: currentCommitRaw,
-              lockScript: locks[idx - 1],
-              partialItems: segments[idx - 1],
-              nextLockScript: locks[idx],
-              nextOutputValue: segmentValues[idx],
-              ephemeralWIF: ephWIF,
-            });
-            setStatusMessage(
-              `Broadcasting chained commit ${idx + 1} of ${segments.length}…`,
-            );
-            const broadcastTxid = await broadcastRawTxCore(chainedHex);
-            currentCommitTxid = broadcastTxid;
-            currentCommitRaw = chainedHex;
-          }
-        }
-
-        setStatusMessage("Waiting for commit to confirm…");
-        const commitRaw = await waitForRawTx(currentCommitTxid, {
-          timeoutMs: 900_000,
-          intervalMs: 2_000,
-        });
-
-        setStatusMessage("Building reveal transaction…");
-        const revealHex = await buildAndSignRevealTx({
-          prevTxId: currentCommitTxid,
-          prevVout: 0,
-          prevRawTx: commitRaw,
-          lockScript: locks[locks.length - 1],
-          partialItems: finalPartial,
-          revealOutputValue: 100_000,
-          toAddress: wallet.address,
-          ephemeralWIF: ephWIF,
-          feeRate,
-          revealFeePadding: REVEAL_FEE_PADDING_SATS,
-        });
-
-        setStatusMessage("Broadcasting reveal transaction…");
-        const revealTxid = await broadcastRawTxCore(revealHex);
-        setStatusMessage("Inscription complete.");
-        setSuccessTx({ commitTxid: currentCommitTxid, revealTxid });
       }
 
-      setTimeout(() => {}, 5000);
+      // Clear files after processing
+      setFiles([]);
+      setTotalSize(0);
+      setStatusMessage("");
     } catch (error: any) {
       console.error("Inscription failed", error);
       setStatusMessage("");
-      toast(error?.message || "Failed to inscribe. Please try again.");
+      toast.error(error?.message || "Failed to inscribe. Please try again.");
     } finally {
       setIsInscribing(false);
     }
@@ -393,9 +276,23 @@ export default function InscribeTabs() {
         </div>
       </div>
 
+      {isInscribing && (
+        <div className="mb-4 rounded-lg bg-green-500/10 border border-green-500/30 p-4">
+          <div className="text-sm text-green-200">
+            ✅ <strong>Your inscription is being saved automatically!</strong>
+            <br />
+            You can safely refresh the page or close the browser - the inscription will automatically resume when you return.
+            <br />
+            <br />
+            💡 <strong>Tip:</strong> You can navigate to other pages while inscribing. Check the bottom-right corner to see progress after page refresh.
+          </div>
+        </div>
+      )}
+
       <Button
         className="font-inherit rounded-[12px] border border-transparent bg-[#1a1a1a] px-4 py-2 text-[1em] font-medium text-white transition-all duration-200 ease-in-out hover:bg-[#222]"
         onClick={handleInscribe}
+        disabled={isInscribing}
       >
         {isInscribing ? statusMessage : "Inscribe"}
       </Button>

@@ -1,7 +1,7 @@
 import * as bitcoinjs from "bitcoinjs-lib";
 import { ECPairFactory } from "ecpair";
 import * as ecc from "@bitcoinerlab/secp256k1";
-import { pepeNetwork } from "./wallet/pepeNetwork";
+import { pepeNetwork } from "@/lib/wallet/pepeNetwork";
 import axios from "axios";
 import {
   CONTENT_TYPE_BY_EXTENSION,

@@ -71,7 +71,7 @@ export default function Wallet() {
     "empty" | "password" | "import" | "secret" | "mywallet" | "send" | "lock"
   >("empty");
 
-  const { pepecoinPrice } = useProfile();
+  const { pepecoinPrice, walletInfo } = useProfile();
 
   useEffect(() => {
     const stored = localStorage.getItem("pepecoin_wallet");
@@ -132,6 +132,12 @@ export default function Wallet() {
     setWalletAddress(w.address);
     setMnemonic(w.mnemonic);
     setPrivateKey(w.privateKey);
+
+    // 💾 Save unlocked wallet to session storage
+    sessionStorage.setItem("pepecoin_wallet_unlocked", JSON.stringify(w));
+
+    // 🔄 Update global wallet state
+    walletInfo();
   }
 
   function handleRemove() {
@@ -179,6 +185,12 @@ export default function Wallet() {
       setWalletAddress(w.address);
       setMnemonic(w.mnemonic);
       setPrivateKey(w.privateKey);
+
+      // 💾 Save unlocked wallet to session storage
+      sessionStorage.setItem("pepecoin_wallet_unlocked", JSON.stringify(w));
+
+      // 🔄 Update global wallet state
+      walletInfo();
     } catch {
       setError("invalid import");
     }
@@ -258,6 +270,14 @@ export default function Wallet() {
       setIsLocked(false);
       setLockPassword("");
       setLockError("");
+
+      // 💾 Save unlocked wallet to session storage so useProfile can access it
+      sessionStorage.setItem("pepecoin_wallet_unlocked", JSON.stringify(w));
+      console.log("💾 Unlocked wallet saved to session storage");
+
+      // 🔄 Update global wallet state (this triggers InscribeHistory refresh!)
+      walletInfo();
+      console.log("✅ Wallet unlocked and global state updated");
 
       // 🔁 Check pending action
       if (pendingAction === "showSecrets" || pendingAction === "backup") {
