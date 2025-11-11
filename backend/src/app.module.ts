@@ -3,7 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { WebsocketGateway } from './websocket/websocket.gateway';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { DatabaseModule } from './prisma/prisma.module';
+import { DatabaseModule } from './database/database.module';
 import { CollectionsModule } from './collections/collections.module';
 import { ListingsModule } from './listings/listings.module';
 

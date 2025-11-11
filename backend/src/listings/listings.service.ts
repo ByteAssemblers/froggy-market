@@ -1,5 +1,5 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '../database/database.service';
 import pepeOrdSwap from '../lib/OrdSwap';
 import { broadcastRawTxCore } from '../lib/inscribe';
 

@@ -7,7 +7,7 @@ import {
   fetchUtxos,
   fetchRawTransaction,
   broadcastRawTxCore,
-} from "./inscribe";
+} from "./inscription/inscribe";
 
 function estimateFee(inCount: any, outCount: any, feePerByte: any) {
   const bytes = 10 + inCount * 148 + outCount * 34;

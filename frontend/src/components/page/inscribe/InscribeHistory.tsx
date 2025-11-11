@@ -7,6 +7,7 @@ import { ChevronUp, ChevronDown, RefreshCw } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Spinner } from "@/components/ui/spinner";
 import { InscriptionAutoResume } from "@/components/InscriptionAutoResume";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function InscribeHistory() {
   const [inscriptions, setInscriptions] = useState<any[]>([]);
@@ -150,9 +151,11 @@ export default function InscribeHistory() {
       {!isLocked && hasSavedWallet && (
         <div>
           {inscriptions.length === 0 ? (
-            <div className="rounded-lg border border-white/20 bg-white/5 p-6 text-center">
-              <div className="text-sm text-[#fffc]">No inscriptions found</div>
-            </div>
+            <Skeleton className="bg-transparent">
+              <div className="mb-4 rounded-lg border border-white/20 bg-white/5 p-6 text-center"></div>
+              <div className="mb-4 rounded-lg border border-white/20 bg-white/5 p-6 text-center"></div>
+              <div className="mb-4 rounded-lg border border-white/20 bg-white/5 p-6 text-center"></div>
+            </Skeleton>
           ) : (
             inscriptions.map((item, index) => {
               const isExpanded = expandedItems.has(index);
