@@ -4,6 +4,7 @@ import * as bitcoin from "bitcoinjs-lib";
 import { ECPairFactory } from "ecpair";
 import * as ecc from "@bitcoinerlab/secp256k1";
 import { pepeNetwork } from "./pepeNetwork";
+import axios from 'axios';
 
 const ECPair = ECPairFactory(ecc);
 
@@ -15,45 +16,34 @@ export type UTXO = {
 
 // --- Helper: Broadcast ---
 async function broadcastRawTransaction(rawTx: string): Promise<string> {
-  const res = await fetch("https://api2.dogepaywallet.space/tx", {
-    method: "POST",
-    headers: { "Content-Type": "text/plain" },
-    body: rawTx,
-  });
-
-  const text = await res.text();
-  if (!res.ok) throw new Error(`Broadcast failed (${res.status}): ${text}`);
-
   try {
-    const parsed = JSON.parse(text);
-    return parsed.txid || text.trim();
-  } catch {
-    return text.trim();
+    // Use Next.js API route proxy to avoid CORS issues
+    const response = await axios.post('/api/dogepay/tx', rawTx, {
+      headers: { 'Content-Type': 'text/plain' },
+    });
+
+    const data = response.data;
+    return data.txid || data;
+  } catch (error: any) {
+    const message = error.response?.data?.error || error.message;
+    throw new Error(`Broadcast failed: ${message}`);
   }
 }
 
 // --- Helper: Fetch raw transaction (binary-safe) ---
 async function fetchRawTransactionHex(txid: string): Promise<string> {
-  const url = `https://api2.dogepaywallet.space/tx/${txid}/raw`;
-  const res = await fetch(url);
-
-  if (!res.ok) throw new Error(`Failed to fetch raw tx (${res.status}) for ${txid}`);
-
-  // Try array buffer first — Dogepay often returns binary
-  const buffer = await res.arrayBuffer();
-  const hex = Buffer.from(buffer).toString("hex");
-
-  if (hex && hex.length > 100) return hex;
-
-  // Fallback: try text → JSON
   try {
-    const txt = await res.text();
-    const parsed = JSON.parse(txt);
-    const rawHex = parsed.rawtx || parsed.hex || parsed.data || "";
-    if (!rawHex || rawHex.length < 100) throw new Error("Invalid hex data");
+    // Use Next.js API route proxy to avoid CORS issues
+    const response = await axios.get(`/api/dogepay/tx/${txid}`);
+    const data = response.data;
+
+    const rawHex = data.hex || "";
+    if (!rawHex || rawHex.length < 100) {
+      throw new Error("Invalid hex data");
+    }
     return rawHex.trim();
-  } catch {
-    throw new Error(`Invalid raw tx format for ${txid}`);
+  } catch (error: any) {
+    throw new Error(`Failed to fetch raw tx for ${txid}: ${error.message}`);
   }
 }
 
@@ -72,9 +62,8 @@ export async function sendPepeTransaction(
     });
 
     // --- Fetch UTXOs ---
-    const utxoRes = await fetch(`https://api2.dogepaywallet.space/address/${address}/utxo`);
-    if (!utxoRes.ok) throw new Error(`UTXO fetch failed (${utxoRes.status})`);
-    const utxos: UTXO[] = await utxoRes.json();
+    const utxoRes = await axios.get(`/api/dogepay/utxo/${address}`);
+    const utxos: UTXO[] = utxoRes.data;
     if (utxos.length === 0) throw new Error("No UTXOs to spend.");
 
     // --- Select inputs ---

@@ -7,14 +7,14 @@ import { FloorPriceChart } from "@/components/FloorPriceChart";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Avatar from "@/components/Avatar";
+import axios from 'axios';
 
 export default function TickInfo({ tick }: { tick: string }) {
   const [info, setInfo] = useState<any>();
   useEffect(() => {
     const fetchData = async () => {
-      const response = await fetch(`/api/belindex/token?tick=${tick}`);
-      const data = await response.json();
-      setInfo(data);
+      const response = await axios.get(`/api/belindex/token?tick=${tick}`);
+      setInfo(response.data);
     };
     fetchData();
   }, []);

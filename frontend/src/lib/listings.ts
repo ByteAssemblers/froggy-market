@@ -1,12 +1,7 @@
 "use client";
 
 import { HDWallet } from "./wallet/wallet";
-
-// Backend API URL
-const API_URL = "http://localhost:5555/api";
-
-// Blockchain API URL
-const BLOCKCHAIN_API = process.env.NEXT_PUBLIC_ORD_API_BASE!;
+import { apiClient, blockchainClient } from "./axios";
 
 /**
  * Get the current UTXO location of an inscription
@@ -21,12 +16,10 @@ export async function getInscriptionUTXO(inscriptionId: string) {
     try {
       const inscriptionNumber = inscriptionId.match(/i(\d+)$/)?.[1];
       if (inscriptionNumber) {
-        const response = await fetch(
-          `${BLOCKCHAIN_API}/inscriptions/number/${inscriptionNumber}`
+        const response = await blockchainClient.get(
+          `/inscriptions/number/${inscriptionNumber}`
         );
-        if (response.ok) {
-          data = await response.json();
-        }
+        data = response.data;
       }
     } catch (e: any) {
       apiError = e.message;
@@ -35,12 +28,10 @@ export async function getInscriptionUTXO(inscriptionId: string) {
     // Method 2: Try direct inscription endpoint
     if (!data) {
       try {
-        const response = await fetch(`${BLOCKCHAIN_API}/inscription/${inscriptionId}`);
-        if (response.ok) {
-          const contentType = response.headers.get("content-type");
-          if (contentType && contentType.includes("application/json")) {
-            data = await response.json();
-          }
+        const response = await blockchainClient.get(`/inscription/${inscriptionId}`);
+        const contentType = response.headers['content-type'];
+        if (contentType && contentType.includes("application/json")) {
+          data = response.data;
         }
       } catch (e: any) {
         apiError = e.message;
@@ -66,7 +57,7 @@ export async function getInscriptionUTXO(inscriptionId: string) {
       } else {
         throw new Error(
           `Cannot parse inscription location. API error: ${apiError}. ` +
-          `Please ensure blockchain API is running at ${BLOCKCHAIN_API}`
+          `Please ensure blockchain API is running at ${blockchainClient.defaults.baseURL}`
         );
       }
     }
@@ -124,28 +115,21 @@ export async function listInscription(
   }
 
   // Step 3: Call backend to create listing
-  const response = await fetch(`${API_URL}/listings/list`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+  try {
+    const response = await apiClient.post('/listings/list', {
       sellerWif: wallet.privateKey,
       nftTxid: utxo.txid,
       nftVout: utxo.vout,
       priceSats: priceSats,
       sellerAddress: wallet.address,
       inscriptionId: inscriptionId,
-    }),
-  });
+    });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || "Failed to list NFT");
+    console.log("[listInscription] Success:", response.data);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || "Failed to list NFT");
   }
-
-  const result = await response.json();
-  console.log("[listInscription] Success:", result);
-
-  return result;
 }
 
 /**
@@ -156,22 +140,17 @@ export async function buyListing(listingId: string, wallet: HDWallet) {
     throw new Error("Wallet not found");
   }
 
-  const response = await fetch(`${API_URL}/listings/buy`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+  try {
+    const response = await apiClient.post('/listings/buy', {
       listingId,
       buyerWif: wallet.privateKey,
       buyerReceiveAddress: wallet.address,
-    }),
-  });
+    });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || "Failed to buy NFT");
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || "Failed to buy NFT");
   }
-
-  return response.json();
 }
 
 /**
@@ -185,75 +164,62 @@ export async function cancelListing(
     throw new Error("Wallet not found");
   }
 
-  const response = await fetch(`${API_URL}/listings/unlist`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+  try {
+    const response = await apiClient.post('/listings/unlist', {
       inscriptionId,
       sellerAddress: wallet.address,
-    }),
-  });
+    });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || "Failed to cancel listing");
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || "Failed to cancel listing");
   }
-
-  return response.json();
 }
 
 /**
  * Get all active listings
  */
 export async function getActiveListings() {
-  const response = await fetch(`${API_URL}/listings`);
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch listings");
+  try {
+    const response = await apiClient.get('/listings');
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || "Failed to fetch listings");
   }
-
-  return response.json();
 }
 
 /**
  * Get listing by ID
  */
 export async function getListingById(listingId: string) {
-  const response = await fetch(`${API_URL}/listings/${listingId}`);
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch listing");
+  try {
+    const response = await apiClient.get(`/listings/${listingId}`);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || "Failed to fetch listing");
   }
-
-  return response.json();
 }
 
 /**
  * Get inscription status
  */
 export async function getInscriptionStatus(inscriptionId: string) {
-  const response = await fetch(
-    `${API_URL}/listings/inscription/${inscriptionId}/status`
-  );
-
-  if (!response.ok) {
+  try {
+    const response = await apiClient.get(`/listings/inscription/${inscriptionId}/status`);
+    return response.data;
+  } catch (error) {
     return null; // Not listed
   }
-
-  return response.json();
 }
 
 /**
  * Get inscription listing history
  */
 export async function getInscriptionHistory(inscriptionId: string) {
-  const response = await fetch(
-    `${API_URL}/listings/inscription/${inscriptionId}/history`
-  );
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch history");
+  try {
+    const response = await apiClient.get(`/listings/inscription/${inscriptionId}/history`);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || "Failed to fetch history");
   }
-
-  return response.json();
 }

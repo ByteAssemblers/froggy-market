@@ -1,5 +1,7 @@
 "use client";
 
+import axios from 'axios';
+
 export type UTXO = {
   txid: string;
   vout: number;
@@ -11,20 +13,13 @@ export type UTXO = {
 
 export async function getPepecoinBalance(address: string): Promise<number> {
   try {
-    const res = await fetch(
-      `https://api2.dogepaywallet.space/address/${address}/utxo`,
-      {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-        cache: "no-store",
-      },
-    );
+    // Use Next.js API route proxy to avoid CORS issues
+    const response = await axios.get(`/api/dogepay/utxo/${address}`, {
+      // Disable caching for balance queries
+      headers: { 'Cache-Control': 'no-cache' }
+    });
 
-    if (!res.ok) {
-      throw new Error(`Failed to fetch UTXOs (${res.status})`);
-    }
-
-    const utxos: UTXO[] = await res.json();
+    const utxos: UTXO[] = response.data;
 
     // Sum all unspent outputs (value is in satoshis)
     const totalSats = utxos.reduce((sum, utxo) => sum + utxo.value, 0);

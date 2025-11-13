@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import axios from 'axios';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -19,18 +20,16 @@ export default function TickTabs({ tick }: { tick: string }) {
   const [holders, setHolders] = useState<any[]>([]);
   useEffect(() => {
     const fetchData = async () => {
-      const response = await fetch(`/api/belindex/token?tick=${tick}`);
-      const data = await response.json();
-      setInfo(data);
+      const response = await axios.get(`/api/belindex/token?tick=${tick}`);
+      setInfo(response.data);
     };
     fetchData();
   }, []);
 
   useEffect(() => {
     const fetchHolders = async () => {
-      const response = await fetch(`/api/belindex/holders?tick=${tick}&page=1`);
-      const data = await response.json();
-      setHolders(data.holders);
+      const response = await axios.get(`/api/belindex/holders?tick=${tick}&page=1`);
+      setHolders(response.data.holders);
     };
     fetchHolders();
   }, []);

@@ -4,6 +4,8 @@ import { use, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
+import { apiClient } from "@/lib/axios";
+import axios from 'axios';
 
 const ORD_API_BASE = process.env.NEXT_PUBLIC_ORD_API_BASE!;
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -43,10 +45,8 @@ export default function WalletAddress({
 
   const fetchWallet = async () => {
     try {
-      const response = await fetch(
-        `http://localhost:5555/api/listings/wallet/${address}`,
-      );
-      const data = await response.json();
+      const response = await apiClient.get(`/listings/wallet/${address}`);
+      const data = response.data;
 
       // Check if data is an array before setting
       if (Array.isArray(data)) {
@@ -67,30 +67,17 @@ export default function WalletAddress({
 
   const handleUnlist = async (item: any) => {
     try {
-      const response = await fetch(
-        "http://localhost:5555/api/listings/unlist",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            inscriptionId: item.inscription_id,
-            sellerAddress: walletAddress,
-          }),
-        },
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to unlist NFT");
-      }
+      await apiClient.post("/listings/unlist", {
+        inscriptionId: item.inscription_id,
+        sellerAddress: walletAddress,
+      });
 
       toast("NFT unlisted successfully!");
       // Refresh the wallet data
       fetchWallet();
     } catch (error: any) {
       console.error(error);
-      toast(`${error.message}`);
+      toast(`${error.response?.data?.message || error.message}`);
     }
   };
 
@@ -252,19 +239,15 @@ export default function WalletAddress({
         setIsLoading(true);
         setMessage("");
 
-        const res = await fetch("/api/send", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            fromAddress: walletAddress,
-            toAddress,
-            inscriptionId: item.inscription_id,
-            privateKey: privateKey,
-            fee: 0.00015,
-          }),
+        const response = await axios.post("/api/send", {
+          fromAddress: walletAddress,
+          toAddress,
+          inscriptionId: item.inscription_id,
+          privateKey: privateKey,
+          fee: 0.00015,
         });
 
-        const data = await res.json();
+        const data = response.data;
         setIsLoading(false);
         setMessage(
           data.txid ? `✅ Sent! TXID: ${data.txid}` : `❌ ${data.error}`,

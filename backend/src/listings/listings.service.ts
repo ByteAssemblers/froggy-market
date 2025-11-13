@@ -2,6 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../database/database.service';
 import pepeOrdSwap from '../lib/OrdSwap';
 import { broadcastRawTxCore } from '../lib/inscribe';
+import { ordClient } from '../lib/axios';
 
 const ORD_API_BASE = process.env.ORD_API_BASE!;
 
@@ -296,15 +297,20 @@ export class ListingsService {
     let continueFetching = true;
 
     while (continueFetching) {
-      const response = await fetch(
-        `${ORD_API_BASE}inscriptions/balance/${walletAddress}/${page}`
-      );
-      const data = await response.json();
+      try {
+        const response = await ordClient.get(
+          `inscriptions/balance/${walletAddress}/${page}`
+        );
+        const data = response.data;
 
-      if (data.inscriptions && data.inscriptions.length > 0) {
-        allInscriptions = [...allInscriptions, ...data.inscriptions];
-        page++;
-      } else {
+        if (data.inscriptions && data.inscriptions.length > 0) {
+          allInscriptions = [...allInscriptions, ...data.inscriptions];
+          page++;
+        } else {
+          continueFetching = false;
+        }
+      } catch (error) {
+        console.error(`Error fetching inscriptions page ${page}:`, error);
         continueFetching = false;
       }
     }

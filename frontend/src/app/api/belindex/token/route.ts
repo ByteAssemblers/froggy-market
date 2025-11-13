@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
+import axios from 'axios';
 
 const BELINDEX_API_BASE = process.env.BELINDEX_API_BASE!;
+
+const belIndexClient = axios.create({
+  baseURL: BELINDEX_API_BASE,
+  timeout: 30000,
+});
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -11,14 +17,14 @@ export async function GET(req: Request) {
   }
 
   try {
-    const response = await fetch(`${BELINDEX_API_BASE}token?tick=${tick}`);
-    if (!response.ok) {
-      return NextResponse.json({ error: 'Failed to fetch token data' }, { status: 500 });
-    }
-
-    const data = await response.json();
-    return NextResponse.json(data);
-  } catch (error) {
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    const response = await belIndexClient.get('token', {
+      params: { tick }
+    });
+    return NextResponse.json(response.data);
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error.response?.data?.message || 'Internal Server Error' },
+      { status: error.response?.status || 500 }
+    );
   }
 }

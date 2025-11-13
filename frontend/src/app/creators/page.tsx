@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import Image from "next/image";
 import { useProfile } from "@/hooks/useProfile";
+import { apiClient } from "@/lib/axios";
 
 const ORD_API_BASE = process.env.NEXT_PUBLIC_ORD_API_BASE!;
 
@@ -88,23 +89,18 @@ export default function Creators() {
     }
 
     try {
-      const response = await fetch("http://localhost:5555/api/collections", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: collectionData.name,
-          symbol: collectionData.symbol,
-          description: collectionData.description,
-          profileInscriptionId: collectionData.profileInscriptionId,
-          socialLink: collectionData.socialLink,
-          personalLink: collectionData.personalLink,
-          totalSupply: Number(collectionData.totalSupply),
-          inscriptions: JSON.parse(collectionData.inscriptionsList || "[]"),
-          wallet: walletAddress,
-        }),
+      await apiClient.post("/collections", {
+        name: collectionData.name,
+        symbol: collectionData.symbol,
+        description: collectionData.description,
+        profileInscriptionId: collectionData.profileInscriptionId,
+        socialLink: collectionData.socialLink,
+        personalLink: collectionData.personalLink,
+        totalSupply: Number(collectionData.totalSupply),
+        inscriptions: JSON.parse(collectionData.inscriptionsList || "[]"),
+        wallet: walletAddress,
       });
 
-      if (!response.ok) throw new Error("Failed to create collection");
       alert("Collection created successfully!");
       setCreatorState("dashboard");
     } catch (err) {

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { blockchainClient } from "@/lib/axios";
 
 const ORD_API_BASE = process.env.NEXT_PUBLIC_ORD_API_BASE!;
 
@@ -21,23 +22,19 @@ export default function Inscription({
     const fetchData = async () => {
       const { id } = await params;
       try {
-        const response = await fetch(
-          `${ORD_API_BASE}/inscription/${id}`,
-        );
-        if (response.status === 200) {
-          const html = await response.text();
-          setData(html);
-          setLoading(false);
-        } else if (response.status === 400) {
+        const response = await blockchainClient.get(`/inscription/${id}`, {
+          responseType: 'text', // Get response as text, not JSON
+        });
+
+        setData(response.data);
+      } catch (err: any) {
+        if (err.response?.status === 400) {
           setError(true);
-          setLoading(false);
           router.push("/");
         } else {
           setError(true);
-          setLoading(false);
         }
-      } catch (err) {
-        setError(true);
+      } finally {
         setLoading(false);
       }
     };

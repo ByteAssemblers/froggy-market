@@ -3,6 +3,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { decryptWallet } from "@/lib/wallet/storage";
+import { apiClient } from "@/lib/axios";
+import axios from 'axios';
 
 export const useProfile = () => {
   const queryClient = useQueryClient();
@@ -26,9 +28,8 @@ export const useProfile = () => {
     queryKey: ["collections"],
     queryFn: async (): Promise<any> => {
       try {
-        const response = await fetch(`http://localhost:5555/api/collections`);
-        const data = await response.json();
-        return data;
+        const response = await apiClient.get('/collections');
+        return response.data;
       } catch (error) {
         console.error("Failed to fetch collections:", error);
       }
@@ -45,11 +46,10 @@ export const useProfile = () => {
     queryKey: ["pepecoinprice"],
     queryFn: async (): Promise<any> => {
       try {
-        const response = await fetch(
+        const response = await axios.get(
           "https://pepeblocks.com/ext/getcurrentprice",
         );
-        const data = await response.json();
-        return data;
+        return response.data;
       } catch (error) {
         console.error("Failed to fetch Pepecoin price:", error);
       }
@@ -66,10 +66,8 @@ export const useProfile = () => {
     queryKey: ["prc-20"],
     queryFn: async (): Promise<any> => {
       try {
-        const response = await fetch("/api/belindex/tokens?page_size=100");
-        if (!response.ok) throw new Error("Failed to fetch tokens");
-        const data = await response.json();
-        return data.tokens || [];
+        const response = await axios.get("/api/belindex/tokens?page_size=100");
+        return response.data.tokens || [];
       } catch (err) {
         console.error("Error fetching tokens:", err);
         return [];

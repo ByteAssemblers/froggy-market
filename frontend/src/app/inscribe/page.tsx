@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { toast, Toaster } from "sonner";
 import { X, ChevronUp, ChevronDown, RefreshCw } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { blockchainClient } from "@/lib/axios";
 
 const ORD_API_BASE = process.env.NEXT_PUBLIC_ORD_API_BASE!;
 import { resolveFileContentType } from "@/lib/inscription/inscribe";
@@ -114,11 +115,11 @@ export default function Inscribe() {
 
   const fetchInscriptions = async () => {
     setIsLoading(true);
-    console.log("🔍 fetchInscriptions called:", {
-      walletAddress,
-      isLocked,
-      wallet: wallet ? "exists" : "null",
-    });
+    // console.log("🔍 fetchInscriptions called:", {
+    //   walletAddress,
+    //   isLocked,
+    //   wallet: wallet ? "exists" : "null",
+    // });
 
     // Only fetch inscriptions if wallet is unlocked
     if (!walletAddress || isLocked) {
@@ -143,30 +144,29 @@ export default function Inscribe() {
       let continueFetching = true;
 
       while (continueFetching) {
-        const url = `${ORD_API_BASE}/inscriptions/balance/${walletAddress}/${page}`;
-        console.log(`📡 Fetching page ${page}:`, url);
+        const url = `/inscriptions/balance/${walletAddress}/${page}`;
+        console.log(`📡 Fetching page ${page}:`, ORD_API_BASE + url);
 
-        const response = await fetch(url);
+        try {
+          const response = await blockchainClient.get(url);
+          const data = response.data;
+          console.log(`📦 Page ${page} response:`, data);
 
-        if (!response.ok) {
+          if (data.inscriptions && data.inscriptions.length > 0) {
+            // Add the new inscriptions to the list
+            allInscriptions = [...allInscriptions, ...data.inscriptions];
+
+            // Move to the next page
+            page++;
+          } else {
+            // Stop if no more inscriptions are found
+            continueFetching = false;
+          }
+        } catch (error: any) {
           console.error(
-            `❌ HTTP Error: ${response.status} ${response.statusText}`,
+            `❌ HTTP Error:`, error.message
           );
-          throw new Error(`Failed to fetch inscriptions: ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log(`📦 Page ${page} response:`, data);
-
-        if (data.inscriptions && data.inscriptions.length > 0) {
-          // Add the new inscriptions to the list
-          allInscriptions = [...allInscriptions, ...data.inscriptions];
-
-          // Move to the next page
-          page++;
-        } else {
-          // Stop if no more inscriptions are found
-          continueFetching = false;
+          throw new Error(`Failed to fetch inscriptions: ${error.message}`);
         }
       }
 
@@ -248,98 +248,168 @@ export default function Inscribe() {
       return;
     }
 
+    // Check if there's already an active inscription
+    const activeJobs = await getAllJobs();
+    const hasActiveJob = activeJobs.some(
+      (job) => job.status === "processing" || job.status === "pending"
+    );
+
+    if (hasActiveJob) {
+      toast.error("Please wait for the current inscription to complete.");
+      return;
+    }
+
     try {
       setIsInscribing(true);
 
-      for (const file of files) {
-        setStatusMessage("Reading file and adding to queue…");
+      // Process only the FIRST file
+      const file = files[0];
+      setStatusMessage("Reading file and adding to queue…");
 
-        let payload: Uint8Array;
-        try {
-          const buffer = await file.arrayBuffer();
-          payload = new Uint8Array(buffer);
-        } catch (_readErr) {
-          throw new Error(
-            "Failed to read the selected file. Please try again.",
-          );
-        }
-
-        const contentType = resolveFileContentType(file);
-        const feeRate = computeFeeRate();
-
-        // Create job in IndexedDB
-        const job: InscriptionJob = {
-          id: `job_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          fileName: file.name,
-          fileSize: file.size,
-          contentType,
-          status: "processing", // ← Changed to "processing" immediately
-          progress: 0,
-          currentCommit: 0,
-          totalCommits: 0,
-          createdAt: Date.now(),
-        };
-
-        // Save job and file data to IndexedDB
-        await saveJob(job);
-        await saveFileData(job.id, payload);
-
-        console.log(`📝 Job queued: ${file.name}`);
-        toast.success(`${file.name} started inscribing!`);
-
-        // Trigger history refresh to show the new job immediately
-        fetchInscriptions();
-
-        // Process the job immediately (don't await - let it run in background)
-        processJob(
-          job.id,
-          wallet,
-          feeRate,
-          (update: Partial<InscriptionJob>) => {
-            // Update UI with progress
-            if (update.currentCommit && update.totalCommits) {
-              setStatusMessage(
-                `Processing commit ${update.currentCommit}/${update.totalCommits}...`,
-              );
-            }
-            // Refresh history to show progress updates
-            fetchInscriptions();
-          },
-        )
-          .then((result) => {
-            setStatusMessage("Inscription complete.");
-            setSuccessTx({
-              commitTxid: result.commitTxid,
-              revealTxid: result.revealTxid,
-            });
-
-            toast.success(`${file.name} inscribed successfully!`);
-            console.log(`✅ Inscription complete: ${result.revealTxid}`);
-
-            // Refresh history to show completed status
-            fetchInscriptions();
-          })
-          .catch((error: any) => {
-            console.error(`❌ Failed to inscribe ${file.name}:`, error);
-            toast.error(`Failed to inscribe ${file.name}: ${error.message}`);
-
-            // Refresh history to show failed status
-            fetchInscriptions();
-          });
+      let payload: Uint8Array;
+      try {
+        const buffer = await file.arrayBuffer();
+        payload = new Uint8Array(buffer);
+      } catch (_readErr) {
+        throw new Error(
+          "Failed to read the selected file. Please try again.",
+        );
       }
+
+      const contentType = resolveFileContentType(file);
+      const feeRate = computeFeeRate();
+
+      // Create job in IndexedDB
+      const job: InscriptionJob = {
+        id: `job_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
+        fileName: file.name,
+        fileSize: file.size,
+        contentType,
+        status: "processing",
+        progress: 0,
+        currentCommit: 0,
+        totalCommits: 0,
+        createdAt: Date.now(),
+      };
+
+      // Save job and file data to IndexedDB
+      await saveJob(job);
+      await saveFileData(job.id, payload);
+
+      console.log(`📝 Job saved to IndexedDB: ${file.name} (ID: ${job.id})`);
+      toast.success(`${file.name} started inscribing!`);
 
       // Clear files after queuing
       setFiles([]);
       setTotalSize(0);
-      setStatusMessage("");
+
+      // Trigger history refresh to show the new job immediately
+      fetchInscriptions();
+
+      // Process the job and AWAIT completion
+      await processJob(
+        job.id,
+        wallet,
+        feeRate,
+        (update: Partial<InscriptionJob>) => {
+          console.log("📊 Progress update:", update);
+          // Update UI with progress
+          if (update.currentCommit && update.totalCommits) {
+            setStatusMessage(
+              `Processing commit ${update.currentCommit}/${update.totalCommits}...`
+            );
+          }
+          // Refresh history to show progress updates
+          fetchInscriptions();
+        }
+      );
+
+      setStatusMessage("Inscription complete.");
+      toast.success(`${file.name} inscribed successfully!`);
+      console.log(`✅ Inscription complete for ${file.name}`);
+      fetchInscriptions();
     } catch (error: any) {
-      console.error("Inscription failed", error);
+      console.error("❌ Inscription failed:", error);
       setStatusMessage("");
       toast.error(error?.message || "Failed to inscribe. Please try again.");
+      fetchInscriptions();
     } finally {
       setIsInscribing(false);
     }
   };
+
+  // Auto-resume jobs on page load/wallet unlock
+  useEffect(() => {
+    const autoResumeJobs = async () => {
+      if (!wallet || isLocked) {
+        console.log("⏭️ Skipping auto-resume: wallet not ready or locked");
+        return;
+      }
+
+      if (isInscribing) {
+        console.log("⏭️ Skipping auto-resume: already inscribing");
+        return;
+      }
+
+      try {
+        // Get processing/pending jobs
+        const allJobs = await getAllJobs();
+        console.log("🔍 Checking for jobs to resume:", allJobs);
+
+        const jobsToProcess = allJobs.filter(
+          (job) => job.status === "processing" || job.status === "pending"
+        );
+
+        if (jobsToProcess.length === 0) {
+          console.log("✅ No jobs to resume");
+          return;
+        }
+
+        // Process only the FIRST job
+        const job = jobsToProcess[0];
+
+        console.log(`🔄 Auto-resuming: ${job.fileName} (ID: ${job.id})`);
+        setIsInscribing(true);
+
+        const feeRate = computeFeeRate();
+        toast.info(`Resuming: ${job.fileName}`, { duration: 3000 });
+
+        await processJob(
+          job.id,
+          wallet,
+          feeRate,
+          (update: Partial<InscriptionJob>) => {
+            console.log("📊 Progress update:", update);
+            if (update.currentCommit && update.totalCommits) {
+              setStatusMessage(
+                `Processing commit ${update.currentCommit}/${update.totalCommits}...`
+              );
+            }
+            // Refresh history to show progress
+            fetchInscriptions();
+          }
+        );
+
+        toast.success(`${job.fileName} inscribed successfully!`);
+        setStatusMessage("");
+        fetchInscriptions();
+      } catch (error: any) {
+        console.error(`❌ Failed to auto-resume:`, error);
+        toast.error(`Failed to resume: ${error.message}`);
+        setStatusMessage("");
+        fetchInscriptions();
+      } finally {
+        setIsInscribing(false);
+      }
+    };
+
+    // Small delay to ensure wallet is fully initialized
+    const timer = setTimeout(() => {
+      autoResumeJobs();
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [wallet, isLocked]);
 
   // Fetch inscriptions when wallet unlocks or when wallet address changes
   // wallet object changes from null to data when unlocked, triggering refresh
