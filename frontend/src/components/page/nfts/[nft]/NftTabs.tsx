@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+
+const ORD_API_BASE = process.env.NEXT_PUBLIC_ORD_API_BASE!;
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Pagination,
@@ -191,7 +193,7 @@ export function NftTabs({ nft }: { nft: string }) {
                     </div>
                     <Link href={`/inscription/${item.inscriptionId}`}>
                       <Image
-                        src={`http://localhost:7777/content/${item.inscriptionId}`}
+                        src={`${ORD_API_BASE}/content/${item.inscriptionId}`}
                         alt={`Inscription #${item.inscriptionId}`}
                         width={224}
                         height={224}
@@ -250,7 +252,7 @@ export function NftTabs({ nft }: { nft: string }) {
                                 <div className="rounded-[12px] bg-[#00000080] p-2">
                                   <div className="flex">
                                     <Image
-                                      src={`http://localhost:7777/content/${item.inscriptionId}`}
+                                      src={`${ORD_API_BASE}/content/${item.inscriptionId}`}
                                       alt={`Inscription #${item.inscriptionId}`}
                                       width={144}
                                       height={144}

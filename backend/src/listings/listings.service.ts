@@ -3,6 +3,8 @@ import { PrismaService } from '../database/database.service';
 import pepeOrdSwap from '../lib/OrdSwap';
 import { broadcastRawTxCore } from '../lib/inscribe';
 
+const ORD_API_BASE = process.env.ORD_API_BASE!;
+
 @Injectable()
 export class ListingsService {
   constructor(private prisma: PrismaService) {}
@@ -295,7 +297,7 @@ export class ListingsService {
 
     while (continueFetching) {
       const response = await fetch(
-        `http://localhost:7777/inscriptions/balance/${walletAddress}/${page}`
+        `${ORD_API_BASE}inscriptions/balance/${walletAddress}/${page}`
       );
       const data = await response.json();
 

@@ -12,6 +12,11 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  env: {
+    BELINDEX_API_BASE: process.env.BELINDEX_API_BASE,
+    ORD_API_BASE: process.env.ORD_API_BASE,
+    NEXT_PUBLIC_ORD_API_BASE: process.env.NEXT_PUBLIC_ORD_API_BASE,
+  },
 };
 
 export default nextConfig;

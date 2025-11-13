@@ -4,6 +4,8 @@ import { use, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
+
+const ORD_API_BASE = process.env.NEXT_PUBLIC_ORD_API_BASE!;
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -135,7 +137,7 @@ export default function WalletAddress({
         <div className="mb-2 flex max-h-104 flex-wrap justify-center gap-2.5 overflow-y-auto">
           <div className="rounded-[12px] bg-[#00000080] p-2">
             <Image
-              src={`http://localhost:7777/content/${item.inscription_id}`}
+              src={`${ORD_API_BASE}/content/${item.inscription_id}`}
               alt={`Inscription #${item.inscription_id}`}
               width={144}
               height={144}
@@ -278,7 +280,7 @@ export default function WalletAddress({
         <div className="mb-2 flex max-h-104 flex-wrap justify-center gap-2.5 overflow-y-auto">
           <div className="rounded-[12px] bg-[#00000080] p-2">
             <Image
-              src={`http://localhost:7777/content/${item.inscription_id}`}
+              src={`${ORD_API_BASE}/content/${item.inscription_id}`}
               alt={`Inscription #${item.inscription_id}`}
               width={144}
               height={144}
@@ -506,7 +508,7 @@ export default function WalletAddress({
                         className="h-full w-full"
                       >
                         <Image
-                          src={`http://localhost:7777/content/${item.inscription_id}`}
+                          src={`${ORD_API_BASE}/content/${item.inscription_id}`}
                           alt="nft"
                           width={128}
                           height={128}

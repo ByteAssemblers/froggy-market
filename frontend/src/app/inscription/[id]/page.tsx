@@ -5,6 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+const ORD_API_BASE = process.env.NEXT_PUBLIC_ORD_API_BASE!;
+
 export default function Inscription({
   params,
 }: {
@@ -20,7 +22,7 @@ export default function Inscription({
       const { id } = await params;
       try {
         const response = await fetch(
-          `http://localhost:7777/inscription/${id}`,
+          `${ORD_API_BASE}/inscription/${id}`,
         );
         if (response.status === 200) {
           const html = await response.text();
@@ -307,7 +309,7 @@ export default function Inscription({
     <div className="mt-4 flex flex-wrap items-start gap-x-16 gap-y-4">
       <div className="flex aspect-square w-0 max-w-full shrink-0 grow basis-md justify-center">
         <Image
-          src={`http://localhost:7777/content/${extractIdFromHtml(data)}`}
+          src={`${ORD_API_BASE}/content/${extractIdFromHtml(data)}`}
           alt={`Inscription #${extractInscriptionIdNumber(data)}`}
           width={512}
           height={512}

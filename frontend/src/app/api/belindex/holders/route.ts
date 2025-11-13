@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+const BELINDEX_API_BASE = process.env.BELINDEX_API_BASE!;
+
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const tick = url.searchParams.get("tick");
@@ -14,7 +16,7 @@ export async function GET(req: Request) {
 
   try {
     const response = await fetch(
-      `http://localhost:8000/holders?tick=${tick}&page=${page}`,
+      `${BELINDEX_API_BASE}holders?tick=${tick}&page=${page}`,
     );
     if (!response.ok) {
       return NextResponse.json(

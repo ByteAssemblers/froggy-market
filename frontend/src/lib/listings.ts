@@ -6,7 +6,7 @@ import { HDWallet } from "./wallet/wallet";
 const API_URL = "http://localhost:5555/api";
 
 // Blockchain API URL
-const BLOCKCHAIN_API = "http://localhost:7777";
+const BLOCKCHAIN_API = process.env.NEXT_PUBLIC_ORD_API_BASE!;
 
 /**
  * Get the current UTXO location of an inscription

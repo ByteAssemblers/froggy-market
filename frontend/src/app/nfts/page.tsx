@@ -14,6 +14,8 @@ import {
 import Image from "next/image";
 import { useProfile } from "@/hooks/useProfile";
 
+const ORD_API_BASE = process.env.NEXT_PUBLIC_ORD_API_BASE!;
+
 export default function nfts() {
   const router = useRouter();
   const [nfts, setNfts] = useState<any[]>([]);
@@ -63,7 +65,7 @@ export default function nfts() {
                 <TableCell>
                   <div className="relative mx-[1.4rem] my-0 shrink-0">
                     <Image
-                      src={`http://localhost:7777/content/${item.profileInscriptionId}`}
+                      src={`${ORD_API_BASE}/content/${item.profileInscriptionId}`}
                       alt={`Inscription #${item.profileInscriptionId}`}
                       width={42}
                       height={42}

@@ -5,6 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useProfile } from "@/hooks/useProfile";
 
+const ORD_API_BASE = process.env.NEXT_PUBLIC_ORD_API_BASE!;
+
 export function NftInfo({ nft }: { nft: any }) {
   const [selectedCollection, setSelectedCollection] = useState<any>(null);
 
@@ -26,7 +28,7 @@ export function NftInfo({ nft }: { nft: any }) {
     <>
       <div className="mt-4 mb-8 flex items-center">
         <Image
-          src={`http://localhost:7777/content/${selectedCollection.profileInscriptionId}`}
+          src={`${ORD_API_BASE}/content/${selectedCollection.profileInscriptionId}`}
           alt={`Inscription #${selectedCollection.profileInscriptionId}`}
           width={112}
           height={112}

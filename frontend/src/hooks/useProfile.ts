@@ -69,9 +69,10 @@ export const useProfile = () => {
         const response = await fetch("/api/belindex/tokens?page_size=100");
         if (!response.ok) throw new Error("Failed to fetch tokens");
         const data = await response.json();
-        return data.tokens;
+        return data.tokens || [];
       } catch (err) {
         console.error("Error fetching tokens:", err);
+        return [];
       }
     },
     staleTime: 10 * 60 * 1000,

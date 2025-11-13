@@ -5,6 +5,8 @@ import { ChevronLeft } from "lucide-react";
 import Image from "next/image";
 import { useProfile } from "@/hooks/useProfile";
 
+const ORD_API_BASE = process.env.NEXT_PUBLIC_ORD_API_BASE!;
+
 export default function Creators() {
   const [creatorState, setCreatorState] = useState<
     "setup" | "dashboard" | "list"
@@ -110,7 +112,7 @@ export default function Creators() {
       alert("Error creating collection");
     }
   };
-
+  console.log(hasSavedWallet, !isLocked);
   return (
     <>
       {hasSavedWallet && !isLocked ? (
@@ -149,7 +151,7 @@ export default function Creators() {
                     className="flex w-40 flex-col overflow-hidden"
                   >
                     <Image
-                      src={`http://localhost:7777/content/${item.profileInscriptionId}`}
+                      src={`${ORD_API_BASE}/content/${item.profileInscriptionId}`}
                       alt={`Inscription #${item.profileInscriptionId}`}
                       width={160}
                       height={160}
