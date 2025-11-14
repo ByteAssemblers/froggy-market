@@ -5,7 +5,6 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DatabaseModule } from './database/database.module';
 import { CollectionsModule } from './collections/collections.module';
-import { ListingsModule } from './listings/listings.module';
 
 @Module({
   imports: [
@@ -15,7 +14,6 @@ import { ListingsModule } from './listings/listings.module';
     }),
     DatabaseModule,
     CollectionsModule,
-    ListingsModule
   ],
   controllers: [AppController],
   providers: [AppService, WebsocketGateway],

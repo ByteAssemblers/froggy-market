@@ -1,13 +1,9 @@
 "use client";
 import { use, useEffect, useState } from "react";
-
 import Image from "next/image";
 import Link from "next/link";
-import { toast } from "sonner";
-import { apiClient } from "@/lib/axios";
-import axios from 'axios';
-
-const ORD_API_BASE = process.env.NEXT_PUBLIC_ORD_API_BASE!;
+import { blockchainClient, apiClient } from "@/lib/axios";
+import axios from "axios";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -27,7 +23,8 @@ import {
 } from "@/components/ui/dialog";
 import { EllipsisVertical, Filter } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
-import { useListings } from "@/hooks/useListings";
+
+const ORD_API_BASE = process.env.NEXT_PUBLIC_ORD_API_BASE!;
 
 export default function WalletAddress({
   params,
@@ -36,89 +33,63 @@ export default function WalletAddress({
 }) {
   const { address } = use(params);
   const [inscriptions, setInscriptions] = useState<any[]>([]);
-
+  const [inscriptionIds, setInscriptionIds] = useState<any[]>([]);
   const { walletInfo, walletAddress, privateKey, pepecoinPrice } = useProfile();
 
   useEffect(() => {
     walletInfo();
   }, []);
 
-  const fetchWallet = async () => {
-    try {
-      const response = await apiClient.get(`/listings/wallet/${address}`);
-      const data = response.data;
+  useEffect(() => {
+    const fetchInscrtions = async () => {
+      try {
+        const response = await apiClient.get("/collections");
+        const data = response.data;
 
-      // Check if data is an array before setting
-      if (Array.isArray(data)) {
-        setInscriptions(data);
-      } else {
-        console.error("Invalid response format:", data);
-        setInscriptions([]);
+        const inscriptionIds = data.flatMap((item: any) =>
+          item.inscriptions.map((ins: any) => ins.inscriptionId),
+        );
+        setInscriptionIds(inscriptionIds);
+      } catch (err) {
+        console.error(err);
       }
-    } catch (error) {
-      console.error("Error fetching wallet NFTs:", error);
-      setInscriptions([]);
-    }
-  };
+    };
+    fetchInscrtions();
+  }, []);
 
   useEffect(() => {
+    const fetchWallet = async () => {
+      let page = 1;
+      let allInscriptions: any = [];
+      let continueFetching = true;
+      while (continueFetching) {
+        const response = await blockchainClient.get(
+          `/inscriptions/balance/${address}/${page}`,
+        );
+        const data = response.data.inscriptions;
+
+        if (data && data.length > 0) {
+          allInscriptions = [...allInscriptions, ...data];
+          page++;
+        } else {
+          continueFetching = false;
+        }
+      }
+      allInscriptions.sort((a: any, b: any) => b.timestamp - a.timestamp);
+      setInscriptions(allInscriptions);
+    };
     fetchWallet();
-  }, [address]);
+  }, []);
 
-  const handleUnlist = async (item: any) => {
-    try {
-      await apiClient.post("/listings/unlist", {
-        inscriptionId: item.inscription_id,
-        sellerAddress: walletAddress,
-      });
-
-      toast("NFT unlisted successfully!");
-      // Refresh the wallet data
-      fetchWallet();
-    } catch (error: any) {
-      console.error(error);
-      toast(`${error.response?.data?.message || error.message}`);
-    }
-  };
+  const handleUnlist = async (item: any) => {};
 
   function ListDialogContent({ item }: { item: any }) {
     const [price, setPrice] = useState<Number>(0);
-    const { list, loading } = useListings();
+    const [loading, setLoading] = useState(false);
 
     async function handleList() {
-      try {
-        if (!price || Number(price) <= 0) {
-          toast.error("Please enter a valid price");
-          return;
-        }
-
-        if (!privateKey || !walletAddress) {
-          toast.error("Wallet not unlocked");
-          return;
-        }
-
-        // Create wallet object for the hook
-        const wallet = {
-          privateKey,
-          address: walletAddress,
-          mnemonic: "",
-          publicKey: "",
-        };
-
-        // ✅ Use the new listing function - it automatically:
-        // 1. Fetches inscription UTXO location
-        // 2. Verifies you own it
-        // 3. Uses correct WIF for that address
-        await list(item.inscription_id, Number(price), wallet);
-
-        // Refresh the wallet data to update button state
-        await fetchWallet();
-      } catch (error: any) {
-        console.error("Listing failed:", error);
-        // Error is already shown via toast in useListings hook
-      }
+      
     }
-
     return (
       <>
         <div className="mb-2 flex max-h-104 flex-wrap justify-center gap-2.5 overflow-y-auto">
@@ -168,7 +139,7 @@ export default function WalletAddress({
                   priority
                   className="mt-2 mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
                 />
-                <span>{Number(price) * 0.014}</span>
+                <span>{(Number(price) * 0.014).toFixed(2)}</span>
                 <span className="text-[#fffc]">
                   ($
                   {(Number(price) * 0.014 * pepecoinPrice).toFixed(2)})
@@ -191,7 +162,7 @@ export default function WalletAddress({
                   className="mt-2 mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
                 />
 
-                <span>{Number(price) * 0.986}</span>
+                <span>{(Number(price) * 0.986).toFixed(2)}</span>
                 <span className="text-[#fffc]">
                   ($
                   {(Number(price) * 0.986 * pepecoinPrice).toFixed(2)})
@@ -215,6 +186,7 @@ export default function WalletAddress({
       </>
     );
   }
+
   function SendDialogContent({
     item,
     walletAddress,
@@ -515,7 +487,12 @@ export default function WalletAddress({
                       <div className="flex w-full gap-2.5">
                         {item.dbMetadata?.listings?.[0]?.status !== "listed" ? (
                           <Dialog>
-                            <DialogTrigger className="font-inherit inline-flex w-full items-center justify-center rounded-xl border border-transparent bg-[#8fc5ff] px-4 py-2 text-base font-bold text-[#007aff] transition-all duration-200 ease-in-out hover:bg-[#007aff] hover:text-white">
+                            <DialogTrigger
+                              disabled={
+                                !inscriptionIds.includes(item.inscription_id)
+                              }
+                              className="font-inherit inline-flex w-full items-center justify-center rounded-xl border border-transparent bg-[#8fc5ff] px-4 py-2 text-base font-bold text-[#007aff] transition-all duration-200 ease-in-out hover:bg-[#007aff] hover:text-white disabled:bg-[#333] disabled:text-white"
+                            >
                               <svg
                                 data-v-51cc9e0e=""
                                 xmlns="http://www.w3.org/2000/svg"

@@ -119,7 +119,7 @@ export function NftTabs({ nft }: { nft: string }) {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
-  console.log(currentItems);
+  const handleBuy = async () => {};
   return (
     <>
       <Tabs defaultValue="listings" className="relative">
@@ -371,7 +371,10 @@ export function NftTabs({ nft }: { nft: string }) {
                                 1.028 +
                                 0.5 <=
                               Number(balance) ? (
-                                <button className="font-inherit mt-4 flex w-full justify-center rounded-[12px] border border-transparent bg-[#8c45ff] px-4 py-2 text-[1em] font-bold text-white transition-all duration-200 ease-in-out">
+                                <button
+                                  onClick={() => handleBuy()}
+                                  className="font-inherit mt-4 flex w-full justify-center rounded-[12px] border border-transparent bg-[#8c45ff] px-4 py-2 text-[1em] font-bold text-white transition-all duration-200 ease-in-out"
+                                >
                                   Confirm
                                 </button>
                               ) : (
