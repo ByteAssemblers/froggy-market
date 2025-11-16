@@ -23,6 +23,10 @@ import {
 } from "@/components/ui/dialog";
 import { EllipsisVertical, Filter } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
+import {
+  createListingPSBT,
+  findInscriptionUTXO,
+} from "@/lib/marketplace/psbt";
 
 const ORD_API_BASE = process.env.NEXT_PUBLIC_ORD_API_BASE!;
 
@@ -34,6 +38,9 @@ export default function WalletAddress({
   const { address } = use(params);
   const [inscriptions, setInscriptions] = useState<any[]>([]);
   const [inscriptionIds, setInscriptionIds] = useState<any[]>([]);
+  const [listingStatuses, setListingStatuses] = useState<Map<string, any>>(
+    new Map(),
+  );
   const { walletInfo, walletAddress, privateKey, pepecoinPrice } = useProfile();
 
   useEffect(() => {
@@ -77,18 +84,97 @@ export default function WalletAddress({
       }
       allInscriptions.sort((a: any, b: any) => b.timestamp - a.timestamp);
       setInscriptions(allInscriptions);
+
+      // Fetch listing status for each inscription
+      const statusMap = new Map();
+      for (const inscription of allInscriptions) {
+        try {
+          const statusResponse = await apiClient.get(
+            `/listings/inscription/${inscription.inscription_id}`,
+          );
+          statusMap.set(inscription.inscription_id, statusResponse.data);
+        } catch (err) {
+          // If no listing found, set status as null
+          statusMap.set(inscription.inscription_id, {
+            status: null,
+            listing: null,
+          });
+        }
+      }
+      setListingStatuses(statusMap);
     };
     fetchWallet();
   }, []);
 
-  const handleUnlist = async (item: any) => {};
+  const handleUnlist = async (item: any) => {
+    try {
+      await apiClient.post("/listings/unlist", {
+        inscriptionId: item.inscription_id,
+        sellerAddress: walletAddress,
+      });
+
+      alert("NFT unlisted successfully!");
+      // Refresh the wallet data
+      window.location.reload();
+    } catch (error: any) {
+      console.error(error);
+      alert(
+        `Failed to unlist: ${error.response?.data?.message || error.message}`,
+      );
+    }
+  };
 
   function ListDialogContent({ item }: { item: any }) {
     const [price, setPrice] = useState<Number>(0);
     const [loading, setLoading] = useState(false);
 
     async function handleList() {
-      
+      if (Number(price) <= 0) {
+        alert("Please enter a valid price");
+        return;
+      }
+
+      if (!privateKey) {
+        alert("Wallet not connected. Please unlock your wallet.");
+        return;
+      }
+
+      try {
+        setLoading(true);
+
+        // Step 1: Find the UTXO containing the inscription
+        const inscriptionUtxo = await findInscriptionUTXO(
+          walletAddress,
+          item.inscription_id
+        );
+
+        // Step 2: Create PSBT for the listing
+        const psbtBase64 = await createListingPSBT(
+          inscriptionUtxo,
+          Number(price),
+          privateKey,
+          walletAddress
+        );
+
+        // Step 3: Save listing to database with PSBT
+        await apiClient.post("/listings/list", {
+          inscriptionId: item.inscription_id,
+          priceSats: Number(price),
+          sellerAddress: walletAddress,
+          psbtBase64: psbtBase64,
+        });
+
+        alert("NFT listed successfully!");
+        setLoading(false);
+        // Refresh the page to show updated status
+        window.location.reload();
+      } catch (error: any) {
+        setLoading(false);
+        console.error(error);
+        alert(
+          `Failed to list NFT: ${error.response?.data?.message || error.message}`,
+        );
+      }
     }
     return (
       <>
@@ -485,7 +571,8 @@ export default function WalletAddress({
                     </div>
                     {walletAddress === address && (
                       <div className="flex w-full gap-2.5">
-                        {item.dbMetadata?.listings?.[0]?.status !== "listed" ? (
+                        {listingStatuses.get(item.inscription_id)?.status !==
+                        "listed" ? (
                           <Dialog>
                             <DialogTrigger
                               disabled={

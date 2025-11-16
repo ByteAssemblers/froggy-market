@@ -5,6 +5,8 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DatabaseModule } from './database/database.module';
 import { CollectionsModule } from './collections/collections.module';
+import { ListingsModule } from './listings/listings.module';
+import { PepecoinModule } from './pepecoin/pepecoin.module';
 
 @Module({
   imports: [
@@ -14,6 +16,8 @@ import { CollectionsModule } from './collections/collections.module';
     }),
     DatabaseModule,
     CollectionsModule,
+    ListingsModule,
+    PepecoinModule,
   ],
   controllers: [AppController],
   providers: [AppService, WebsocketGateway],

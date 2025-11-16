@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { apiClient } from "@/lib/axios";
+import { completeBuyPSBT } from "@/lib/marketplace/psbt";
 
 const ORD_API_BASE = process.env.NEXT_PUBLIC_ORD_API_BASE!;
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -58,6 +60,7 @@ export function NftTabs({ nft }: { nft: string }) {
     walletInfo,
     wallet,
     walletAddress,
+    privateKey,
     collections,
     isCollectionsLoading,
     collectionsError,
@@ -119,7 +122,57 @@ export function NftTabs({ nft }: { nft: string }) {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
-  const handleBuy = async () => {};
+  const handleBuy = async (item: any) => {
+    if (!walletAddress) {
+      alert("Please connect your wallet first");
+      return;
+    }
+
+    if (!privateKey) {
+      alert("Wallet not connected. Please unlock your wallet.");
+      return;
+    }
+
+    try {
+      const priceSats = item.activities[item.activities.length - 1].priceSats;
+
+      // Step 1: Get the listing with PSBT from backend
+      const listingResponse = await apiClient.get(
+        `/listings/inscription/${item.inscriptionId}`
+      );
+
+      if (!listingResponse.data.listing?.psbtBase64) {
+        throw new Error("Listing PSBT not found");
+      }
+
+      const psbtBase64 = listingResponse.data.listing.psbtBase64;
+
+      // Step 2: Complete the PSBT with buyer's payment and broadcast
+      const txid = await completeBuyPSBT(
+        psbtBase64,
+        privateKey,
+        walletAddress,
+        priceSats
+      );
+
+      // Step 3: Update backend with the sale
+      await apiClient.post("/listings/buy", {
+        inscriptionId: item.inscriptionId,
+        buyerAddress: walletAddress,
+        priceSats: priceSats,
+        txid: txid,
+      });
+
+      alert(`NFT purchased successfully! Transaction: ${txid}`);
+      // Refresh to show updated status
+      window.location.reload();
+    } catch (error: any) {
+      console.error(error);
+      alert(
+        `Failed to buy NFT: ${error.response?.data?.message || error.message}`,
+      );
+    }
+  };
   return (
     <>
       <Tabs defaultValue="listings" className="relative">
@@ -372,7 +425,7 @@ export function NftTabs({ nft }: { nft: string }) {
                                 0.5 <=
                               Number(balance) ? (
                                 <button
-                                  onClick={() => handleBuy()}
+                                  onClick={() => handleBuy(item)}
                                   className="font-inherit mt-4 flex w-full justify-center rounded-[12px] border border-transparent bg-[#8c45ff] px-4 py-2 text-[1em] font-bold text-white transition-all duration-200 ease-in-out"
                                 >
                                   Confirm
