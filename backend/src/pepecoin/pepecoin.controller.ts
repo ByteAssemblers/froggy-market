@@ -36,10 +36,15 @@ export class PepecoinController {
     try {
       // Handle both text and JSON bodies
       let raw: string;
+      let allowHighFees = false;
+
       if (typeof rawBody === 'string') {
         raw = rawBody.trim();
+        allowHighFees = this.parseAllowHighFees(allowHighFeesParam);
       } else if (rawBody && typeof rawBody === 'object' && rawBody.rawHex) {
         raw = rawBody.rawHex.trim();
+        // Read allowHighFees from body if present, otherwise from query param
+        allowHighFees = rawBody.allowHighFees ?? this.parseAllowHighFees(allowHighFeesParam);
       } else {
         throw new HttpException(
           {
@@ -59,19 +64,16 @@ export class PepecoinController {
           HttpStatus.BAD_REQUEST,
         );
       }
-
-      const allowHighFees = this.parseAllowHighFees(allowHighFeesParam);
-      const result = await this.pepecoinService.broadcastPepecoinTransaction(
+      const txid = await this.pepecoinService.broadcastPepecoinTransaction(
         raw,
         { allowHighFees },
       );
 
-      const txid = typeof result === 'string' ? result.trim() : null;
-      if (!txid || txid.length !== 64) {
-        return { txid: null, result };
-      }
-
-      return { txid, result };
+      return {
+        success: true,
+        txid,
+        message: 'Transaction broadcast successfully',
+      };
     } catch (error: any) {
       const status = error.code === -26 ? HttpStatus.BAD_REQUEST : HttpStatus.INTERNAL_SERVER_ERROR;
       throw new HttpException(

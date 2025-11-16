@@ -784,7 +784,7 @@ export default function Wallet() {
                           className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
                         />
                         0.01
-                        <span className="text-[#fffc]">($0.02)</span>
+                        <span className="text-[#fffc]">($0.00)</span>
                       </div>
                     </div>
                     <button

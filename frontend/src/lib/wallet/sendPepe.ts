@@ -5,6 +5,7 @@ import { ECPairFactory } from "ecpair";
 import * as ecc from "@bitcoinerlab/secp256k1";
 import { pepeNetwork } from "./pepeNetwork";
 import axios from 'axios';
+import { blockchainClient } from '../axios';
 
 const ECPair = ECPairFactory(ecc);
 
@@ -47,6 +48,82 @@ async function fetchRawTransactionHex(txid: string): Promise<string> {
   }
 }
 
+/**
+ * Get all inscription UTXOs for an address to avoid spending them
+ */
+async function getInscriptionUTXOs(address: string): Promise<Set<string>> {
+  try {
+    const inscriptionUTXOs = new Set<string>();
+    let page = 1;
+    let continueFetching = true;
+
+    // Fetch all inscriptions for this address (paginated)
+    while (continueFetching) {
+      const response = await blockchainClient.get(
+        `/inscriptions/balance/${address}/${page}`
+      );
+
+      const inscriptions = response.data?.inscriptions || [];
+
+      if (inscriptions && inscriptions.length > 0) {
+        for (const inscription of inscriptions) {
+          // Each inscription has an inscription_id
+          // We need to fetch the location for each inscription
+          if (inscription.inscription_id) {
+            try {
+              const detailResponse = await blockchainClient.get(
+                `/inscription/${inscription.inscription_id}`
+              );
+
+              // Extract location from the HTML response
+              const location = extractLocationFromHtml(detailResponse.data);
+              if (location) {
+                const [txid, vout] = location.split(':');
+                if (txid && vout !== undefined) {
+                  inscriptionUTXOs.add(`${txid}:${vout}`);
+                  console.log(`📍 Inscription ${inscription.inscription_id} at ${txid}:${vout}`);
+                }
+              }
+            } catch (err) {
+              console.warn(`Failed to fetch location for inscription ${inscription.inscription_id}:`, err);
+            }
+          }
+        }
+        page++;
+      } else {
+        continueFetching = false;
+      }
+    }
+
+    return inscriptionUTXOs;
+  } catch (error) {
+    console.warn('Failed to fetch inscriptions, assuming no inscriptions:', error);
+    return new Set();
+  }
+}
+
+/**
+ * Extract location (txid:vout) from HTML response
+ */
+function extractLocationFromHtml(htmlString: string): string | null {
+  // Create a DOMParser instance to parse the HTML string
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(htmlString, 'text/html');
+
+  // Find all <dt> elements and search for the "location" one
+  const dtElements = doc.querySelectorAll('dt');
+  for (let dt of dtElements) {
+    if (dt.textContent?.trim() === 'location') {
+      // Get the next sibling <dd> element
+      const dd = dt.nextElementSibling as HTMLElement;
+      if (dd && dd.classList.contains('monospace')) {
+        return dd.textContent?.trim() || null;
+      }
+    }
+  }
+  return null;
+}
+
 export async function sendPepeTransaction(
   privateKeyWIF: string,
   recipient: string,
@@ -66,15 +143,36 @@ export async function sendPepeTransaction(
     const utxos: UTXO[] = utxoRes.data;
     if (utxos.length === 0) throw new Error("No UTXOs to spend.");
 
+    // --- Fetch inscription UTXOs to avoid spending them ---
+    console.log('🔍 Checking for inscription UTXOs to exclude...');
+    const inscriptionUTXOs = await getInscriptionUTXOs(address!);
+    console.log(`📌 Found ${inscriptionUTXOs.size} inscription UTXOs to protect`);
+
+    // --- Filter out inscription UTXOs ---
+    const safeUTXOs = utxos.filter(u => {
+      const utxoKey = `${u.txid}:${u.vout}`;
+      const isInscription = inscriptionUTXOs.has(utxoKey);
+      if (isInscription) {
+        console.log(`🚫 Skipping inscription UTXO: ${utxoKey}`);
+      }
+      return !isInscription;
+    });
+
+    if (safeUTXOs.length === 0) {
+      throw new Error("No spendable UTXOs available (all UTXOs contain inscriptions)");
+    }
+
+    console.log(`✅ Found ${safeUTXOs.length} safe UTXOs for spending`);
+
     // --- Select inputs ---
     let totalIn = BigInt(0);
     const inputs: UTXO[] = [];
-    for (const u of utxos) {
+    for (const u of safeUTXOs) {
       inputs.push(u);
       totalIn += BigInt(u.value);
       if (totalIn >= amountSats + BigInt(1_000_000)) break;
     }
-    if (totalIn < amountSats) throw new Error("Insufficient balance for transaction.");
+    if (totalIn < amountSats) throw new Error("Insufficient balance for transaction (excluding inscription UTXOs).");
 
     // --- Build PSBT ---
     const psbt = new bitcoin.Psbt({ network: pepeNetwork });
