@@ -5,7 +5,6 @@ import { ECPairFactory } from "ecpair";
 import * as ecc from "@bitcoinerlab/secp256k1";
 import { pepeNetwork } from "./pepeNetwork";
 import axios from 'axios';
-import { blockchainClient } from '../axios';
 
 const ECPair = ECPairFactory(ecc);
 
@@ -49,80 +48,10 @@ async function fetchRawTransactionHex(txid: string): Promise<string> {
 }
 
 /**
- * Get all inscription UTXOs for an address to avoid spending them
+ * Inscription UTXOs always have exactly 0.01 PEPE (1,000,000 sats)
+ * Skip these to avoid accidentally spending inscriptions
  */
-async function getInscriptionUTXOs(address: string): Promise<Set<string>> {
-  try {
-    const inscriptionUTXOs = new Set<string>();
-    let page = 1;
-    let continueFetching = true;
-
-    // Fetch all inscriptions for this address (paginated)
-    while (continueFetching) {
-      const response = await blockchainClient.get(
-        `/inscriptions/balance/${address}/${page}`
-      );
-
-      const inscriptions = response.data?.inscriptions || [];
-
-      if (inscriptions && inscriptions.length > 0) {
-        for (const inscription of inscriptions) {
-          // Each inscription has an inscription_id
-          // We need to fetch the location for each inscription
-          if (inscription.inscription_id) {
-            try {
-              const detailResponse = await blockchainClient.get(
-                `/inscription/${inscription.inscription_id}`
-              );
-
-              // Extract location from the HTML response
-              const location = extractLocationFromHtml(detailResponse.data);
-              if (location) {
-                const [txid, vout] = location.split(':');
-                if (txid && vout !== undefined) {
-                  inscriptionUTXOs.add(`${txid}:${vout}`);
-                  console.log(`📍 Inscription ${inscription.inscription_id} at ${txid}:${vout}`);
-                }
-              }
-            } catch (err) {
-              console.warn(`Failed to fetch location for inscription ${inscription.inscription_id}:`, err);
-            }
-          }
-        }
-        page++;
-      } else {
-        continueFetching = false;
-      }
-    }
-
-    return inscriptionUTXOs;
-  } catch (error) {
-    console.warn('Failed to fetch inscriptions, assuming no inscriptions:', error);
-    return new Set();
-  }
-}
-
-/**
- * Extract location (txid:vout) from HTML response
- */
-function extractLocationFromHtml(htmlString: string): string | null {
-  // Create a DOMParser instance to parse the HTML string
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(htmlString, 'text/html');
-
-  // Find all <dt> elements and search for the "location" one
-  const dtElements = doc.querySelectorAll('dt');
-  for (let dt of dtElements) {
-    if (dt.textContent?.trim() === 'location') {
-      // Get the next sibling <dd> element
-      const dd = dt.nextElementSibling as HTMLElement;
-      if (dd && dd.classList.contains('monospace')) {
-        return dd.textContent?.trim() || null;
-      }
-    }
-  }
-  return null;
-}
+const INSCRIPTION_VALUE = 100_000; // 0.001 PEPE in sats
 
 export async function sendPepeTransaction(
   privateKeyWIF: string,
@@ -143,23 +72,18 @@ export async function sendPepeTransaction(
     const utxos: UTXO[] = utxoRes.data;
     if (utxos.length === 0) throw new Error("No UTXOs to spend.");
 
-    // --- Fetch inscription UTXOs to avoid spending them ---
-    console.log('🔍 Checking for inscription UTXOs to exclude...');
-    const inscriptionUTXOs = await getInscriptionUTXOs(address!);
-    console.log(`📌 Found ${inscriptionUTXOs.size} inscription UTXOs to protect`);
-
-    // --- Filter out inscription UTXOs ---
+    // --- Filter out inscription UTXOs (they always have exactly 0.01 PEPE) ---
+    console.log('🔍 Filtering out inscription UTXOs (value = 0.01 PEPE)...');
     const safeUTXOs = utxos.filter(u => {
-      const utxoKey = `${u.txid}:${u.vout}`;
-      const isInscription = inscriptionUTXOs.has(utxoKey);
+      const isInscription = u.value === INSCRIPTION_VALUE;
       if (isInscription) {
-        console.log(`🚫 Skipping inscription UTXO: ${utxoKey}`);
+        console.log(`🚫 Skipping inscription UTXO: ${u.txid}:${u.vout} (${u.value} sats)`);
       }
       return !isInscription;
     });
 
     if (safeUTXOs.length === 0) {
-      throw new Error("No spendable UTXOs available (all UTXOs contain inscriptions)");
+      throw new Error("No spendable UTXOs available (all UTXOs are inscriptions with 0.01 PEPE)");
     }
 
     console.log(`✅ Found ${safeUTXOs.length} safe UTXOs for spending`);

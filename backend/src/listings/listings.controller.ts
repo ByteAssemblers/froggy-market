@@ -42,6 +42,19 @@ export class ListingsController {
     return this.listingsService.unlistNFT(dto);
   }
 
+  @Post('send')
+  async sendNFT(
+    @Body()
+    dto: {
+      inscriptionId: string;
+      fromAddress: string;
+      toAddress: string;
+      txid: string;
+    },
+  ) {
+    return this.listingsService.sendNFT(dto);
+  }
+
   @Get()
   async getActiveListings() {
     return this.listingsService.getActiveListings();

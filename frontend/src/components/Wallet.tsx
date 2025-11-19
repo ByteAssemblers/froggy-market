@@ -71,7 +71,13 @@ export default function Wallet() {
     "empty" | "password" | "import" | "secret" | "mywallet" | "send" | "lock"
   >("empty");
 
-  const { pepecoinPrice, walletInfo } = useProfile();
+  const {
+    pepecoinPrice,
+    walletInfo,
+    collections,
+    isCollectionsLoading,
+    collectionsError,
+  } = useProfile();
 
   useEffect(() => {
     const stored = localStorage.getItem("pepecoin_wallet");

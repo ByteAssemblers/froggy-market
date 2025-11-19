@@ -40,7 +40,7 @@ model inscriptions {
 
 model listings {
   id            String   @id @default(cuid())
-  inscriptionId String
+  inscriptionId String?
   status        String   @default("unlisted") // unlisted, listed, sold, sent
   psbtBase64    String?
   priceSats     Int?
@@ -49,5 +49,5 @@ model listings {
   txid          String?
   createdAt     DateTime @default(now())
 
-  inscription inscriptions @relation(fields: [inscriptionId], references: [id])
+  inscription inscriptions? @relation(fields: [inscriptionId], references: [id])
 }

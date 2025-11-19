@@ -141,6 +141,60 @@ export class ListingsService {
   }
 
   /**
+   * Send NFT - adds a row with status='sent'
+   */
+  async sendNFT(dto: {
+    inscriptionId: string;
+    fromAddress: string;
+    toAddress: string;
+    txid: string;
+  }) {
+    const { inscriptionId, fromAddress, toAddress, txid } = dto;
+
+    // Find the inscription (it may or may not exist in collections)
+    let inscription = await this.prisma.inscriptions.findUnique({
+      where: { inscriptionId },
+    });
+
+    // If inscription is not in our database, we can still record the send
+    // but we won't have the inscriptionId foreign key
+    if (!inscription) {
+      // Create a new listing record with status='sent' without inscription FK
+      const sentListing = await this.prisma.listings.create({
+        data: {
+          status: 'sent',
+          sellerAddress: fromAddress,
+          buyerAddress: toAddress,
+          txid,
+        },
+      });
+
+      return {
+        success: true,
+        listing: sentListing,
+        message: 'NFT send recorded successfully',
+      };
+    }
+
+    // Create a new listing record with status='sent'
+    const sentListing = await this.prisma.listings.create({
+      data: {
+        inscriptionId: inscription.id,
+        status: 'sent',
+        sellerAddress: fromAddress,
+        buyerAddress: toAddress,
+        txid,
+      },
+    });
+
+    return {
+      success: true,
+      listing: sentListing,
+      message: 'NFT sent successfully',
+    };
+  }
+
+  /**
    * Get all active listings (status='listed')
    */
   async getActiveListings() {

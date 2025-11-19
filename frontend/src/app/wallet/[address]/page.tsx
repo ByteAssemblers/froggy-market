@@ -2,9 +2,9 @@
 import { use, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { blockchainClient, apiClient } from "@/lib/axios";
-import axios from "axios";
+import { blockchainClient, apiClient, belIndexClient } from "@/lib/axios";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { sendInscriptionTransaction } from "@/lib/wallet/sendInscription";
 import {
   Table,
   TableBody,
@@ -23,10 +23,8 @@ import {
 } from "@/components/ui/dialog";
 import { EllipsisVertical, Filter } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
-import {
-  createListingPSBT,
-  findInscriptionUTXO,
-} from "@/lib/marketplace/psbt";
+import { createListingPSBT, findInscriptionUTXO } from "@/lib/marketplace/psbt";
+import { Content } from "vaul";
 
 const ORD_API_BASE = process.env.NEXT_PUBLIC_ORD_API_BASE!;
 
@@ -37,74 +35,122 @@ export default function WalletAddress({
 }) {
   const { address } = use(params);
   const [inscriptions, setInscriptions] = useState<any[]>([]);
-  const [inscriptionIds, setInscriptionIds] = useState<any[]>([]);
+  const [pepemaps, setPepemaps] = useState<any[]>([]);
   const [listingStatuses, setListingStatuses] = useState<Map<string, any>>(
     new Map(),
   );
-  const { walletInfo, walletAddress, privateKey, pepecoinPrice } = useProfile();
+  const [isLoadingInscriptions, setIsLoadingInscriptions] = useState(false);
+  const {
+    walletInfo,
+    walletAddress,
+    privateKey,
+    pepecoinPrice,
+    collections,
+    isCollectionsLoading,
+    collectionsError,
+  } = useProfile();
 
   useEffect(() => {
     walletInfo();
   }, []);
 
+  // Get all inscription IDs from collections
+  const inscriptionIdsInCollections =
+    collections?.flatMap((collection: any) =>
+      collection.inscriptions.map((ins: any) => ins.inscriptionId),
+    ) || [];
+
   useEffect(() => {
-    const fetchInscrtions = async () => {
+    const fetchWalletNft = async () => {
+      setIsLoadingInscriptions(true);
       try {
-        const response = await apiClient.get("/collections");
-        const data = response.data;
+        let page = 1;
+        let allInscriptions: any = [];
+        let continueFetching = true;
 
-        const inscriptionIds = data.flatMap((item: any) =>
-          item.inscriptions.map((ins: any) => ins.inscriptionId),
-        );
-        setInscriptionIds(inscriptionIds);
-      } catch (err) {
-        console.error(err);
+        while (continueFetching) {
+          const response = await blockchainClient.get(
+            `/inscriptions/balance/${address}/${page}`,
+          );
+          const data = response.data.inscriptions;
+
+          if (data && data.length > 0) {
+            allInscriptions = [...allInscriptions, ...data];
+            page++;
+          } else {
+            continueFetching = false;
+          }
+        }
+
+        allInscriptions.sort((a: any, b: any) => b.timestamp - a.timestamp);
+        setInscriptions(allInscriptions);
+
+        // Fetch listing status for each inscription
+        const statusMap = new Map();
+        for (const inscription of allInscriptions) {
+          try {
+            const statusResponse = await apiClient.get(
+              `/listings/inscription/${inscription.inscription_id}`,
+            );
+            statusMap.set(inscription.inscription_id, statusResponse.data);
+          } catch (err) {
+            // If no listing found, set status as null
+            statusMap.set(inscription.inscription_id, {
+              status: null,
+              listing: null,
+            });
+          }
+        }
+        setListingStatuses(statusMap);
+      } catch (error) {
+        console.error("Error fetching inscriptions:", error);
+      } finally {
+        setIsLoadingInscriptions(false);
       }
     };
-    fetchInscrtions();
-  }, []);
+
+    if (address) {
+      fetchWalletNft();
+    }
+  }, [address]);
+
+  // useEffect(() => {
+  //   const fetchWalletPrc = async () => {
+  //     try {
+  //       const response = await belIndexClient.get(`address/${address}`);
+  //       const data = response.data;
+  //       console.log(data);
+  //     } catch (error) {
+  //       console.error("Error fetching prc-20:", error);
+  //     }
+  //   };
+
+  //   if (address) {
+  //     fetchWalletPrc();
+  //   }
+  // }, [address]);
 
   useEffect(() => {
-    const fetchWallet = async () => {
-      let page = 1;
-      let allInscriptions: any = [];
-      let continueFetching = true;
-      while (continueFetching) {
+    const fetchWalletPepemap = async () => {
+      try {
         const response = await blockchainClient.get(
-          `/inscriptions/balance/${address}/${page}`,
+          `pepemap/address/${address}`,
         );
-        const data = response.data.inscriptions;
-
-        if (data && data.length > 0) {
-          allInscriptions = [...allInscriptions, ...data];
-          page++;
-        } else {
-          continueFetching = false;
-        }
+        const data = response.data;
+        setPepemaps(data);
+      } catch (error) {
+        console.error("Error fetching pepemap:", error);
       }
-      allInscriptions.sort((a: any, b: any) => b.timestamp - a.timestamp);
-      setInscriptions(allInscriptions);
-
-      // Fetch listing status for each inscription
-      const statusMap = new Map();
-      for (const inscription of allInscriptions) {
-        try {
-          const statusResponse = await apiClient.get(
-            `/listings/inscription/${inscription.inscription_id}`,
-          );
-          statusMap.set(inscription.inscription_id, statusResponse.data);
-        } catch (err) {
-          // If no listing found, set status as null
-          statusMap.set(inscription.inscription_id, {
-            status: null,
-            listing: null,
-          });
-        }
-      }
-      setListingStatuses(statusMap);
     };
-    fetchWallet();
-  }, []);
+
+    if (address) {
+      fetchWalletPepemap();
+    }
+  }, [address]);
+
+  // Get all inscription IDs from pepemaps
+  const inscriptionIdsInPepemaps =
+    pepemaps?.map((pepemap: any) => pepemap.inscription_id) || [];
 
   const handleUnlist = async (item: any) => {
     try {
@@ -145,7 +191,7 @@ export default function WalletAddress({
         // Step 1: Find the UTXO containing the inscription
         const inscriptionUtxo = await findInscriptionUTXO(
           walletAddress,
-          item.inscription_id
+          item.inscription_id,
         );
 
         // Step 2: Create PSBT for the listing
@@ -153,7 +199,7 @@ export default function WalletAddress({
           inscriptionUtxo,
           Number(price),
           privateKey,
-          walletAddress
+          walletAddress,
         );
 
         // Step 3: Save listing to database with PSBT
@@ -293,26 +339,63 @@ export default function WalletAddress({
     }, [toAddress]);
 
     async function handleSend() {
+      if (!isValid || !toAddress) {
+        setMessage("Please enter a valid Pepecoin address");
+        return;
+      }
+
+      if (!privateKey) {
+        setMessage("Wallet not connected. Please unlock your wallet.");
+        return;
+      }
+
       try {
         setIsLoading(true);
-        setMessage("");
+        setMessage("Finding inscription UTXO...");
 
-        const response = await axios.post("/api/send", {
-          fromAddress: walletAddress,
+        // Step 1: Find the UTXO containing the inscription
+        const inscriptionUtxo = await findInscriptionUTXO(
+          walletAddress,
+          item.inscription_id,
+        );
+
+        console.log("Found inscription UTXO:", inscriptionUtxo);
+
+        setMessage("Creating transaction...");
+
+        // Step 2: Send the inscription
+        const txid = await sendInscriptionTransaction(
+          inscriptionUtxo,
+          privateKey,
+          walletAddress,
           toAddress,
+        );
+
+        console.log("Transaction broadcast:", txid);
+
+        setMessage("Recording transaction...");
+
+        // Step 3: Record the send in the database
+        await apiClient.post("/listings/send", {
           inscriptionId: item.inscription_id,
-          privateKey: privateKey,
-          fee: 0.00015,
+          fromAddress: walletAddress,
+          toAddress: toAddress,
+          txid: txid,
         });
 
-        const data = response.data;
-        setIsLoading(false);
         setMessage(
-          data.txid ? `✅ Sent! TXID: ${data.txid}` : `❌ ${data.error}`,
+          `✅ NFT sent successfully!\n\nTransaction ID: ${txid.slice(0, 8)}...${txid.slice(-8)}`,
         );
-      } catch (e: any) {
+
+        // Wait 2 seconds then reload
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+      } catch (error: any) {
+        console.error("Send error:", error);
+        setMessage(`❌ Failed to send: ${error.message}`);
+      } finally {
         setIsLoading(false);
-        setMessage(`Error: ${e.message}`);
       }
     }
 
@@ -339,7 +422,6 @@ export default function WalletAddress({
           <div className="mr-4 text-[1.1rem] font-semibold">Send to:</div>
           <input
             className="font-inherit mr-2 w-full max-w-md border-b border-[tan] bg-transparent p-[0.4em] text-center text-inherit outline-none focus:border-[violet]"
-            placeholder="Enter Pepecoin address"
             value={toAddress}
             onChange={(e) => setToAddress(e.target.value.trim())}
           />
@@ -357,7 +439,7 @@ export default function WalletAddress({
               className="mt-2 mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
             />
             <span>~0.00015</span>
-            <span className="text-[#fffc]"> ($0.02)</span>
+            <span className="text-[#fffc]"> ($0.00)</span>
           </div>
         </div>
 
@@ -389,7 +471,7 @@ export default function WalletAddress({
       <h1 className="leading-[1.1 ] text-3xl">
         {walletAddress === address ? "My wallet" : address}
       </h1>
-      <Tabs defaultValue="nfts" className="relative">
+      <Tabs defaultValue="prc" className="relative">
         <TabsList className="my-4 flex shrink-0 flex-wrap items-center justify-between bg-transparent">
           <div className="my-2 flex list-none gap-5 overflow-x-auto p-0 select-none">
             <TabsTrigger value="prc" className="text-md">
@@ -537,148 +619,349 @@ export default function WalletAddress({
         <TabsContent value="nfts">
           <div className="relative flex">
             <div className="relative grow overflow-hidden">
-              <div className="grid grid-cols-[repeat(auto-fill,minmax(12rem,1fr))] gap-5">
-                {inscriptions.map((item, index) => (
-                  <div
-                    key={index}
-                    className="relative flex flex-col items-center overflow-hidden rounded-xl border-2 border-transparent bg-[#4c505c33] p-4 text-center transition-all duration-150 ease-in-out"
-                  >
-                    <div className="flex h-32 w-32 items-center justify-center">
-                      <Link
-                        href={`/inscription/${item.inscription_id}`}
-                        className="h-full w-full"
-                      >
-                        <Image
-                          src={`${ORD_API_BASE}/content/${item.inscription_id}`}
-                          alt="nft"
-                          width={128}
-                          height={128}
-                          className="pointer-events-none h-full max-h-32 w-auto max-w-32 rounded-xl bg-[#444] object-contain text-[0.8rem] select-none"
-                          unoptimized
-                        />
-                      </Link>
+              {isLoadingInscriptions ? (
+                <div className="py-8 text-center">Loading NFTs...</div>
+              ) : inscriptions.filter((item) => item.content === null)
+                  .length === 0 ? (
+                <div className="py-8 text-center">
+                  No NFTs found in this wallet
+                </div>
+              ) : (
+                <>
+                  {isCollectionsLoading && (
+                    <div className="py-2 text-center text-sm text-gray-400">
+                      Loading collections data...
                     </div>
-                    <div className="my-1.5 flex w-full justify-center text-[1.1rem] leading-[1.2]">
-                      <span></span>
-                      <span className="ml-4"></span>
+                  )}
+                  {collectionsError && (
+                    <div className="py-2 text-center text-sm text-red-400">
+                      Error loading collections: {collectionsError.message}
                     </div>
-                    <div className="mt-auto w-full border-t border-white/10 py-2">
-                      <div className="text-[0.9rem] text-[#dfc0fd] hover:text-[#c891ff]">
-                        <Link href={`/inscription/${item.inscription_id}`}>
-                          #{item.inscription_number}
-                        </Link>
-                      </div>
-                    </div>
-                    {walletAddress === address && (
-                      <div className="flex w-full gap-2.5">
-                        {listingStatuses.get(item.inscription_id)?.status !==
-                        "listed" ? (
-                          <Dialog>
-                            <DialogTrigger
-                              disabled={
-                                !inscriptionIds.includes(item.inscription_id)
-                              }
-                              className="font-inherit inline-flex w-full items-center justify-center rounded-xl border border-transparent bg-[#8fc5ff] px-4 py-2 text-base font-bold text-[#007aff] transition-all duration-200 ease-in-out hover:bg-[#007aff] hover:text-white disabled:bg-[#333] disabled:text-white"
+                  )}
+                  <div className="grid grid-cols-[repeat(auto-fill,minmax(12rem,1fr))] gap-5">
+                    {inscriptions
+                      .filter((item) => item.content === null)
+                      .map((item, index) => (
+                        <div
+                          key={index}
+                          className="relative flex flex-col items-center overflow-hidden rounded-xl border-2 border-transparent bg-[#4c505c33] p-4 text-center transition-all duration-150 ease-in-out"
+                        >
+                          <div className="flex h-32 w-32 items-center justify-center">
+                            <Link
+                              href={`/inscription/${item.inscription_id}`}
+                              className="h-full w-full"
                             >
-                              <svg
-                                data-v-51cc9e0e=""
-                                xmlns="http://www.w3.org/2000/svg"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                width="20"
-                                height="20"
-                              >
-                                <path
-                                  stroke="currentColor"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth="2"
-                                  d="M3 11.172V5a2 2 0 0 1 2-2h6.172a2 2 0 0 1 1.414.586l8 8a2 2 0 0 1 0 2.828l-6.172 6.172a2 2 0 0 1-2.828 0l-8-8A2 2 0 0 1 3 11.172zM7 7h.001"
-                                ></path>
-                              </svg>
-                              <span className="ml-2">List</span>
-                            </DialogTrigger>
-                            <DialogContent className="my-[50px] box-border flex min-h-[500px] max-w-[calc(100%-1rem)] min-w-[700px] shrink-0 grow-0 scale-100 flex-col overflow-visible rounded-[12px] bg-[#ffffff1f] p-6 opacity-100 backdrop-blur-xl transition-opacity duration-200 ease-linear">
-                              <DialogHeader>
-                                <DialogTitle>
-                                  <div className="mt-0 text-center text-3xl leading-[1.1] font-semibold text-[#8fc5ff]">
-                                    List NFT for sale
-                                  </div>
-                                </DialogTitle>
-                                <DialogDescription></DialogDescription>
-
-                                <ListDialogContent item={item} />
-                              </DialogHeader>
-                            </DialogContent>
-                          </Dialog>
-                        ) : (
-                          <button
-                            onClick={() => handleUnlist(item)}
-                            className="font-inherit inline-flex w-full items-center justify-center rounded-xl border border-transparent bg-[#1a1a1a] px-4 py-2 text-base font-bold text-white transition-all duration-200 ease-in-out hover:bg-[#222]"
-                          >
-                            <svg
-                              data-v-51cc9e0e=""
-                              xmlns="http://www.w3.org/2000/svg"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              width="20"
-                              height="20"
-                            >
-                              <path
-                                stroke="currentColor"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth="2"
-                                d="m14 5-1.414-1.414A2 2 0 0 0 11.172 3H5a2 2 0 0 0-2 2v6.172a2 2 0 0 0 .586 1.414L5 14m14-4 1.586 1.586a2 2 0 0 1 0 2.828l-6.172 6.172a2 2 0 0 1-2.828 0L10 19M7 7h.001M21 3 3 21"
-                              ></path>
-                            </svg>
-                            <span className="ml-2">Unlist</span>
-                          </button>
-                        )}
-                        <Dialog>
-                          <DialogTrigger className="font-inherit inline-flex grow-0 cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#3c1295] px-4 py-2 text-base font-bold text-[#d94fff] transition-all duration-200 ease-in-out hover:bg-[#9d12c8] hover:text-white">
-                            <svg
-                              data-v-51cc9e0e=""
-                              xmlns="http://www.w3.org/2000/svg"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              width="20"
-                              height="20"
-                            >
-                              <path
-                                stroke="currentColor"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth="2"
-                                d="m6 12-3 9 18-9L3 3l3 9zm0 0h6"
-                              ></path>
-                            </svg>
-                          </DialogTrigger>
-                          <DialogContent className="my-[50px] box-border flex min-h-[500px] max-w-[calc(100%-1rem)] min-w-[700px] shrink-0 grow-0 scale-100 flex-col overflow-visible rounded-[12px] bg-[#ffffff1f] p-6 opacity-100 backdrop-blur-xl transition-opacity duration-200 ease-linear">
-                            <DialogHeader>
-                              <DialogTitle>
-                                <div className="mt-0 text-center text-3xl leading-[1.1] font-semibold text-[#d94fff]">
-                                  Send NFT
-                                </div>
-                              </DialogTitle>
-                              <DialogDescription></DialogDescription>
-                              <SendDialogContent
-                                item={item}
-                                walletAddress={walletAddress}
+                              <Image
+                                src={`${ORD_API_BASE}/content/${item.inscription_id}`}
+                                alt="nft"
+                                width={128}
+                                height={128}
+                                className="pointer-events-none h-full max-h-32 w-auto max-w-32 rounded-xl bg-[#444] object-contain text-[0.8rem] select-none"
+                                unoptimized
                               />
-                            </DialogHeader>
-                          </DialogContent>
-                        </Dialog>
-                      </div>
-                    )}
+                            </Link>
+                          </div>
+                          <div className="my-1.5 flex w-full justify-center text-[1.1rem] leading-[1.2]">
+                            <span></span>
+                            <span className="ml-4"></span>
+                          </div>
+                          <div className="mt-auto w-full border-t border-white/10 py-2">
+                            <div className="text-[0.9rem] text-[#dfc0fd] hover:text-[#c891ff]">
+                              <Link
+                                href={`/inscription/${item.inscription_id}`}
+                              >
+                                #{item.inscription_number}
+                              </Link>
+                            </div>
+                          </div>
+                          {walletAddress === address && (
+                            <div className="flex w-full gap-2.5">
+                              {listingStatuses.get(item.inscription_id)
+                                ?.status !== "listed" ? (
+                                <Dialog>
+                                  <DialogTrigger
+                                    disabled={
+                                      !inscriptionIdsInCollections.includes(
+                                        item.inscription_id,
+                                      )
+                                    }
+                                    className="font-inherit inline-flex w-full items-center justify-center rounded-xl border border-transparent bg-[#8fc5ff] px-4 py-2 text-base font-bold text-[#007aff] transition-all duration-200 ease-in-out hover:bg-[#007aff] hover:text-white disabled:bg-[#333] disabled:text-white"
+                                  >
+                                    <svg
+                                      data-v-51cc9e0e=""
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      width="20"
+                                      height="20"
+                                    >
+                                      <path
+                                        stroke="currentColor"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth="2"
+                                        d="M3 11.172V5a2 2 0 0 1 2-2h6.172a2 2 0 0 1 1.414.586l8 8a2 2 0 0 1 0 2.828l-6.172 6.172a2 2 0 0 1-2.828 0l-8-8A2 2 0 0 1 3 11.172zM7 7h.001"
+                                      ></path>
+                                    </svg>
+                                    <span className="ml-2">List</span>
+                                  </DialogTrigger>
+                                  <DialogContent className="my-[50px] box-border flex min-h-[500px] max-w-[calc(100%-1rem)] min-w-[700px] shrink-0 grow-0 scale-100 flex-col overflow-visible rounded-[12px] bg-[#ffffff1f] p-6 opacity-100 backdrop-blur-xl transition-opacity duration-200 ease-linear">
+                                    <DialogHeader>
+                                      <DialogTitle>
+                                        <div className="mt-0 text-center text-3xl leading-[1.1] font-semibold text-[#8fc5ff]">
+                                          List NFT for sale
+                                        </div>
+                                      </DialogTitle>
+                                      <DialogDescription></DialogDescription>
+
+                                      <ListDialogContent item={item} />
+                                    </DialogHeader>
+                                  </DialogContent>
+                                </Dialog>
+                              ) : (
+                                <button
+                                  onClick={() => handleUnlist(item)}
+                                  className="font-inherit inline-flex w-full items-center justify-center rounded-xl border border-transparent bg-[#1a1a1a] px-4 py-2 text-base font-bold text-white transition-all duration-200 ease-in-out hover:bg-[#222]"
+                                >
+                                  <svg
+                                    data-v-51cc9e0e=""
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    width="20"
+                                    height="20"
+                                  >
+                                    <path
+                                      stroke="currentColor"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth="2"
+                                      d="m14 5-1.414-1.414A2 2 0 0 0 11.172 3H5a2 2 0 0 0-2 2v6.172a2 2 0 0 0 .586 1.414L5 14m14-4 1.586 1.586a2 2 0 0 1 0 2.828l-6.172 6.172a2 2 0 0 1-2.828 0L10 19M7 7h.001M21 3 3 21"
+                                    ></path>
+                                  </svg>
+                                  <span className="ml-2">Unlist</span>
+                                </button>
+                              )}
+                              <Dialog>
+                                <DialogTrigger className="font-inherit inline-flex grow-0 cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#3c1295] px-4 py-2 text-base font-bold text-[#d94fff] transition-all duration-200 ease-in-out hover:bg-[#9d12c8] hover:text-white">
+                                  <svg
+                                    data-v-51cc9e0e=""
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    width="20"
+                                    height="20"
+                                  >
+                                    <path
+                                      stroke="currentColor"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth="2"
+                                      d="m6 12-3 9 18-9L3 3l3 9zm0 0h6"
+                                    ></path>
+                                  </svg>
+                                </DialogTrigger>
+                                <DialogContent className="my-[50px] box-border flex min-h-[500px] max-w-[calc(100%-1rem)] min-w-[700px] shrink-0 grow-0 scale-100 flex-col overflow-visible rounded-[12px] bg-[#ffffff1f] p-6 opacity-100 backdrop-blur-xl transition-opacity duration-200 ease-linear">
+                                  <DialogHeader>
+                                    <DialogTitle>
+                                      <div className="mt-0 text-center text-3xl leading-[1.1] font-semibold text-[#d94fff]">
+                                        Send NFT
+                                      </div>
+                                    </DialogTitle>
+                                    <DialogDescription></DialogDescription>
+                                    <SendDialogContent
+                                      item={item}
+                                      walletAddress={walletAddress}
+                                    />
+                                  </DialogHeader>
+                                </DialogContent>
+                              </Dialog>
+                            </div>
+                          )}
+                        </div>
+                      ))}
                   </div>
-                ))}
-              </div>
+                </>
+              )}
             </div>
           </div>
         </TabsContent>
         <TabsContent value="pepemaps">
-          <div className="flex justify-center">no pepemaps on this wallet</div>
+          <div className="relative flex">
+            <div className="relative grow overflow-hidden">
+              {isLoadingInscriptions ? (
+                <div className="py-8 text-center">Loading Pepemaps...</div>
+              ) : inscriptions.filter(
+                  (item) =>
+                    typeof item.content === "string" &&
+                    item.content.endsWith(".pepemap"),
+                ).length === 0 ? (
+                <div className="py-8 text-center">
+                  No Pepemaps found in this wallet
+                </div>
+              ) : (
+                <>
+                  {isCollectionsLoading && (
+                    <div className="py-2 text-center text-sm text-gray-400">
+                      Loading pepemaps data...
+                    </div>
+                  )}
+                  {collectionsError && (
+                    <div className="py-2 text-center text-sm text-red-400">
+                      Error loading pepemaps: {collectionsError.message}
+                    </div>
+                  )}
+                  <div className="grid grid-cols-[repeat(auto-fill,minmax(12rem,1fr))] gap-5">
+                    {inscriptions
+                      .filter(
+                        (item) =>
+                          typeof item.content === "string" &&
+                          item.content.endsWith(".pepemap"),
+                      )
+                      .map((item, index) => (
+                        <div
+                          key={index}
+                          className="relative flex flex-col items-center overflow-hidden rounded-xl border-2 border-transparent bg-[#4c505c33] p-4 text-center transition-all duration-150 ease-in-out"
+                        >
+                          <div className="flex h-32 w-32 items-center justify-center">
+                            <Link
+                              href={`/inscription/${item.inscription_id}`}
+                              className="h-full w-full"
+                            >
+                              <Image
+                                src={`${ORD_API_BASE}/content/${item.inscription_id}`}
+                                alt="nft"
+                                width={128}
+                                height={128}
+                                className="pointer-events-none h-full max-h-32 w-auto max-w-32 rounded-xl bg-[#444] object-contain text-[0.8rem] select-none"
+                                unoptimized
+                              />
+                            </Link>
+                          </div>
+                          <div className="my-1.5 flex w-full justify-center text-[1.1rem] leading-[1.2]">
+                            <span></span>
+                            <span className="ml-4"></span>
+                          </div>
+                          <div className="mt-auto w-full border-t border-white/10 py-2">
+                            <div className="text-[0.9rem] text-[#dfc0fd] hover:text-[#c891ff]">
+                              <Link
+                                href={`/inscription/${item.inscription_id}`}
+                              >
+                                #{item.inscription_number}
+                              </Link>
+                            </div>
+                          </div>
+                          {walletAddress === address && (
+                            <div className="flex w-full gap-2.5">
+                              {listingStatuses.get(item.inscription_id)
+                                ?.status !== "listed" ? (
+                                <Dialog>
+                                  <DialogTrigger
+                                    disabled={
+                                      !inscriptionIdsInPepemaps.includes(
+                                        item.inscription_id,
+                                      )
+                                    }
+                                    className="font-inherit inline-flex w-full items-center justify-center rounded-xl border border-transparent bg-[#8fc5ff] px-4 py-2 text-base font-bold text-[#007aff] transition-all duration-200 ease-in-out hover:bg-[#007aff] hover:text-white disabled:bg-[#333] disabled:text-white"
+                                  >
+                                    <svg
+                                      data-v-51cc9e0e=""
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      width="20"
+                                      height="20"
+                                    >
+                                      <path
+                                        stroke="currentColor"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth="2"
+                                        d="M3 11.172V5a2 2 0 0 1 2-2h6.172a2 2 0 0 1 1.414.586l8 8a2 2 0 0 1 0 2.828l-6.172 6.172a2 2 0 0 1-2.828 0l-8-8A2 2 0 0 1 3 11.172zM7 7h.001"
+                                      ></path>
+                                    </svg>
+                                    <span className="ml-2">List</span>
+                                  </DialogTrigger>
+                                  <DialogContent className="my-[50px] box-border flex min-h-[500px] max-w-[calc(100%-1rem)] min-w-[700px] shrink-0 grow-0 scale-100 flex-col overflow-visible rounded-[12px] bg-[#ffffff1f] p-6 opacity-100 backdrop-blur-xl transition-opacity duration-200 ease-linear">
+                                    <DialogHeader>
+                                      <DialogTitle>
+                                        <div className="mt-0 text-center text-3xl leading-[1.1] font-semibold text-[#8fc5ff]">
+                                          List NFT for sale
+                                        </div>
+                                      </DialogTitle>
+                                      <DialogDescription></DialogDescription>
+
+                                      <ListDialogContent item={item} />
+                                    </DialogHeader>
+                                  </DialogContent>
+                                </Dialog>
+                              ) : (
+                                <button
+                                  onClick={() => handleUnlist(item)}
+                                  className="font-inherit inline-flex w-full items-center justify-center rounded-xl border border-transparent bg-[#1a1a1a] px-4 py-2 text-base font-bold text-white transition-all duration-200 ease-in-out hover:bg-[#222]"
+                                >
+                                  <svg
+                                    data-v-51cc9e0e=""
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    width="20"
+                                    height="20"
+                                  >
+                                    <path
+                                      stroke="currentColor"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth="2"
+                                      d="m14 5-1.414-1.414A2 2 0 0 0 11.172 3H5a2 2 0 0 0-2 2v6.172a2 2 0 0 0 .586 1.414L5 14m14-4 1.586 1.586a2 2 0 0 1 0 2.828l-6.172 6.172a2 2 0 0 1-2.828 0L10 19M7 7h.001M21 3 3 21"
+                                    ></path>
+                                  </svg>
+                                  <span className="ml-2">Unlist</span>
+                                </button>
+                              )}
+                              <Dialog>
+                                <DialogTrigger className="font-inherit inline-flex grow-0 cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#3c1295] px-4 py-2 text-base font-bold text-[#d94fff] transition-all duration-200 ease-in-out hover:bg-[#9d12c8] hover:text-white">
+                                  <svg
+                                    data-v-51cc9e0e=""
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    width="20"
+                                    height="20"
+                                  >
+                                    <path
+                                      stroke="currentColor"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth="2"
+                                      d="m6 12-3 9 18-9L3 3l3 9zm0 0h6"
+                                    ></path>
+                                  </svg>
+                                </DialogTrigger>
+                                <DialogContent className="my-[50px] box-border flex min-h-[500px] max-w-[calc(100%-1rem)] min-w-[700px] shrink-0 grow-0 scale-100 flex-col overflow-visible rounded-[12px] bg-[#ffffff1f] p-6 opacity-100 backdrop-blur-xl transition-opacity duration-200 ease-linear">
+                                  <DialogHeader>
+                                    <DialogTitle>
+                                      <div className="mt-0 text-center text-3xl leading-[1.1] font-semibold text-[#d94fff]">
+                                        Send NFT
+                                      </div>
+                                    </DialogTitle>
+                                    <DialogDescription></DialogDescription>
+                                    <SendDialogContent
+                                      item={item}
+                                      walletAddress={walletAddress}
+                                    />
+                                  </DialogHeader>
+                                </DialogContent>
+                              </Dialog>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
         </TabsContent>
         <TabsContent value="history">
           <Table className="w-full max-w-full border-separate border-spacing-0 leading-[1.2]">

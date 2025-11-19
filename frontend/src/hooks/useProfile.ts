@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { decryptWallet } from "@/lib/wallet/storage";
-import { apiClient } from "@/lib/axios";
+import { apiClient, blockchainClient } from "@/lib/axios";
 import axios from 'axios';
 
 export const useProfile = () => {

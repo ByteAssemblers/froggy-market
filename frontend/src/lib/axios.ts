@@ -1,17 +1,17 @@
-import axios from 'axios';
+import axios from "axios";
 
 // Backend API instance
 export const apiClient = axios.create({
-  baseURL: 'http://localhost:5555/api',
+  baseURL: "http://localhost:5555/api",
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
   timeout: 30000, // 30 seconds
 });
 
 // Blockchain API instance (ORD API)
 export const blockchainClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_ORD_API_BASE || 'http://62.84.181.219:7777',
+  baseURL: process.env.NEXT_PUBLIC_ORD_API_BASE || "http://62.84.181.219:7777",
   timeout: 30000,
 });
 
@@ -33,7 +33,7 @@ apiClient.interceptors.request.use(
   },
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 // Response interceptor (for error handling)
@@ -42,25 +42,25 @@ apiClient.interceptors.response.use(
   (error) => {
     if (error.response) {
       // Server responded with error status
-      console.error('API Error:', error.response.status, error.response.data);
+      console.error("API Error:", error.response.status, error.response.data);
     } else if (error.request) {
       // Request made but no response
-      console.error('Network Error:', error.message);
+      console.error("Network Error:", error.message);
     } else {
       // Something else happened
-      console.error('Error:', error.message);
+      console.error("Error:", error.message);
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 // Add similar interceptors for other clients
 blockchainClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error('Blockchain API Error:', error.message);
+    console.error("Blockchain API Error:", error.message);
     return Promise.reject(error);
-  }
+  },
 );
 
 belIndexClient.interceptors.response.use(

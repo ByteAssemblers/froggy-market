@@ -290,7 +290,7 @@ export default function TickTabs({ tick }: { tick: string }) {
             <div className="mb-2 whitespace-nowrap">
               <div className="text-[90%] leading-none">Deployed at</div>
               <div className="font-bold">
-                {new Date(info.created).toLocaleString("en-GB")}
+                {new Date(info.created * 1000).toLocaleString("en-GB")}
               </div>
             </div>
             <div className="mb-2 whitespace-nowrap">
