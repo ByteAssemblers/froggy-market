@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { decryptWallet } from "@/lib/wallet/storage";
 import { apiClient, blockchainClient } from "@/lib/axios";
-import axios from 'axios';
+import axios from "axios";
 
 export const useProfile = () => {
   const queryClient = useQueryClient();
@@ -19,6 +19,24 @@ export const useProfile = () => {
     "empty" | "password" | "import" | "secret" | "mywallet" | "send" | "lock"
   >("empty");
 
+  // Fetch active pepemap listings from backend
+  const {
+    data: pepemaps,
+    isLoading: isPepemapsLoading,
+    error: pepemapsError,
+  } = useQuery({
+    queryKey: ["pepemaps"],
+    queryFn: async (): Promise<any> => {
+      try {
+        const response = await apiClient.get("/pepemap-listings/active");
+        return response.data;
+      } catch (error) {
+        console.error("Failed to fetch pepemap listings:", error);
+      }
+    },
+    staleTime: 1 * 60 * 1000,
+  });
+
   // Fetch collections data
   const {
     data: collections,
@@ -28,7 +46,7 @@ export const useProfile = () => {
     queryKey: ["collections"],
     queryFn: async (): Promise<any> => {
       try {
-        const response = await apiClient.get('/collections');
+        const response = await apiClient.get("/collections");
         return response.data;
       } catch (error) {
         console.error("Failed to fetch collections:", error);
@@ -162,6 +180,7 @@ export const useProfile = () => {
   const refetchAll = () => {
     queryClient.invalidateQueries({ queryKey: ["collections"] });
     queryClient.invalidateQueries({ queryKey: ["pepecoinprice"] });
+    queryClient.invalidateQueries({ queryKey: ["pepemaps"] });
   };
 
   // Auto-initialize wallet state on mount
@@ -176,16 +195,19 @@ export const useProfile = () => {
 
   return {
     // Data
+    pepemaps,
     collections,
     pepecoinPrice,
     tokens,
 
     // Loading states
+    isPepemapsLoading,
     isCollectionsLoading,
     isPepecoinPriceLoading,
     isTokensLoading,
 
     // Errors
+    pepemapsError,
     collectionsError,
     pepecoinPriceError,
     tokensError,
