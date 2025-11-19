@@ -47,7 +47,6 @@ function PepemapImage({ item }: { item: any }) {
           setIsLoading(false);
         })
         .catch(() => {
-          // Silently show fallback image on error
           setImageSrc("/assets/imagenotfound.png");
           setIsLoading(false);
         });

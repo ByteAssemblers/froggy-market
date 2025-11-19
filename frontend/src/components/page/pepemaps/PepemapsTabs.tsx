@@ -14,53 +14,39 @@ import {
 import { Filter } from "lucide-react";
 import PepemapCard from "@/components/PepemapCard";
 import { useProfile } from "@/hooks/useProfile";
-
-const database = [
-  {
-    id: 305070,
-    price: 95,
-    seller: "D9VDZVrYGWPMcKWiPYqHAoCgjAQRBuiAVp",
-  },
-  {
-    id: 3435397,
-    price: 28,
-    seller: "D6dahHHrXSVcCW9CpXg2sF2SR6Kp2yES5x",
-  },
-  {
-    id: 4653828,
-    price: 27,
-    seller: "D6dahHHrXSVcCW9CpXg2sF2SR6Kp2yES5x",
-  },
-  {
-    id: 1440800,
-    price: 2,
-    seller: "DGa4LWNKS6ayBs4qJpQ3c4c5AUa1S8GTiJ",
-  },
-  {
-    id: 1440170,
-    price: 2,
-    seller: "DGa4LWNKS6ayBs4qJpQ3c4c5AUa1S8GTiJ",
-  },
-];
-
-const repeatedDatabase = Array(279274)
-  .fill(null)
-  .map((_, index) => ({
-    ...database[index % database.length], // Cycle through the original database
-    id: 1000000 + index, // Ensure unique IDs 279274
-  }));
+import { apiClient } from "@/lib/axios";
 
 export default function PepemapsTabs() {
   const { pepecoinPrice } = useProfile();
+  const [listings, setListings] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch active pepemap listings from backend
+  useEffect(() => {
+    const fetchListings = async () => {
+      try {
+        setIsLoading(true);
+        const response = await apiClient.get("/pepemap-listings/active");
+        setListings(response.data || []);
+      } catch (error) {
+        console.error("Failed to fetch pepemap listings:", error);
+        setListings([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchListings();
+  }, []);
 
   const ITEMS_PER_PAGE = 30;
-  const totalPages = Math.ceil(repeatedDatabase.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(listings.length / ITEMS_PER_PAGE);
 
   const [currentPage, setCurrentPage] = useState(1);
 
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
-  const currentItems = repeatedDatabase.slice(startIndex, endIndex);
+  const currentItems = listings.slice(startIndex, endIndex);
 
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages) {
@@ -93,16 +79,22 @@ export default function PepemapsTabs() {
         </TabsContent>
       </TabsList>
       <TabsContent value="listings">
-        <div className="tiny:gap-5 four:grid-cols-5 three:grid-cols-4 two:grid-cols-3 tiny:grid-cols-2 mt-4 grid grid-cols-2 gap-2">
-          {currentItems.map((item) => (
-            <PepemapCard
-              key={item.id}
-              item={item}
-              pepecoinPrice={pepecoinPrice}
-            />
-          ))}
-        </div>
-        <Pagination className="mt-5">
+        {isLoading ? (
+          <div className="py-8 text-center text-white">Loading pepemaps...</div>
+        ) : listings.length === 0 ? (
+          <div className="py-8 text-center text-white">No pepemaps listed for sale</div>
+        ) : (
+          <>
+            <div className="tiny:gap-5 four:grid-cols-5 three:grid-cols-4 two:grid-cols-3 tiny:grid-cols-2 mt-4 grid grid-cols-2 gap-2">
+              {currentItems.map((item, index) => (
+                <PepemapCard
+                  key={item.id || item.inscriptionId || index}
+                  item={item}
+                  pepecoinPrice={pepecoinPrice}
+                />
+              ))}
+            </div>
+            <Pagination className="mt-5">
           <PaginationContent className="flex items-center space-x-2">
             {/* Previous Button */}
             <PaginationItem>
@@ -185,6 +177,8 @@ export default function PepemapsTabs() {
             </PaginationItem>
           </PaginationContent>
         </Pagination>
+          </>
+        )}
       </TabsContent>
       <TabsContent value="packs">Packs</TabsContent>
       <TabsContent value="activity">Activity</TabsContent>
