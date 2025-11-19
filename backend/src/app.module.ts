@@ -7,6 +7,7 @@ import { DatabaseModule } from './database/database.module';
 import { CollectionsModule } from './collections/collections.module';
 import { ListingsModule } from './listings/listings.module';
 import { PepecoinModule } from './pepecoin/pepecoin.module';
+import { PepemapModule } from './pepemap/pepemap.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { PepecoinModule } from './pepecoin/pepecoin.module';
     CollectionsModule,
     ListingsModule,
     PepecoinModule,
+    PepemapModule,
   ],
   controllers: [AppController],
   providers: [AppService, WebsocketGateway],

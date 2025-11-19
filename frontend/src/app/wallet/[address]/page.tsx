@@ -24,9 +24,50 @@ import {
 import { EllipsisVertical, Filter } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
 import { createListingPSBT, findInscriptionUTXO } from "@/lib/marketplace/psbt";
-import { Content } from "vaul";
+import {
+  getPepemapBlockNumber,
+  fetchPepemapImage,
+  PEPEMAP_GREEN_PLACEHOLDER,
+} from "@/lib/pepemapImage";
 
 const ORD_API_BASE = process.env.NEXT_PUBLIC_ORD_API_BASE!;
+
+// PepemapImage component
+function PepemapImage({ item }: { item: any }) {
+  const [imageSrc, setImageSrc] = useState(PEPEMAP_GREEN_PLACEHOLDER);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const blockNumber = getPepemapBlockNumber(item);
+    if (blockNumber != null) {
+      setIsLoading(true);
+      fetchPepemapImage(blockNumber)
+        .then((url) => {
+          setImageSrc(url);
+          setIsLoading(false);
+        })
+        .catch(() => {
+          // Silently show fallback image on error
+          setImageSrc("/assets/imagenotfound.png");
+          setIsLoading(false);
+        });
+    } else {
+      setIsLoading(false);
+    }
+  }, [item]);
+
+  return (
+    <img
+      src={imageSrc}
+      alt="pepemap"
+      width={128}
+      height={128}
+      className={`pointer-events-none h-full max-h-32 w-auto max-w-32 rounded-xl  object-contain text-[0.8rem] select-none ${
+        isLoading ? "opacity-20" : ""
+      }`}
+    />
+  );
+}
 
 export default function WalletAddress({
   params,
@@ -824,23 +865,10 @@ export default function WalletAddress({
                           className="relative flex flex-col items-center overflow-hidden rounded-xl border-2 border-transparent bg-[#4c505c33] p-4 text-center transition-all duration-150 ease-in-out"
                         >
                           <div className="flex h-32 w-32 items-center justify-center">
-                            <Link
-                              href={`/inscription/${item.inscription_id}`}
-                              className="h-full w-full"
-                            >
-                              <Image
-                                src={`${ORD_API_BASE}/content/${item.inscription_id}`}
-                                alt="nft"
-                                width={128}
-                                height={128}
-                                className="pointer-events-none h-full max-h-32 w-auto max-w-32 rounded-xl bg-[#444] object-contain text-[0.8rem] select-none"
-                                unoptimized
-                              />
-                            </Link>
+                            <PepemapImage item={item} />
                           </div>
                           <div className="my-1.5 flex w-full justify-center text-[1.1rem] leading-[1.2]">
-                            <span></span>
-                            <span className="ml-4"></span>
+                            <span>{item.content}</span>
                           </div>
                           <div className="mt-auto w-full border-t border-white/10 py-2">
                             <div className="text-[0.9rem] text-[#dfc0fd] hover:text-[#c891ff]">
