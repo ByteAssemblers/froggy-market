@@ -8,6 +8,7 @@ import { CollectionsModule } from './collections/collections.module';
 import { ListingsModule } from './listings/listings.module';
 import { PepecoinModule } from './pepecoin/pepecoin.module';
 import { PepemapModule } from './pepemap/pepemap.module';
+import { PepemapListingsModule } from './pepemap-listings/pepemap-listings.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { PepemapModule } from './pepemap/pepemap.module';
     ListingsModule,
     PepecoinModule,
     PepemapModule,
+    PepemapListingsModule,
   ],
   controllers: [AppController],
   providers: [AppService, WebsocketGateway],

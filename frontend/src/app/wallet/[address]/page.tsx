@@ -63,7 +63,7 @@ function PepemapImage({ item }: { item: any }) {
       width={128}
       height={128}
       className={`pointer-events-none h-full max-h-32 w-auto max-w-32 rounded-xl  object-contain text-[0.8rem] select-none ${
-        isLoading ? "opacity-20" : ""
+        isLoading ? "opacity-50" : ""
       }`}
     />
   );
@@ -78,6 +78,9 @@ export default function WalletAddress({
   const [inscriptions, setInscriptions] = useState<any[]>([]);
   const [pepemaps, setPepemaps] = useState<any[]>([]);
   const [listingStatuses, setListingStatuses] = useState<Map<string, any>>(
+    new Map(),
+  );
+  const [pepemapListingStatuses, setPepemapListingStatuses] = useState<Map<string, any>>(
     new Map(),
   );
   const [isLoadingInscriptions, setIsLoadingInscriptions] = useState(false);
@@ -128,21 +131,43 @@ export default function WalletAddress({
 
         // Fetch listing status for each inscription
         const statusMap = new Map();
+        const pepemapStatusMap = new Map();
+
         for (const inscription of allInscriptions) {
-          try {
-            const statusResponse = await apiClient.get(
-              `/listings/inscription/${inscription.inscription_id}`,
-            );
-            statusMap.set(inscription.inscription_id, statusResponse.data);
-          } catch (err) {
-            // If no listing found, set status as null
-            statusMap.set(inscription.inscription_id, {
-              status: null,
-              listing: null,
-            });
+          // Check if it's a pepemap
+          const isPepemap = typeof inscription.content === "string" && inscription.content.endsWith(".pepemap");
+
+          if (isPepemap) {
+            // Fetch pepemap listing status
+            try {
+              const statusResponse = await apiClient.get(
+                `/pepemap-listings/inscription/${inscription.inscription_id}`,
+              );
+              pepemapStatusMap.set(inscription.inscription_id, statusResponse.data);
+            } catch (err) {
+              pepemapStatusMap.set(inscription.inscription_id, {
+                status: null,
+                listing: null,
+              });
+            }
+          } else {
+            // Fetch regular NFT listing status
+            try {
+              const statusResponse = await apiClient.get(
+                `/listings/inscription/${inscription.inscription_id}`,
+              );
+              statusMap.set(inscription.inscription_id, statusResponse.data);
+            } catch (err) {
+              statusMap.set(inscription.inscription_id, {
+                status: null,
+                listing: null,
+              });
+            }
           }
         }
+
         setListingStatuses(statusMap);
+        setPepemapListingStatuses(pepemapStatusMap);
       } catch (error) {
         console.error("Error fetching inscriptions:", error);
       } finally {
@@ -201,6 +226,24 @@ export default function WalletAddress({
       });
 
       alert("NFT unlisted successfully!");
+      // Refresh the wallet data
+      window.location.reload();
+    } catch (error: any) {
+      console.error(error);
+      alert(
+        `Failed to unlist: ${error.response?.data?.message || error.message}`,
+      );
+    }
+  };
+
+  const handlePepemapUnlist = async (item: any) => {
+    try {
+      await apiClient.post("/pepemap-listings/unlist", {
+        inscriptionId: item.inscription_id,
+        sellerAddress: walletAddress,
+      });
+
+      alert("Pepemap unlisted successfully!");
       // Refresh the wallet data
       window.location.reload();
     } catch (error: any) {
@@ -487,6 +530,291 @@ export default function WalletAddress({
         <button
           disabled={!isValid || isLoading}
           onClick={handleSend}
+          className={`font-inherit mt-4 flex w-full justify-center rounded-xl border border-transparent px-4 py-2 text-base font-bold transition-all duration-200 ease-in-out ${
+            !isValid ? "bg-[#1a1a1a]" : "bg-[#007aff]"
+          }`}
+        >
+          {isLoading
+            ? "Creating transfer"
+            : isValid
+              ? "Confirm"
+              : "Enter valid address"}
+        </button>
+
+        {message && (
+          <div className="mt-3 text-center text-sm break-all text-[#dfc0fd]">
+            {message}
+          </div>
+        )}
+      </>
+    );
+  }
+
+  function PepemapListDialogContent({ item }: { item: any }) {
+    const [price, setPrice] = useState<Number>(0);
+    const [loading, setLoading] = useState(false);
+
+    async function handlePepemapList() {
+      if (Number(price) <= 0) {
+        alert("Please enter a valid price");
+        return;
+      }
+
+      if (!privateKey) {
+        alert("Wallet not connected. Please unlock your wallet.");
+        return;
+      }
+
+      try {
+        setLoading(true);
+
+        // Step 1: Find the UTXO containing the inscription
+        const inscriptionUtxo = await findInscriptionUTXO(
+          walletAddress,
+          item.inscription_id,
+        );
+
+        // Step 2: Create PSBT for the listing
+        const psbtBase64 = await createListingPSBT(
+          inscriptionUtxo,
+          Number(price),
+          privateKey,
+          walletAddress,
+        );
+
+        // Step 3: Save pepemap listing to database with PSBT
+        await apiClient.post("/pepemap-listings/list", {
+          inscriptionId: item.inscription_id,
+          pepemapLabel: item.content,
+          priceSats: Number(price),
+          sellerAddress: walletAddress,
+          psbtBase64: psbtBase64,
+        });
+
+        alert("Pepemap listed successfully!");
+        setLoading(false);
+        // Refresh the page to show updated status
+        window.location.reload();
+      } catch (error: any) {
+        setLoading(false);
+        console.error(error);
+        alert(
+          `Failed to list pepemap: ${error.response?.data?.message || error.message}`,
+        );
+      }
+    }
+
+    return (
+      <>
+        <div className="mb-2 flex max-h-104 flex-wrap justify-center gap-2.5 overflow-y-auto">
+          <div className="rounded-[12px] bg-[#00000080] p-2">
+            <PepemapImage item={item} />
+            <div className="mt-2 text-center text-[1rem] text-white">
+              <div className="text-center text-[0.8rem] text-[#dfc0fd]">
+                {item.content}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="my-4 flex w-full items-center justify-center">
+          <div className="mr-8 ml-14 pt-4 font-semibold">Price:</div>
+          <Image
+            src="/assets/coin.gif"
+            alt="coin"
+            width={18}
+            height={18}
+            priority
+            className="mt-2 mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+          />
+          <input
+            type="number"
+            value={Number(price)}
+            onChange={(e) => setPrice(Number(e.target.value))}
+            className="font-inherit mr-2 w-20 max-w-md border-b border-[tan] bg-transparent p-[0.4em] text-center text-inherit outline-none focus:border-[violet]"
+          />
+        </div>
+        <div className="mt-2 flex justify-center leading-8">
+          <div className="mr-8 w-1/2 text-right">Maker fee (1.4%):</div>
+          <div className="flex w-1/2 text-left">
+            {price !== 0 && (
+              <>
+                <Image
+                  src="/assets/coin.gif"
+                  alt="coin"
+                  width={18}
+                  height={18}
+                  priority
+                  className="mt-2 mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                />
+                <span>{(Number(price) * 0.014).toFixed(2)}</span>
+                <span className="text-[#fffc]">
+                  ($
+                  {(Number(price) * 0.014 * pepecoinPrice).toFixed(2)})
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+        <div className="flex justify-center leading-8">
+          <div className="mr-8 w-1/2 text-right">You will receive:</div>
+          <div className="flex w-1/2 text-left">
+            {price !== 0 && (
+              <>
+                <Image
+                  src="/assets/coin.gif"
+                  alt="coin"
+                  width={18}
+                  height={18}
+                  priority
+                  className="mt-2 mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                />
+
+                <span>{(Number(price) * 0.986).toFixed(2)}</span>
+                <span className="text-[#fffc]">
+                  ($
+                  {(Number(price) * 0.986 * pepecoinPrice).toFixed(2)})
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+
+        <button
+          onClick={handlePepemapList}
+          disabled={loading || Number(price) <= 0}
+          className={`font-inherit mt-4 flex w-full justify-center rounded-xl border border-transparent px-4 py-2 text-base font-bold transition-all duration-200 ease-in-out ${
+            loading || Number(price) <= 0
+              ? "bg-[#1a1a1a]"
+              : "bg-[#007aff] hover:bg-[#3b82f6]"
+          }`}
+        >
+          {loading ? "Listing..." : "Confirm Listing"}
+        </button>
+      </>
+    );
+  }
+
+  function PepemapSendDialogContent({
+    item,
+    walletAddress,
+  }: {
+    item: any;
+    walletAddress: string;
+  }) {
+    const [toAddress, setToAddress] = useState("");
+    const [isValid, setIsValid] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [message, setMessage] = useState("");
+
+    const validateAddress = (address: string) =>
+      /^[P][a-zA-Z0-9]{25,34}$/.test(address);
+
+    useEffect(() => {
+      setIsValid(validateAddress(toAddress));
+    }, [toAddress]);
+
+    async function handlePepemapSend() {
+      if (!isValid || !toAddress) {
+        setMessage("Please enter a valid Pepecoin address");
+        return;
+      }
+
+      if (!privateKey) {
+        setMessage("Wallet not connected. Please unlock your wallet.");
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        setMessage("Finding inscription UTXO...");
+
+        // Step 1: Find the UTXO containing the inscription
+        const inscriptionUtxo = await findInscriptionUTXO(
+          walletAddress,
+          item.inscription_id,
+        );
+
+        console.log("Found inscription UTXO:", inscriptionUtxo);
+
+        setMessage("Creating transaction...");
+
+        // Step 2: Send the inscription
+        const txid = await sendInscriptionTransaction(
+          inscriptionUtxo,
+          privateKey,
+          walletAddress,
+          toAddress,
+        );
+
+        console.log("Transaction broadcast:", txid);
+
+        setMessage("Recording transaction...");
+
+        // Step 3: Record the send in the database
+        await apiClient.post("/pepemap-listings/send", {
+          inscriptionId: item.inscription_id,
+          pepemapLabel: item.content,
+          fromAddress: walletAddress,
+          toAddress: toAddress,
+          txid: txid,
+        });
+
+        setMessage(
+          `✅ Pepemap sent successfully!\n\nTransaction ID: ${txid.slice(0, 8)}...${txid.slice(-8)}`,
+        );
+
+        // Wait 2 seconds then reload
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+      } catch (error: any) {
+        console.error("Send error:", error);
+        setMessage(`❌ Failed to send: ${error.message}`);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    return (
+      <>
+        <div className="mb-2 flex max-h-104 flex-wrap justify-center gap-2.5 overflow-y-auto">
+          <div className="rounded-[12px] bg-[#00000080] p-2">
+            <PepemapImage item={item} />
+            <div className="mt-2 text-center text-[1rem] text-white">
+              <div className="text-center text-[0.8rem] text-[#dfc0fd]">
+                {item.content}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="my-4 flex w-full items-center justify-center">
+          <div className="mr-4 text-[1.1rem] font-semibold">Send to:</div>
+          <input
+            className="font-inherit mr-2 w-full max-w-md border-b border-[tan] bg-transparent p-[0.4em] text-center text-inherit outline-none focus:border-[violet]"
+            value={toAddress}
+            onChange={(e) => setToAddress(e.target.value.trim())}
+          />
+        </div>
+
+        <div className="mt-12 flex justify-center text-[0.9rem] leading-8">
+          <div className="mr-8 w-1/2 text-right">Network fee:</div>
+          <div className="flex w-1/2 text-left">
+            <Image
+              src="/assets/coin.gif"
+              alt="coin"
+              width={18}
+              height={18}
+              priority
+              className="mt-2 mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+            />
+            <span>~0.00015</span>
+            <span className="text-[#fffc]"> ($0.00)</span>
+          </div>
+        </div>
+
+        <button
+          disabled={!isValid || isLoading}
+          onClick={handlePepemapSend}
           className={`font-inherit mt-4 flex w-full justify-center rounded-xl border border-transparent px-4 py-2 text-base font-bold transition-all duration-200 ease-in-out ${
             !isValid ? "bg-[#1a1a1a]" : "bg-[#007aff]"
           }`}
@@ -881,7 +1209,7 @@ export default function WalletAddress({
                           </div>
                           {walletAddress === address && (
                             <div className="flex w-full gap-2.5">
-                              {listingStatuses.get(item.inscription_id)
+                              {pepemapListingStatuses.get(item.inscription_id)
                                 ?.status !== "listed" ? (
                                 <Dialog>
                                   <DialogTrigger
@@ -914,18 +1242,18 @@ export default function WalletAddress({
                                     <DialogHeader>
                                       <DialogTitle>
                                         <div className="mt-0 text-center text-3xl leading-[1.1] font-semibold text-[#8fc5ff]">
-                                          List NFT for sale
+                                          List Pepemap for sale
                                         </div>
                                       </DialogTitle>
                                       <DialogDescription></DialogDescription>
 
-                                      <ListDialogContent item={item} />
+                                      <PepemapListDialogContent item={item} />
                                     </DialogHeader>
                                   </DialogContent>
                                 </Dialog>
                               ) : (
                                 <button
-                                  onClick={() => handleUnlist(item)}
+                                  onClick={() => handlePepemapUnlist(item)}
                                   className="font-inherit inline-flex w-full items-center justify-center rounded-xl border border-transparent bg-[#1a1a1a] px-4 py-2 text-base font-bold text-white transition-all duration-200 ease-in-out hover:bg-[#222]"
                                 >
                                   <svg
@@ -970,11 +1298,11 @@ export default function WalletAddress({
                                   <DialogHeader>
                                     <DialogTitle>
                                       <div className="mt-0 text-center text-3xl leading-[1.1] font-semibold text-[#d94fff]">
-                                        Send NFT
+                                        Send Pepemap
                                       </div>
                                     </DialogTitle>
                                     <DialogDescription></DialogDescription>
-                                    <SendDialogContent
+                                    <PepemapSendDialogContent
                                       item={item}
                                       walletAddress={walletAddress}
                                     />
