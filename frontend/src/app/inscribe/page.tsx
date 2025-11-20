@@ -8,6 +8,7 @@ import { toast, Toaster } from "sonner";
 import { X, ChevronUp, ChevronDown, RefreshCw } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { blockchainClient } from "@/lib/axios";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const ORD_API_BASE = process.env.NEXT_PUBLIC_ORD_API_BASE!;
 import { resolveFileContentType } from "@/lib/inscription/inscribe";
@@ -29,6 +30,7 @@ import {
   splitPartialForScriptSig,
   buildPepinalsPartial,
 } from "@/lib/inscription/inscribe";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function Inscribe() {
   const [isInscribing, setIsInscribing] = useState(false);
@@ -39,6 +41,28 @@ export default function Inscribe() {
   const [pepePerState, setPepePerState] = useState<"recommended" | "custom">(
     "recommended",
   );
+  // Text
+  const [textInput, setTextInput] = useState("");
+
+  // Prc-20 state
+  const [prcState, setPrcState] = useState<"" | "deploy" | "mint" | "transfer">(
+    "",
+  );
+
+  // DEPLOY
+  const [deployTick, setDeployTick] = useState("");
+  const [deployMax, setDeployMax] = useState("");
+  const [deployLim, setDeployLim] = useState("");
+  const [deployDec, setDeployDec] = useState("18");
+
+  // MINT
+  const [mintTick, setMintTick] = useState("");
+  const [mintAmt, setMintAmt] = useState("");
+
+  // TRANSFER
+  const [transferTick, setTransferTick] = useState("");
+  const [transferAmt, setTransferAmt] = useState("");
+
   const [successTx, setSuccessTx] = useState<any>(null);
   const [inscriptions, setInscriptions] = useState<any[]>([]);
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
@@ -163,9 +187,7 @@ export default function Inscribe() {
             continueFetching = false;
           }
         } catch (error: any) {
-          console.error(
-            `❌ HTTP Error:`, error.message
-          );
+          console.error(`❌ HTTP Error:`, error.message);
           throw new Error(`Failed to fetch inscriptions: ${error.message}`);
         }
       }
@@ -233,8 +255,10 @@ export default function Inscribe() {
   };
 
   const handleInscribe = async () => {
-    if (files.length === 0) {
-      toast.error("Please select a file to inscribe.");
+    const hasTextInput = textInput.trim().length > 0;
+
+    if (files.length === 0 && !hasTextInput) {
+      toast.error("Please input text or select a file to inscribe.");
       return;
     }
 
@@ -251,7 +275,7 @@ export default function Inscribe() {
     // Check if there's already an active inscription
     const activeJobs = await getAllJobs();
     const hasActiveJob = activeJobs.some(
-      (job) => job.status === "processing" || job.status === "pending"
+      (job) => job.status === "processing" || job.status === "pending",
     );
 
     if (hasActiveJob) {
@@ -262,18 +286,37 @@ export default function Inscribe() {
     try {
       setIsInscribing(true);
 
-      // Process only the FIRST file
-      const file = files[0];
-      setStatusMessage("Reading file and adding to queue…");
+      let file: {
+        name: string;
+        size: number;
+        type: string;
+        arrayBuffer: () => Promise<ArrayBuffer>;
+      };
+
+      if (files.length > 0) {
+        // Existing file mode
+        file = files[0];
+        setStatusMessage("Reading file and adding to queue…");
+      } else {
+        // New TEXT mode — convert text to a virtual file
+        const blob = new Blob([textInput], { type: "text/plain" });
+
+        file = {
+          name: "text.txt",
+          size: blob.size,
+          type: "text/plain",
+          arrayBuffer: () => blob.arrayBuffer(),
+        };
+
+        setStatusMessage("Preparing text and adding to queue…");
+      }
 
       let payload: Uint8Array;
       try {
         const buffer = await file.arrayBuffer();
         payload = new Uint8Array(buffer);
       } catch (_readErr) {
-        throw new Error(
-          "Failed to read the selected file. Please try again.",
-        );
+        throw new Error("Failed to read the selected file. Please try again.");
       }
 
       const contentType = resolveFileContentType(file);
@@ -316,12 +359,12 @@ export default function Inscribe() {
           // Update UI with progress
           if (update.currentCommit && update.totalCommits) {
             setStatusMessage(
-              `Processing commit ${update.currentCommit}/${update.totalCommits}...`
+              `Processing commit ${update.currentCommit}/${update.totalCommits}...`,
             );
           }
           // Refresh history to show progress updates
           fetchInscriptions();
-        }
+        },
       );
 
       setStatusMessage("Inscription complete.");
@@ -336,6 +379,7 @@ export default function Inscribe() {
     } finally {
       setIsInscribing(false);
     }
+    setTextInput("");
   };
 
   // Auto-resume jobs on page load/wallet unlock
@@ -357,7 +401,7 @@ export default function Inscribe() {
         console.log("🔍 Checking for jobs to resume:", allJobs);
 
         const jobsToProcess = allJobs.filter(
-          (job) => job.status === "processing" || job.status === "pending"
+          (job) => job.status === "processing" || job.status === "pending",
         );
 
         if (jobsToProcess.length === 0) {
@@ -382,12 +426,12 @@ export default function Inscribe() {
             console.log("📊 Progress update:", update);
             if (update.currentCommit && update.totalCommits) {
               setStatusMessage(
-                `Processing commit ${update.currentCommit}/${update.totalCommits}...`
+                `Processing commit ${update.currentCommit}/${update.totalCommits}...`,
               );
             }
             // Refresh history to show progress
             fetchInscriptions();
-          }
+          },
         );
 
         toast.success(`${job.fileName} inscribed successfully!`);
@@ -423,120 +467,237 @@ export default function Inscribe() {
         Inscribe on Pepinals
       </h2>
 
-      <Toaster/>
+      <Toaster />
 
-      <div className="relative">
-        <div className="relative mb-6 min-w-[20rem] rounded-[12px] border-2 border-dashed border-[#696969] bg-[#222] p-8 text-center">
-          <div>Click to select files, or drop your files here</div>
-          <div className="text-[0.9rem] text-[#ffffffe6]">
-            Maximum 2500 files, if you want to inscribe more please split them
-            into few batches.
+      <Tabs defaultValue="file" className="relative">
+        <TabsList className="my-4 flex shrink-0 flex-wrap items-center justify-between bg-transparent">
+          <div className="my-2 flex list-none gap-5 overflow-x-auto p-0 select-none">
+            <TabsTrigger value="file" className="text-md">
+              File
+            </TabsTrigger>
+            <TabsTrigger value="text" className="text-md">
+              Text
+            </TabsTrigger>
+            <TabsTrigger value="deploy" className="text-md">
+              Deploy
+            </TabsTrigger>
+            <TabsTrigger value="mint" className="text-md">
+              Mint
+            </TabsTrigger>
+            <TabsTrigger value="transfer" className="text-md">
+              Transfer
+            </TabsTrigger>
           </div>
-        </div>
-        <input
-          type="file"
-          multiple
-          className="absolute inset-0 cursor-pointer opacity-0"
-          onChange={handleFileSelect}
-        />
-      </div>
-
-      {files.length > 0 && (
-        <div className="mb-6">
-          <div className="mb-4">{files.length} files</div>
-          <div className="flex max-h-80 flex-col gap-y-2 overflow-y-auto">
-            {files.map((file, index) => (
-              <div
-                key={index}
-                className="flex items-center gap-x-4 rounded-xl bg-[#202020] px-4 py-2"
-              >
-                <div className="overflow-hidden text-ellipsis whitespace-nowrap">
-                  {file.name}
-                </div>
-                <div className="text-[0.9rem] text-[#ffffffe6]">
-                  {file.type}
-                </div>
-                <X
-                  onClick={() => handleRemoveFile(index)}
-                  className="ml-auto cursor-pointer"
-                />
+        </TabsList>
+        <TabsContent value="file">
+          <div className="relative">
+            <div className="relative mb-6 min-w-[20rem] rounded-[12px] border-2 border-dashed border-[#696969] bg-[#222] p-8 text-center">
+              <div>Click to select files, or drop your files here</div>
+              <div className="text-[0.9rem] text-[#ffffffe6]">
+                Maximum 2500 files, if you want to inscribe more please split
+                them into few batches.
               </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="mb-6">
-        <div className="mb-2">Network fee:</div>
-        <div className="inline-flex gap-6">
-          {pepePerState === "recommended" && (
-            <>
-              <div className="flex flex-col items-center justify-center rounded-[12px] border border-white/20 p-3 px-4 outline-1 outline-white/20">
-                <div>Recommended</div>
-                <div className="text-[0.9rem] text-[#fffc]">
-                  {PEPE_PER_KB_FEE} pepe/kB
-                </div>
-              </div>
-              <label
-                onClick={() => {
-                  setPepePerState("custom");
-                  setPepePer(0);
-                }}
-                className="flex flex-col items-center justify-center rounded-xl border border-white/20 px-4 py-3"
-              >
-                Custom
-              </label>
-            </>
-          )}
-          {pepePerState === "custom" && (
-            <>
-              <div
-                onClick={() => setPepePerState("recommended")}
-                className="flex flex-col items-center justify-center rounded-[12px] border border-white/20 p-3 px-4"
-              >
-                <div>Recommended</div>
-                <div className="text-[0.9rem] text-[#fffc]">
-                  {PEPE_PER_KB_FEE} pepe/kB
-                </div>
-              </div>
-              <label className="flex flex-col items-center justify-center rounded-xl border border-white/20 px-4 py-3 outline-1 outline-white/20">
-                <div>Custom</div>
-                <div className="text-[0.9rem] text-[#fffc]">
-                  <input
-                    type="number"
-                    value={pepePer}
-                    onChange={(e) => setPepePer(Number(e.target.value))}
-                    placeholder={String(PEPE_PER_KB_FEE)}
-                    className="w-10 rounded-md bg-transparent text-white focus:ring-0 focus:outline-none"
-                  />
-                  <span className="ml-2">pepe/kB</span>
-                </div>
-              </label>
-            </>
-          )}
-        </div>
-        {files.length > 0 && (
-          <div className="mt-6 flex items-center">
-            Estimated fee: ~&#xA0;
-            <Image
-              src="/assets/coin.gif"
-              alt="coin"
-              width={18}
-              height={18}
-              priority
-              className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+            </div>
+            <input
+              type="file"
+              multiple
+              className="absolute inset-0 cursor-pointer opacity-0"
+              onChange={handleFileSelect}
             />
-            {estimatedFee > 0 ? estimatedFee.toFixed(6) : "0"}
-            {files.length > 0 && estimatedFee === 0 && (
-              <span className="ml-2 text-xs text-gray-400">
-                (calculating...)
-              </span>
+          </div>
+
+          {files.length > 0 && (
+            <div className="mb-6">
+              <div className="mb-4">{files.length} files</div>
+              <div className="flex max-h-80 flex-col gap-y-2 overflow-y-auto">
+                {files.map((file, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-x-4 rounded-xl bg-[#202020] px-4 py-2"
+                  >
+                    <div className="overflow-hidden text-ellipsis whitespace-nowrap">
+                      {file.name}
+                    </div>
+                    <div className="text-[0.9rem] text-[#ffffffe6]">
+                      {file.type}
+                    </div>
+                    <X
+                      onClick={() => handleRemoveFile(index)}
+                      className="ml-auto cursor-pointer"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </TabsContent>
+        <TabsContent value="text" className="relative">
+          <Textarea
+            className="focus: relative mb-6 h-28 min-w-[20rem] rounded-[12px] border-2 border-dashed border-[#696969] bg-[#222]"
+            value={textInput}
+            onChange={(e) => setTextInput(e.target.value)}
+          />
+        </TabsContent>
+        <TabsContent value="deploy">
+          <div className="mb-6">
+            <div className="mb-2">Token tick:</div>
+            <input
+              type="text"
+              placeholder="e.g. frog"
+              value={deployTick}
+              onChange={(e) => setDeployTick(e.target.value)}
+              className="font-inherit mr-2 w-lg max-w-full border-b border-[tan] bg-transparent p-1.5 text-center text-inherit outline-none focus:border-[violet]"
+            />
+          </div>
+          <div className="flex">
+            <div className="mb-6">
+              <div className="mb-2">Max supply:</div>
+              <input
+                type="number"
+                placeholder="Total supply"
+                value={deployMax}
+                onChange={(e) => setDeployMax(e.target.value)}
+                className="font-inherit mr-4 w-40 max-w-full border-b border-[tan] bg-transparent p-1.5 text-center text-inherit outline-none focus:border-[violet]"
+              />
+            </div>
+            <div className="mb-6">
+              <div className="mb-2">Mint limit:</div>
+              <input
+                type="number"
+                placeholder="Limit per mint"
+                value={deployLim}
+                onChange={(e) => setDeployLim(e.target.value)}
+                className="font-inherit mr-4 w-40 max-w-full border-b border-[tan] bg-transparent p-1.5 text-center text-inherit outline-none focus:border-[violet]"
+              />
+            </div>
+            <div className="mb-6">
+              <div className="mb-2">Decimals:</div>
+              <input
+                type="number"
+                placeholder="18"
+                value={deployDec}
+                onChange={(e) => setDeployDec(e.target.value)}
+                className="font-inherit mr-2 w-40 max-w-full border-b border-[tan] bg-transparent p-1.5 text-center text-inherit outline-none focus:border-[violet]"
+              />
+            </div>
+          </div>
+        </TabsContent>
+        <TabsContent value="mint">
+          <div className="mb-6">
+            <div className="mb-2">Token tick:</div>
+            <input
+              type="text"
+              placeholder="e.g. frog"
+              value={mintTick}
+              onChange={(e) => setMintTick(e.target.value)}
+              className="font-inherit mr-2 w-lg max-w-full border-b border-[tan] bg-transparent p-1.5 text-center text-inherit outline-none focus:border-[violet]"
+            />
+          </div>
+          <div className="mb-6">
+            <div className="mb-2">Amount to mint:</div>
+            <input
+              type="number"
+              placeholder="Enter amount"
+              value={mintAmt}
+              onChange={(e) => setMintAmt(e.target.value)}
+              className="font-inherit mr-2 w-lg max-w-full border-b border-[tan] bg-transparent p-1.5 text-center text-inherit outline-none focus:border-[violet]"
+            />
+          </div>
+        </TabsContent>
+        <TabsContent value="transfer">
+          <div className="mb-6">
+            <div className="mb-2">Token tick:</div>
+            <input
+              type="text"
+              placeholder="e.g. frog"
+              value={transferTick}
+              onChange={(e) => setTransferTick(e.target.value)}
+              className="font-inherit mr-2 w-lg max-w-full border-b border-[tan] bg-transparent p-1.5 text-center text-inherit outline-none focus:border-[violet]"
+            />
+          </div>
+          <div className="mb-6">
+            <div className="mb-2">Amount to trnasfer:</div>
+            <input
+              type="number"
+              placeholder="Enter amount"
+              value={transferAmt}
+              onChange={(e) => setTransferAmt(e.target.value)}
+              className="font-inherit mr-2 w-lg max-w-full border-b border-[tan] bg-transparent p-1.5 text-center text-inherit outline-none focus:border-[violet]"
+            />
+          </div>
+        </TabsContent>
+
+        <div className="mb-6">
+          <div className="mb-2">Network fee:</div>
+          <div className="inline-flex gap-6">
+            {pepePerState === "recommended" && (
+              <>
+                <div className="flex flex-col items-center justify-center rounded-[12px] border border-white/20 p-3 px-4 outline-1 outline-white/20">
+                  <div>Recommended</div>
+                  <div className="text-[0.9rem] text-[#fffc]">
+                    {PEPE_PER_KB_FEE} pepe/kB
+                  </div>
+                </div>
+                <label
+                  onClick={() => {
+                    setPepePerState("custom");
+                    setPepePer(0);
+                  }}
+                  className="flex flex-col items-center justify-center rounded-xl border border-white/20 px-4 py-3"
+                >
+                  Custom
+                </label>
+              </>
+            )}
+            {pepePerState === "custom" && (
+              <>
+                <div
+                  onClick={() => setPepePerState("recommended")}
+                  className="flex flex-col items-center justify-center rounded-[12px] border border-white/20 p-3 px-4"
+                >
+                  <div>Recommended</div>
+                  <div className="text-[0.9rem] text-[#fffc]">
+                    {PEPE_PER_KB_FEE} pepe/kB
+                  </div>
+                </div>
+                <label className="flex flex-col items-center justify-center rounded-xl border border-white/20 px-4 py-3 outline-1 outline-white/20">
+                  <div>Custom</div>
+                  <div className="text-[0.9rem] text-[#fffc]">
+                    <input
+                      type="number"
+                      value={pepePer}
+                      onChange={(e) => setPepePer(Number(e.target.value))}
+                      placeholder={String(PEPE_PER_KB_FEE)}
+                      className="w-10 rounded-md bg-transparent text-white focus:ring-0 focus:outline-none"
+                    />
+                    <span className="ml-2">pepe/kB</span>
+                  </div>
+                </label>
+              </>
             )}
           </div>
-        )}
-      </div>
+          {files.length > 0 && (
+            <div className="mt-6 flex items-center">
+              Estimated fee: ~&#xA0;
+              <Image
+                src="/assets/coin.gif"
+                alt="coin"
+                width={18}
+                height={18}
+                priority
+                className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+              />
+              {estimatedFee > 0 ? estimatedFee.toFixed(6) : "0"}
+              {files.length > 0 && estimatedFee === 0 && (
+                <span className="ml-2 text-xs text-gray-400">
+                  (calculating...)
+                </span>
+              )}
+            </div>
+          )}
+        </div>
 
-      {/* {isInscribing && (
+        {/* {isInscribing && (
         <div className="mb-4 rounded-lg border border-green-500/30 bg-green-500/10 p-4">
           <div className="text-sm text-green-200">
             ✅ <strong>Your inscription is being saved automatically!</strong>
@@ -552,15 +713,15 @@ export default function Inscribe() {
         </div>
       )} */}
 
-      <Button
-        className="font-inherit rounded-[12px] border border-transparent bg-[#1a1a1a] px-4 py-2 text-[1em] font-medium text-white transition-all duration-200 ease-in-out hover:bg-[#222]"
-        onClick={handleInscribe}
-        disabled={isInscribing || inscriptions[0]?.isActiveJob}
-      >
-        {isInscribing ? statusMessage : "Inscribe"}
-      </Button>
+        <Button
+          className="font-inherit rounded-[12px] border border-transparent bg-[#1a1a1a] px-4 py-2 text-[1em] font-medium text-white transition-all duration-200 ease-in-out hover:bg-[#222]"
+          onClick={handleInscribe}
+          disabled={isInscribing || inscriptions[0]?.isActiveJob}
+        >
+          {isInscribing ? statusMessage : "Inscribe"}
+        </Button>
 
-      {/* {successTx && (
+        {/* {successTx && (
         <div>
           <div>
             Transaction successful!
@@ -572,152 +733,153 @@ export default function Inscribe() {
         </div>
       )} */}
 
-      <div className="mt-6 mb-4 flex items-center justify-between">
-        <h3 className="m-0 mx-0 my-[1em] block text-[1.17em] font-bold">
-          History
-        </h3>
-        <div
-          onClick={fetchInscriptions}
-          className="inline-flex cursor-pointer items-center gap-2 transition-opacity"
-        >
-          {isLoading ? (
-            <>
-              <Spinner className="size-6" />
-              <span>Loading</span>
-            </>
-          ) : (
-            <>
-              <RefreshCw />
-              <span>Refresh</span>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Show message when wallet is locked */}
-      {isLocked && hasSavedWallet && (
-        <div className="rounded-lg border border-white/20 bg-white/5 p-6 text-center">
-          <div className="mb-2 text-lg">🔒 Wallet Locked</div>
-          <div className="text-sm text-[#fffc]">
-            Please unlock your wallet to view inscription history
+        <div className="mt-6 mb-4 flex items-center justify-between">
+          <h3 className="m-0 mx-0 my-[1em] block text-[1.17em] font-bold">
+            History
+          </h3>
+          <div
+            onClick={fetchInscriptions}
+            className="inline-flex cursor-pointer items-center gap-2 transition-opacity"
+          >
+            {isLoading ? (
+              <>
+                <Spinner className="size-6" />
+                <span>Loading</span>
+              </>
+            ) : (
+              <>
+                <RefreshCw />
+                <span>Refresh</span>
+              </>
+            )}
           </div>
         </div>
-      )}
 
-      {/* Show message when no wallet */}
-      {!hasSavedWallet && (
-        <div className="rounded-lg border border-white/20 bg-white/5 p-6 text-center">
-          <div className="mb-2 text-lg">👛 No Wallet</div>
-          <div className="text-sm text-[#fffc]">
-            Please create or import a wallet to view inscription history
-          </div>
-        </div>
-      )}
-
-      {/* Show inscriptions only when wallet is unlocked */}
-      {!isLocked && hasSavedWallet && (
-        <div>
-          {inscriptions.length === 0 ? (
-            <div className="rounded-lg border border-gray-500/30 bg-gray-500/10 p-6 text-center text-gray-300">
-              No inscriptions found
+        {/* Show message when wallet is locked */}
+        {isLocked && hasSavedWallet && (
+          <div className="rounded-lg border border-white/20 bg-white/5 p-6 text-center">
+            <div className="mb-2 text-lg">🔒 Wallet Locked</div>
+            <div className="text-sm text-[#fffc]">
+              Please unlock your wallet to view inscription history
             </div>
-          ) : (
-            inscriptions.map((item, index) => {
-              const isExpanded = expandedItems.has(index);
-              const isActive = item.isActiveJob; // Active job from IndexedDB
+          </div>
+        )}
 
-              return (
-                <div key={index} className="mb-4">
-                  <div className="flex items-center gap-4">
-                    <div className="w-[614px] overflow-hidden text-ellipsis">
-                      {isActive
-                        ? item.fileName
-                        : item.utxo?.txid || item.inscriptionId}
-                    </div>
-                    <div className="mr-auto text-[0.9rem]">
-                      {isActive
-                        ? formatDistanceToNow(new Date(item.createdAt), {
-                            addSuffix: true,
-                          })
-                        : item.timestamp
-                          ? formatDistanceToNow(
-                              new Date(item.timestamp * 1000),
-                              { addSuffix: true },
-                            )
-                          : "Unknown"}
-                    </div>
-                    <div className="cursor-pointer text-[0.9rem] font-medium text-[#c891ff] [text-decoration:inherit]">
-                      {/* {isActive && item.currentCommit > 0 && (
+        {/* Show message when no wallet */}
+        {!hasSavedWallet && (
+          <div className="rounded-lg border border-white/20 bg-white/5 p-6 text-center">
+            <div className="mb-2 text-lg">👛 No Wallet</div>
+            <div className="text-sm text-[#fffc]">
+              Please create or import a wallet to view inscription history
+            </div>
+          </div>
+        )}
+
+        {/* Show inscriptions only when wallet is unlocked */}
+        {!isLocked && hasSavedWallet && (
+          <div>
+            {inscriptions.length === 0 ? (
+              <div className="rounded-lg border border-gray-500/30 bg-gray-500/10 p-6 text-center text-gray-300">
+                No inscriptions found
+              </div>
+            ) : (
+              inscriptions.map((item, index) => {
+                const isExpanded = expandedItems.has(index);
+                const isActive = item.isActiveJob; // Active job from IndexedDB
+
+                return (
+                  <div key={index} className="mb-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-[614px] overflow-hidden text-ellipsis">
+                        {isActive
+                          ? item.fileName
+                          : item.utxo?.txid || item.inscriptionId}
+                      </div>
+                      <div className="mr-auto text-[0.9rem]">
+                        {isActive
+                          ? formatDistanceToNow(new Date(item.createdAt), {
+                              addSuffix: true,
+                            })
+                          : item.timestamp
+                            ? formatDistanceToNow(
+                                new Date(item.timestamp * 1000),
+                                { addSuffix: true },
+                              )
+                            : "Unknown"}
+                      </div>
+                      <div className="cursor-pointer text-[0.9rem] font-medium text-[#c891ff] [text-decoration:inherit]">
+                        {/* {isActive && item.currentCommit > 0 && (
                         <>
                           commit {item.currentCommit}/
                           {item.resumeData?.locks.length}
                         </>
                       )} */}
-                      {isActive && item.currentCommit === 0 && (
-                        <>Preparing...</>
-                      )}
-                      {!isActive && <>copy metadata</>}
-                    </div>
-                    <div
-                      className={`text-right ${isActive ? "text-yellow-500" : "text-green-500"}`}
-                    >
-                      <div>{isActive ? "inscribing" : "inscribed"}</div>
-                      <div>
-                        {item.resumeData?.locks.length && isActive
-                          ? `commit ${item.currentCommit}/${item.resumeData?.locks.length}`
-                          : "1/1"}
+                        {isActive && item.currentCommit === 0 && (
+                          <>Preparing...</>
+                        )}
+                        {!isActive && <>copy metadata</>}
+                      </div>
+                      <div
+                        className={`text-right ${isActive ? "text-yellow-500" : "text-green-500"}`}
+                      >
+                        <div>{isActive ? "inscribing" : "inscribed"}</div>
+                        <div>
+                          {item.resumeData?.locks.length && isActive
+                            ? `commit ${item.currentCommit}/${item.resumeData?.locks.length}`
+                            : "1/1"}
+                        </div>
+                      </div>
+                      <div
+                        onClick={() => toggleExpanded(index)}
+                        className="cursor-pointer"
+                      >
+                        {isExpanded ? <ChevronUp /> : <ChevronDown />}
                       </div>
                     </div>
-                    <div
-                      onClick={() => toggleExpanded(index)}
-                      className="cursor-pointer"
-                    >
-                      {isExpanded ? <ChevronUp /> : <ChevronDown />}
-                    </div>
-                  </div>
 
-                  {isExpanded && (
-                    <div className="mt-2 flex gap-2 text-[0.9rem]">
-                      <div>
-                        {isActive ? item.contentType : item.content_type}
-                      </div>
-                      <div>
-                        {isActive ? item.fileSize : item.content_length} bytes
-                      </div>
-                      <div className="ml-auto flex">
-                        {!isActive && item.inscription_id && (
-                          <Link
-                            href={`inscription/${item.inscription_id}`}
-                            className="mr-4 cursor-pointer font-medium text-[#dfc0fd] [text-decoration:inherit]"
+                    {isExpanded && (
+                      <div className="mt-2 flex gap-2 text-[0.9rem]">
+                        <div>
+                          {isActive ? item.contentType : item.content_type}
+                        </div>
+                        <div>
+                          {isActive ? item.fileSize : item.content_length} bytes
+                        </div>
+                        <div className="ml-auto flex">
+                          {!isActive && item.inscription_id && (
+                            <Link
+                              href={`inscription/${item.inscription_id}`}
+                              className="mr-4 cursor-pointer font-medium text-[#dfc0fd] [text-decoration:inherit]"
+                            >
+                              {item.inscription_id.slice(0, 3)}...
+                              {item.inscription_id.slice(-3)}
+                            </Link>
+                          )}
+                          {isActive && (
+                            <div className="mx-4 h-2 w-64 overflow-hidden rounded-full bg-gray-700">
+                              <div
+                                className="h-full bg-linear-to-r from-yellow-500 to-green-500 transition-all duration-300"
+                                style={{ width: `${item.progress || 0}%` }}
+                              />
+                            </div>
+                          )}
+                          <span
+                            className={
+                              isActive ? "text-yellow-500" : "text-green-500"
+                            }
                           >
-                            {item.inscription_id.slice(0, 3)}...
-                            {item.inscription_id.slice(-3)}
-                          </Link>
-                        )}
-                        {isActive && (
-                          <div className="mx-4 h-2 w-64 overflow-hidden rounded-full bg-gray-700">
-                            <div
-                              className="h-full bg-linear-to-r from-yellow-500 to-green-500 transition-all duration-300"
-                              style={{ width: `${item.progress || 0}%` }}
-                            />
-                          </div>
-                        )}
-                        <span
-                          className={
-                            isActive ? "text-yellow-500" : "text-green-500"
-                          }
-                        >
-                          {isActive ? `${item.progress || 0}%` : "confirmed"}
-                        </span>
+                            {isActive ? `${item.progress || 0}%` : "confirmed"}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })
-          )}
-        </div>
-      )}
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+      </Tabs>
     </>
   );
 }

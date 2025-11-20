@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 
-const BELINDEX_API_BASE = process.env.BELINDEX_API_BASE || 'http://172.16.11.131:8000';
+const BELINDEX_API_BASE = (process.env.NEXT_PUBLIC_BELINDEX_API_BASE || 'http://172.16.11.131:8000').replace(/\/$/, '');
 
 export async function GET(
   request: NextRequest,

@@ -2,7 +2,7 @@
 import { use, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { blockchainClient, apiClient, belIndexClient } from "@/lib/axios";
+import { blockchainClient, apiClient } from "@/lib/axios";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { sendInscriptionTransaction } from "@/lib/wallet/sendInscription";
 import {
@@ -29,6 +29,17 @@ import {
   fetchPepemapImage,
   PEPEMAP_GREEN_PLACEHOLDER,
 } from "@/lib/pepemapImage";
+import Avatar from "@/components/Avatar";
+import {
+  saveJob,
+  saveFileData,
+  getAllJobs,
+  type InscriptionJob,
+} from "@/lib/inscription/indexedDB";
+import { toast } from "sonner";
+import { resolveFileContentType } from "@/lib/inscription/inscribe";
+import { processJob } from "@/lib/inscription/inscriptionWorker";
+import { PEPE_PER_KB_FEE, RECOMMENDED_FEE } from "@/constants/inscription";
 
 const ORD_API_BASE = process.env.NEXT_PUBLIC_ORD_API_BASE!;
 
@@ -61,7 +72,7 @@ function PepemapImage({ item }: { item: any }) {
       alt="pepemap"
       width={128}
       height={128}
-      className={`pointer-events-none h-full max-h-32 w-auto max-w-32 rounded-xl  object-contain text-[0.8rem] select-none ${
+      className={`pointer-events-none h-full max-h-32 w-auto max-w-32 rounded-xl object-contain text-[0.8rem] select-none ${
         isLoading ? "opacity-50" : ""
       }`}
     />
@@ -76,14 +87,16 @@ export default function WalletAddress({
   const { address } = use(params);
   const [inscriptions, setInscriptions] = useState<any[]>([]);
   const [pepemaps, setPepemaps] = useState<any[]>([]);
+  const [ticks, setTicks] = useState<any[]>([]);
   const [listingStatuses, setListingStatuses] = useState<Map<string, any>>(
     new Map(),
   );
-  const [pepemapListingStatuses, setPepemapListingStatuses] = useState<Map<string, any>>(
-    new Map(),
-  );
+  const [pepemapListingStatuses, setPepemapListingStatuses] = useState<
+    Map<string, any>
+  >(new Map());
   const [isLoadingInscriptions, setIsLoadingInscriptions] = useState(false);
   const {
+    wallet,
     walletInfo,
     walletAddress,
     privateKey,
@@ -134,7 +147,9 @@ export default function WalletAddress({
 
         for (const inscription of allInscriptions) {
           // Check if it's a pepemap
-          const isPepemap = typeof inscription.content === "string" && inscription.content.endsWith(".pepemap");
+          const isPepemap =
+            typeof inscription.content === "string" &&
+            inscription.content.endsWith(".pepemap");
 
           if (isPepemap) {
             // Fetch pepemap listing status
@@ -142,7 +157,10 @@ export default function WalletAddress({
               const statusResponse = await apiClient.get(
                 `/pepemap-listings/inscription/${inscription.inscription_id}`,
               );
-              pepemapStatusMap.set(inscription.inscription_id, statusResponse.data);
+              pepemapStatusMap.set(
+                inscription.inscription_id,
+                statusResponse.data,
+              );
             } catch (err) {
               pepemapStatusMap.set(inscription.inscription_id, {
                 status: null,
@@ -179,19 +197,37 @@ export default function WalletAddress({
     }
   }, [address]);
 
+  useEffect(() => {
+    const fetchWalletPrc = async () => {
+      try {
+        const response = await fetch(`/api/belindex/address/${address}`);
+        const data = await response.json();
+        setTicks(data);
+      } catch (error) {
+        console.error("Error fetching prc-20:", error);
+      }
+    };
+
+    if (address) {
+      fetchWalletPrc();
+    }
+  }, [address]);
+
   // useEffect(() => {
-  //   const fetchWalletPrc = async () => {
+  //   const fetchWalletPrcHistory = async () => {
   //     try {
-  //       const response = await belIndexClient.get(`address/${address}`);
-  //       const data = response.data;
+  //       const response = await fetch(
+  //         `/api/belindex/address/${address}/history`,
+  //       );
+  //       const data = await response.json();
   //       console.log(data);
   //     } catch (error) {
-  //       console.error("Error fetching prc-20:", error);
+  //       console.error("Error fetching prc-20 history", error);
   //     }
   //   };
 
   //   if (address) {
-  //     fetchWalletPrc();
+  //     fetchWalletPrcHistory();
   //   }
   // }, [address]);
 
@@ -243,6 +279,24 @@ export default function WalletAddress({
       });
 
       alert("Pepemap unlisted successfully!");
+      // Refresh the wallet data
+      window.location.reload();
+    } catch (error: any) {
+      console.error(error);
+      alert(
+        `Failed to unlist: ${error.response?.data?.message || error.message}`,
+      );
+    }
+  };
+
+  const handlePrcUnlist = async (item: any) => {
+    try {
+      await apiClient.post("/prc20-listings/unlist", {
+        inscriptionId: item.inscription_id,
+        sellerAddress: walletAddress,
+      });
+
+      alert("Prc20 unlisted successfully!");
       // Refresh the wallet data
       window.location.reload();
     } catch (error: any) {
@@ -402,13 +456,7 @@ export default function WalletAddress({
     );
   }
 
-  function SendDialogContent({
-    item,
-    walletAddress,
-  }: {
-    item: any;
-    walletAddress: string;
-  }) {
+  function SendDialogContent({ item }: { item: any }) {
     const [toAddress, setToAddress] = useState("");
     const [isValid, setIsValid] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -693,13 +741,7 @@ export default function WalletAddress({
     );
   }
 
-  function PepemapSendDialogContent({
-    item,
-    walletAddress,
-  }: {
-    item: any;
-    walletAddress: string;
-  }) {
+  function PepemapSendDialogContent({ item }: { item: any }) {
     const [toAddress, setToAddress] = useState("");
     const [isValid, setIsValid] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -834,6 +876,562 @@ export default function WalletAddress({
     );
   }
 
+  function PrcInscribeDialogContent({ item }: { item: any }) {
+    const [isValid, setIsValid] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [amount, setAmount] = useState("");
+    const [isInscribing, setIsInscribing] = useState(false);
+    const [statusMessage, setStatusMessage] = useState("");
+    const [pepePer, setPepePer] = useState<number>(PEPE_PER_KB_FEE);
+    const [pepePerState, setPepePerState] = useState<"recommended" | "custom">(
+      "recommended",
+    );
+
+    useEffect(() => {
+      if (
+        Number(item.balance) >= Number(amount) &&
+        amount != "" &&
+        Number(amount) != 0
+      ) {
+        setIsValid(true);
+      } else {
+        setIsValid(false);
+      }
+    }, [amount]);
+
+    const fetchInscriptions = async () => {
+      setIsLoading(true);
+
+      console.log("🔄 Fetching inscription history for:", walletAddress);
+
+      try {
+        // 1. Get active jobs from IndexedDB
+        const activeJobs = await getAllJobs();
+        const myActiveJobs = activeJobs.filter(
+          (job) => job.status === "processing" || job.status === "pending",
+        );
+
+        // 2. Fetch completed inscriptions from API
+        let page = 1;
+        let allInscriptions: any = [];
+        let continueFetching = true;
+
+        while (continueFetching) {
+          const url = `/inscriptions/balance/${walletAddress}/${page}`;
+          console.log(`📡 Fetching page ${page}:`, ORD_API_BASE + url);
+
+          try {
+            const response = await blockchainClient.get(url);
+            const data = response.data;
+            console.log(`📦 Page ${page} response:`, data);
+
+            if (data.inscriptions && data.inscriptions.length > 0) {
+              // Add the new inscriptions to the list
+              allInscriptions = [...allInscriptions, ...data.inscriptions];
+
+              // Move to the next page
+              page++;
+            } else {
+              // Stop if no more inscriptions are found
+              continueFetching = false;
+            }
+          } catch (error: any) {
+            console.error(`❌ HTTP Error:`, error.message);
+            throw new Error(`Failed to fetch inscriptions: ${error.message}`);
+          }
+        }
+
+        // 3. Merge active jobs with completed inscriptions
+        const mergedList = [
+          ...myActiveJobs.map((job) => ({
+            ...job,
+            isActiveJob: true, // Flag to identify active jobs
+          })),
+          ...allInscriptions,
+        ];
+
+        // Sort by timestamp/createdAt in descending order
+        mergedList.sort((a: any, b: any) => {
+          const aTime = a.timestamp || a.createdAt / 1000;
+          const bTime = b.timestamp || b.createdAt / 1000;
+          return bTime - aTime;
+        });
+
+        // Update the state with the merged list
+        setInscriptions(mergedList);
+        console.log(
+          `✅ Loaded ${allInscriptions.length} completed + ${myActiveJobs.length} active inscriptions`,
+        );
+        setIsLoading(false);
+      } catch (error) {
+        console.error("❌ Failed to fetch inscriptions:", error);
+        setInscriptions([]);
+        setIsLoading(false);
+      }
+    };
+
+    const computeFeeRate = () => {
+      const recommended = Math.max(
+        1,
+        Math.floor((RECOMMENDED_FEE * 1e8) / 1_000),
+      );
+      if (pepePerState !== "custom") return recommended;
+      const custom = Number.parseFloat(String(pepePer));
+      if (!Number.isFinite(custom) || custom <= 0) return recommended;
+      return Math.max(1, Math.floor((custom * 1e8) / 1_000));
+    };
+
+    const handleInscribe = async () => {
+      const activeJobs = await getAllJobs();
+      const hasActiveJob = activeJobs.some(
+        (job) => job.status === "processing" || job.status === "pending",
+      );
+
+      const transfer = `{"p": "prc-20", "op": "transfer", "tick": "${item.tick}", "amt": "${amount}"}`;
+
+      if (hasActiveJob) {
+        toast.error("Please wait for the current inscription to complete.");
+        return;
+      }
+
+      try {
+        setIsInscribing(true);
+
+        let file: {
+          name: string;
+          size: number;
+          type: string;
+          arrayBuffer: () => Promise<ArrayBuffer>;
+        };
+
+        const blob = new Blob([transfer], { type: "application/json" });
+
+        file = {
+          name: "transfer.json",
+          size: blob.size,
+          type: "application/json",
+          arrayBuffer: () => blob.arrayBuffer(),
+        };
+
+        setStatusMessage("Preparing text and adding to queue…");
+
+        let payload: Uint8Array;
+        try {
+          const buffer = await file.arrayBuffer();
+          payload = new Uint8Array(buffer);
+        } catch (_readErr) {
+          throw new Error(
+            "Failed to read the selected file. Please try again.",
+          );
+        }
+
+        const contentType = resolveFileContentType(file);
+        const feeRate = computeFeeRate();
+
+        // Create job in IndexedDB
+        const job: InscriptionJob = {
+          id: `job_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
+          fileName: file.name,
+          fileSize: file.size,
+          contentType,
+          status: "processing",
+          progress: 0,
+          currentCommit: 0,
+          totalCommits: 0,
+          createdAt: Date.now(),
+        };
+
+        // Save job and file data to IndexedDB
+        await saveJob(job);
+        await saveFileData(job.id, payload);
+
+        console.log(`📝 Job saved to IndexedDB: ${file.name} (ID: ${job.id})`);
+        toast.success(`${file.name} started inscribing!`);
+
+        // Trigger history refresh to show the new job immediately
+        fetchInscriptions();
+        // Process the job and AWAIT completion
+        await processJob(
+          job.id,
+          wallet,
+          feeRate,
+          (update: Partial<InscriptionJob>) => {
+            console.log("📊 Progress update:", update);
+            // Update UI with progress
+            if (update.currentCommit && update.totalCommits) {
+              setStatusMessage(
+                `Processing commit ${update.currentCommit}/${update.totalCommits}...`,
+              );
+            }
+            // Refresh history to show progress updates
+            fetchInscriptions();
+          },
+        );
+
+        setStatusMessage("Inscription complete.");
+        toast.success(`${file.name} inscribed successfully!`);
+        console.log(`✅ Inscription complete for ${file.name}`);
+        fetchInscriptions();
+      } catch (error: any) {
+        console.error("❌ Inscription failed:", error);
+        setStatusMessage("");
+        toast.error(error?.message || "Failed to inscribe. Please try again.");
+        fetchInscriptions();
+      } finally {
+        setIsInscribing(false);
+      }
+      setAmount("");
+    };
+    console.log(statusMessage);
+    return (
+      <>
+        <div className="mb-2 flex max-h-104 flex-wrap justify-center gap-2.5 overflow-y-auto">
+          <div className="rounded-[12px] bg-[#00000080] p-2">
+            <Avatar text={item.tick} xl />
+            <div className="mt-2 text-center text-[1rem] text-white">
+              <div className="text-center text-[0.8rem] text-[#dfc0fd]">
+                {item.tick}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="my-4 flex w-full items-center justify-center">
+          <div className="mt-8 mr-4 text-[1.1rem] font-semibold">
+            <span>Inscribe amount:</span>
+            <div className="text-[13px]">(Available {item.balance})</div>
+          </div>
+          <input
+            type="number"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "." || e.key === "e" || e.key === "-") {
+                e.preventDefault();
+              }
+            }}
+            className="font-inherit mr-16 w-20 max-w-md border-b border-[tan] bg-transparent p-[0.4em] text-center text-inherit outline-none focus:border-[violet]"
+          />
+        </div>
+
+        <div className="mt-12 flex justify-center text-[0.9rem] leading-8">
+          <div className="mr-8 w-1/2 text-right">Network fee:</div>
+          <div className="flex w-1/2 text-left">
+            <Image
+              src="/assets/coin.gif"
+              alt="coin"
+              width={18}
+              height={18}
+              priority
+              className="mt-2 mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+            />
+            <span>~0.00015</span>
+            <span className="text-[#fffc]"> ($0.00)</span>
+          </div>
+        </div>
+
+        <button
+          disabled={!isValid || isLoading}
+          onClick={handleInscribe}
+          className={`font-inherit mt-4 flex w-full justify-center rounded-xl border border-transparent px-4 py-2 text-base font-bold transition-all duration-200 ease-in-out ${
+            !isValid ? "bg-[#1a1a1a]" : "bg-[#007aff]"
+          }`}
+        >
+          {isLoading
+            ? "Inscribing"
+            : isValid
+              ? "Confirm"
+              : "Enter valid amount"}
+        </button>
+
+        {statusMessage && (
+          <div className="mt-3 text-center text-sm break-all text-[#dfc0fd]">
+            {statusMessage}
+          </div>
+        )}
+      </>
+    );
+  }
+
+  function PrcListeDialogContent({ item }: { item: any }) {
+    const [price, setPrice] = useState<Number>(0);
+    const [loading, setLoading] = useState(false);
+
+    async function handlePrc20List() {
+      if (Number(price) <= 0) {
+        alert("Please enter a valid price");
+        return;
+      }
+
+      if (!privateKey) {
+        alert("Wallet not connected. Please unlock your wallet.");
+        return;
+      }
+
+      try {
+        setLoading(true);
+
+        // Step 1: Find the UTXO containing the inscription
+        const inscriptionUtxo = await findInscriptionUTXO(
+          walletAddress,
+          item.inscription_id,
+        );
+
+        // Step 2: Create PSBT for the listing
+        const psbtBase64 = await createListingPSBT(
+          inscriptionUtxo,
+          Number(price),
+          privateKey,
+          walletAddress,
+        );
+
+        // Step 3: Save prc20 listing to database with PSBT
+        await apiClient.post("/prc20-listings/list", {
+          inscriptionId: item.inscription_id,
+          prc20Label: item.content,
+          priceSats: Number(price),
+          sellerAddress: walletAddress,
+          psbtBase64: psbtBase64,
+        });
+
+        alert("Prc20 listed successfully!");
+        setLoading(false);
+        // Refresh the page to show updated status
+        window.location.reload();
+      } catch (error: any) {
+        setLoading(false);
+        console.error(error);
+        alert(
+          `Failed to list prc20: ${error.response?.data?.message || error.message}`,
+        );
+      }
+    }
+    return (
+      <>
+        <div className="mb-2 flex max-h-104 flex-wrap justify-center gap-2.5 overflow-y-auto">
+          <div className="rounded-[12px] bg-[#00000080] p-2">
+            <Avatar text={item.tick} xl />
+            <div className="mt-2 text-center text-[1rem] text-white">
+              <div className="text-center text-[0.8rem] text-[#dfc0fd]">
+                {item.tick}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="my-4 flex w-full items-center justify-center">
+          <div className="mr-8 ml-14 pt-4 font-semibold">Price:</div>
+          <Image
+            src="/assets/coin.gif"
+            alt="coin"
+            width={18}
+            height={18}
+            priority
+            className="mt-2 mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+          />
+          <input
+            type="number"
+            value={Number(price)}
+            onChange={(e) => setPrice(Number(e.target.value))}
+            className="font-inherit mr-2 w-20 max-w-md border-b border-[tan] bg-transparent p-[0.4em] text-center text-inherit outline-none focus:border-[violet]"
+          />
+        </div>
+        <div className="mt-2 flex justify-center leading-8">
+          <div className="mr-8 w-1/2 text-right">Maker fee (1.4%):</div>
+          <div className="flex w-1/2 text-left">
+            {price !== 0 && (
+              <>
+                <Image
+                  src="/assets/coin.gif"
+                  alt="coin"
+                  width={18}
+                  height={18}
+                  priority
+                  className="mt-2 mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                />
+                <span>{(Number(price) * 0.014).toFixed(2)}</span>
+                <span className="text-[#fffc]">
+                  ($
+                  {(Number(price) * 0.014 * pepecoinPrice).toFixed(2)})
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+        <div className="flex justify-center leading-8">
+          <div className="mr-8 w-1/2 text-right">You will receive:</div>
+          <div className="flex w-1/2 text-left">
+            {price !== 0 && (
+              <>
+                <Image
+                  src="/assets/coin.gif"
+                  alt="coin"
+                  width={18}
+                  height={18}
+                  priority
+                  className="mt-2 mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                />
+
+                <span>{(Number(price) * 0.986).toFixed(2)}</span>
+                <span className="text-[#fffc]">
+                  ($
+                  {(Number(price) * 0.986 * pepecoinPrice).toFixed(2)})
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+
+        <button
+          onClick={handlePrc20List}
+          disabled={loading || Number(price) <= 0}
+          className={`font-inherit mt-4 flex w-full justify-center rounded-xl border border-transparent px-4 py-2 text-base font-bold transition-all duration-200 ease-in-out ${
+            loading || Number(price) <= 0
+              ? "bg-[#1a1a1a]"
+              : "bg-[#007aff] hover:bg-[#3b82f6]"
+          }`}
+        >
+          {loading ? "Listing..." : "Confirm Listing"}
+        </button>
+      </>
+    );
+  }
+
+  function PrcSendDialogContent({ item }: { item: any }) {
+    const [toAddress, setToAddress] = useState("");
+    const [isValid, setIsValid] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [message, setMessage] = useState("");
+
+    const validateAddress = (address: string) =>
+      /^[P][a-zA-Z0-9]{25,34}$/.test(address);
+
+    useEffect(() => {
+      setIsValid(validateAddress(toAddress));
+    }, [toAddress]);
+
+    async function handlePrc20Send() {
+      if (!isValid || !toAddress) {
+        setMessage("Please enter a valid Pepecoin address");
+        return;
+      }
+
+      if (!privateKey) {
+        setMessage("Wallet not connected. Please unlock your wallet.");
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        setMessage("Finding inscription UTXO...");
+
+        // Step 1: Find the UTXO containing the inscription
+        const inscriptionUtxo = await findInscriptionUTXO(
+          walletAddress,
+          item.inscription_id,
+        );
+
+        console.log("Found inscription UTXO:", inscriptionUtxo);
+
+        setMessage("Creating transaction...");
+
+        // Step 2: Send the inscription
+        const txid = await sendInscriptionTransaction(
+          inscriptionUtxo,
+          privateKey,
+          walletAddress,
+          toAddress,
+        );
+
+        console.log("Transaction broadcast:", txid);
+
+        setMessage("Recording transaction...");
+
+        // Step 3: Record the send in the database
+        await apiClient.post("/prc20-listings/send", {
+          inscriptionId: item.inscription_id,
+          prc20Label: item.content,
+          fromAddress: walletAddress,
+          toAddress: toAddress,
+          txid: txid,
+        });
+
+        setMessage(
+          `✅ Prc20 sent successfully!\n\nTransaction ID: ${txid.slice(0, 8)}...${txid.slice(-8)}`,
+        );
+
+        // Wait 2 seconds then reload
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+      } catch (error: any) {
+        console.error("Send error:", error);
+        setMessage(`❌ Failed to send: ${error.message}`);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    return (
+      <>
+        <div className="mb-2 flex max-h-104 flex-wrap justify-center gap-2.5 overflow-y-auto">
+          <div className="rounded-[12px] bg-[#00000080] p-2">
+            <Avatar text={item.tick} xl />
+            <div className="mt-2 text-center text-[1rem] text-white">
+              <div className="text-center text-[0.8rem] text-[#dfc0fd]">
+                {item.tick}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="my-4 flex w-full items-center justify-center">
+          <div className="mr-4 text-[1.1rem] font-semibold">Send to:</div>
+          <input
+            className="font-inherit mr-2 w-full max-w-md border-b border-[tan] bg-transparent p-[0.4em] text-center text-inherit outline-none focus:border-[violet]"
+            value={toAddress}
+            onChange={(e) => setToAddress(e.target.value.trim())}
+          />
+        </div>
+
+        <div className="mt-12 flex justify-center text-[0.9rem] leading-8">
+          <div className="mr-8 w-1/2 text-right">Network fee:</div>
+          <div className="flex w-1/2 text-left">
+            <Image
+              src="/assets/coin.gif"
+              alt="coin"
+              width={18}
+              height={18}
+              priority
+              className="mt-2 mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+            />
+            <span>~0.00015</span>
+            <span className="text-[#fffc]"> ($0.00)</span>
+          </div>
+        </div>
+
+        <button
+          disabled={!isValid || isLoading}
+          onClick={handlePrc20Send}
+          className={`font-inherit mt-4 flex w-full justify-center rounded-xl border border-transparent px-4 py-2 text-base font-bold transition-all duration-200 ease-in-out ${
+            !isValid ? "bg-[#1a1a1a]" : "bg-[#007aff]"
+          }`}
+        >
+          {isLoading
+            ? "Creating transfer"
+            : isValid
+              ? "Confirm"
+              : "Enter valid address"}
+        </button>
+
+        {message && (
+          <div className="mt-3 text-center text-sm break-all text-[#dfc0fd]">
+            {message}
+          </div>
+        )}
+      </>
+    );
+  }
+
+  console.log(ticks);
   return (
     <>
       <h1 className="leading-[1.1 ] text-3xl">
@@ -896,21 +1494,21 @@ export default function WalletAddress({
               </TableRow>
             </TableHeader>
             <TableBody className="text-[16px]">
-              {[...Array(20)].map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell className="w-auto px-0 text-center">
-                    <Link href="/dxcn">
-                      <div className="m-auto flex h-[42px] w-[42px] items-center justify-center rounded-full bg-[#212121] object-cover align-middle text-[0.7rem] select-none">
-                        dxcn
-                      </div>
+              {ticks.map((item, index) => (
+                <TableRow key={index}>
+                  <TableCell className="px-auto w-auto text-center">
+                    <Link href={`/${item.tick}`}>
+                      <Avatar text={item.tick} />
                     </Link>
                   </TableCell>
                   <TableCell>
-                    <Link href="/dxcn">dxcn</Link>
+                    <Link href={`/${item.tick}`}>{item.tick}</Link>
                   </TableCell>
-                  <TableCell>1,507,100,000,000</TableCell>
-                  <TableCell>1,507,100,000,000</TableCell>
-                  <TableCell>0</TableCell>
+                  <TableCell>
+                    {Number(item.balance) + Number(item.transferable_balance)}
+                  </TableCell>
+                  <TableCell>{item.balance}</TableCell>
+                  <TableCell>{item.transferable_balance}</TableCell>
                   <TableCell>
                     <div className="flex">
                       <Image
@@ -921,12 +1519,121 @@ export default function WalletAddress({
                         priority
                         className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
                       />
-                      587.77
+                      -
                     </div>
                     <div className="ml-5 text-[90%] leading-none font-medium text-[#fffc]">
-                      $119.90
+                      $-
                     </div>
                   </TableCell>
+                  {walletAddress === address && (
+                    <>
+                      <TableCell className="flex flex-row gap-2">
+                        <Dialog>
+                          <DialogTrigger className="font-inherit inline-flex w-auto flex-1 items-center justify-center rounded-xl border border-transparent bg-[#00c85342] px-4 py-2 text-base font-bold text-[#00c853] transition-all duration-200 ease-in-out hover:bg-[#00c853] hover:text-white disabled:bg-[#333] disabled:text-white">
+                            Inscribe
+                          </DialogTrigger>
+                          <DialogContent className="my-[50px] box-border flex min-h-[500px] max-w-[calc(100%-1rem)] min-w-[700px] shrink-0 grow-0 scale-100 flex-col overflow-visible rounded-[12px] bg-[#ffffff1f] p-6 opacity-100 backdrop-blur-xl transition-opacity duration-200 ease-linear">
+                            <DialogHeader>
+                              <DialogTitle>
+                                <div className="mt-0 text-center text-3xl leading-[1.1] font-semibold text-[#00c853]">
+                                  Inscribe Prc-20
+                                </div>
+                              </DialogTitle>
+                              <DialogDescription></DialogDescription>
+
+                              <PrcInscribeDialogContent item={item} />
+                            </DialogHeader>
+                          </DialogContent>
+                        </Dialog>
+                        <Dialog>
+                          <DialogTrigger className="font-inherit inline-flex w-auto items-center justify-center rounded-xl border border-transparent bg-[#8fc5ff] px-4 py-2 text-base font-bold text-[#007aff] transition-all duration-200 ease-in-out hover:bg-[#007aff] hover:text-white disabled:bg-[#333] disabled:text-white">
+                            <svg
+                              data-v-51cc9e0e=""
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              width="20"
+                              height="20"
+                            >
+                              <path
+                                stroke="currentColor"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M3 11.172V5a2 2 0 0 1 2-2h6.172a2 2 0 0 1 1.414.586l8 8a2 2 0 0 1 0 2.828l-6.172 6.172a2 2 0 0 1-2.828 0l-8-8A2 2 0 0 1 3 11.172zM7 7h.001"
+                              ></path>
+                            </svg>
+                            <span className="ml-2">List</span>
+                          </DialogTrigger>
+                          <DialogContent className="my-[50px] box-border flex min-h-[500px] max-w-[calc(100%-1rem)] min-w-[700px] shrink-0 grow-0 scale-100 flex-col overflow-visible rounded-[12px] bg-[#ffffff1f] p-6 opacity-100 backdrop-blur-xl transition-opacity duration-200 ease-linear">
+                            <DialogHeader>
+                              <DialogTitle>
+                                <div className="mt-0 text-center text-3xl leading-[1.1] font-semibold text-[#8fc5ff]">
+                                  List Prc-20 for sale
+                                </div>
+                              </DialogTitle>
+                              <DialogDescription></DialogDescription>
+
+                              <PrcListeDialogContent item={item} />
+                            </DialogHeader>
+                          </DialogContent>
+                        </Dialog>
+                        {/* <button
+                          onClick={() => handlePrcUnlist(item)}
+                          className="font-inherit inline-flex w-full items-center justify-center rounded-xl border border-transparent bg-[#1a1a1a] px-4 py-2 text-base font-bold text-white transition-all duration-200 ease-in-out hover:bg-[#222]"
+                        >
+                          <svg
+                            data-v-51cc9e0e=""
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            width="20"
+                            height="20"
+                          >
+                            <path
+                              stroke="currentColor"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="m14 5-1.414-1.414A2 2 0 0 0 11.172 3H5a2 2 0 0 0-2 2v6.172a2 2 0 0 0 .586 1.414L5 14m14-4 1.586 1.586a2 2 0 0 1 0 2.828l-6.172 6.172a2 2 0 0 1-2.828 0L10 19M7 7h.001M21 3 3 21"
+                            ></path>
+                          </svg>
+                          <span className="ml-2">Unlist</span>
+                        </button> */}
+                        <Dialog>
+                          <DialogTrigger className="font-inherit inline-flex grow-0 cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#3c1295] px-4 py-2 text-base font-bold text-[#d94fff] transition-all duration-200 ease-in-out hover:bg-[#9d12c8] hover:text-white">
+                            <svg
+                              data-v-51cc9e0e=""
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              width="20"
+                              height="20"
+                            >
+                              <path
+                                stroke="currentColor"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="m6 12-3 9 18-9L3 3l3 9zm0 0h6"
+                              ></path>
+                            </svg>
+                          </DialogTrigger>
+                          <DialogContent className="my-[50px] box-border flex min-h-[500px] max-w-[calc(100%-1rem)] min-w-[700px] shrink-0 grow-0 scale-100 flex-col overflow-visible rounded-[12px] bg-[#ffffff1f] p-6 opacity-100 backdrop-blur-xl transition-opacity duration-200 ease-linear">
+                            <DialogHeader>
+                              <DialogTitle>
+                                <div className="mt-0 text-center text-3xl leading-[1.1] font-semibold text-[#d94fff]">
+                                  Send Prc-20
+                                </div>
+                              </DialogTitle>
+                              <DialogDescription></DialogDescription>
+                              <PrcSendDialogContent item={item} />
+                            </DialogHeader>
+                          </DialogContent>
+                        </Dialog>
+                      </TableCell>
+                    </>
+                  )}
                 </TableRow>
               ))}
             </TableBody>
@@ -945,7 +1652,7 @@ export default function WalletAddress({
               </TableRow>
             </TableHeader>
             <TableBody className="text-[16px]">
-              {[...Array(20)].map((_, i) => (
+              {[...Array(5)].map((_, i) => (
                 <TableRow key={i}>
                   <TableCell>
                     <Link
@@ -1137,10 +1844,7 @@ export default function WalletAddress({
                                       </div>
                                     </DialogTitle>
                                     <DialogDescription></DialogDescription>
-                                    <SendDialogContent
-                                      item={item}
-                                      walletAddress={walletAddress}
-                                    />
+                                    <SendDialogContent item={item} />
                                   </DialogHeader>
                                 </DialogContent>
                               </Dialog>
@@ -1301,10 +2005,7 @@ export default function WalletAddress({
                                       </div>
                                     </DialogTitle>
                                     <DialogDescription></DialogDescription>
-                                    <PepemapSendDialogContent
-                                      item={item}
-                                      walletAddress={walletAddress}
-                                    />
+                                    <PepemapSendDialogContent item={item} />
                                   </DialogHeader>
                                 </DialogContent>
                               </Dialog>

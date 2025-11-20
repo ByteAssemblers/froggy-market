@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import axios from 'axios';
 
-const BELINDEX_API_BASE = process.env.BELINDEX_API_BASE!;
+const BELINDEX_API_BASE = process.env.NEXT_PUBLIC_BELINDEX_API_BASE!;
 
 const belIndexClient = axios.create({
   baseURL: BELINDEX_API_BASE,

@@ -66,7 +66,6 @@ export async function fetchUtxos(address: string) {
   }));
 }
 
-
 export function ensureCryptoReady(): Promise<{
   btc: any;
   ecc: any;
@@ -772,7 +771,7 @@ export function resolveFileContentType(file: any) {
   if (name) {
     const dotIndex = name.lastIndexOf(".");
     if (dotIndex !== -1 && dotIndex < name.length - 1) {
-      const ext:FileExtension = name.slice(dotIndex + 1).toLowerCase();
+      const ext: FileExtension = name.slice(dotIndex + 1).toLowerCase();
       if (
         Object.prototype.hasOwnProperty.call(CONTENT_TYPE_BY_EXTENSION, ext)
       ) {
@@ -798,10 +797,13 @@ async function broadcastRawHex(
   { label = "broadcast", query }: { label?: string; query?: string } = {},
 ) {
   const trimmed = normalizeRawHexPayload(rawHex, label);
-  const endpoint = query
-    ? `${path}${query.startsWith("?") ? query : `?${query}`}`
-    : path;
+  // Ensure path always starts with `/`
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
 
+  const endpoint = query
+    ? `${normalizedPath}${query.startsWith("?") ? query : `?${query}`}`
+    : normalizedPath;
+  console.log("-------------------------", endpoint, trimmed);
   return axios.post(endpoint, trimmed, {
     headers: { "Content-Type": "text/plain" },
   });

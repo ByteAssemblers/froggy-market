@@ -2,7 +2,7 @@ import axios from "axios";
 
 // Backend API instance
 export const apiClient = axios.create({
-  baseURL: "http://localhost:5555/api",
+  baseURL: process.env.NEXT_PUBLIC_FROGGY_MARKET_BACKEND,
   headers: {
     "Content-Type": "application/json",
   },
@@ -11,13 +11,13 @@ export const apiClient = axios.create({
 
 // Blockchain API instance (ORD API)
 export const blockchainClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_ORD_API_BASE || "http://62.84.181.219:7777",
+  baseURL: process.env.NEXT_PUBLIC_ORD_API_BASE,
   timeout: 30000,
 });
 
 // BelIndex API instance
 export const belIndexClient = axios.create({
-  baseURL: process.env.BELINDEX_API_BASE || 'http://172.16.11.131:8000',
+  baseURL: process.env.NEXT_PUBLIC_BELINDEX_API_BASE,
   timeout: 30000,
 });
 
@@ -66,7 +66,7 @@ blockchainClient.interceptors.response.use(
 belIndexClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error('BelIndex API Error:', error.message);
+    console.error("BelIndex API Error:", error.message);
     return Promise.reject(error);
-  }
+  },
 );

@@ -30,13 +30,12 @@ const getColorFromText = (text: string) => {
   return colorClasses[index];
 };
 
-const Avatar = ({ text }: { text: string }) => {
+const Avatar = ({ text, xl }: { text: string; xl?: any }) => {
   const initials = text.trim().slice(0, 2).toUpperCase();
   const color = getColorFromText(text.toUpperCase());
-
   return (
     <div
-      className={`w-12 h-12 flex items-center justify-center rounded-md text-lg font-bold shadow-md ${color.bg} ${color.text}`}
+      className={`flex ${xl ? "h-36 w-36 text-4xl" : "h-12 w-12 text-lg "} items-center justify-center rounded-md font-bold shadow-md ${color.bg} ${color.text}`}
     >
       {initials}
     </div>

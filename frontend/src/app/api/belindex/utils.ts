@@ -1,7 +1,7 @@
 import axios, { AxiosRequestConfig } from "axios";
 import { NextResponse } from "next/server";
 
-const BASE_URL = process.env.BELINDEX_API_BASE;
+const BASE_URL = process.env.NEXT_PUBLIC_BELINDEX_API_BASE;
 
 export async function forwardBelIndexerJson(
   path: string,
