@@ -803,7 +803,7 @@ async function broadcastRawHex(
   const endpoint = query
     ? `${normalizedPath}${query.startsWith("?") ? query : `?${query}`}`
     : normalizedPath;
-  console.log("-------------------------", endpoint, trimmed);
+
   return axios.post(endpoint, trimmed, {
     headers: { "Content-Type": "text/plain" },
   });

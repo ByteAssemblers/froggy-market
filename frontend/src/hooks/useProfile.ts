@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { decryptWallet } from "@/lib/wallet/storage";
-import { apiClient, blockchainClient } from "@/lib/axios";
+import { apiClient, baseClient } from "@/lib/axios";
 import axios from "axios";
 
 export const useProfile = () => {
@@ -84,7 +84,7 @@ export const useProfile = () => {
     queryKey: ["prc-20"],
     queryFn: async (): Promise<any> => {
       try {
-        const response = await axios.get("/api/belindex/tokens?page_size=100");
+        const response = await baseClient.get("/belindex/tokens?page_size=100");
         return response.data.tokens || [];
       } catch (err) {
         console.error("Error fetching tokens:", err);

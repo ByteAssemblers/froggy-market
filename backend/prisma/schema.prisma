@@ -54,9 +54,23 @@ model listings {
 
 model pepemapListings {
   id            String   @id @default(cuid())
-  pepemapLabel  String   // e.g., "12345.pepemap"
-  inscriptionId String   // inscription ID of the pepemap (can have multiple status records)
-  blockNumber   Int      // extracted block number from label
+  pepemapLabel  String // e.g., "12345.pepemap"
+  inscriptionId String // inscription ID of the pepemap (can have multiple status records)
+  blockNumber   Int // extracted block number from label
+  status        String   @default("unlisted") // unlisted, listed, sold, sent
+  psbtBase64    String?
+  priceSats     Int?
+  sellerAddress String
+  buyerAddress  String?
+  txid          String?
+  createdAt     DateTime @default(now())
+}
+
+model prc20Listings {
+  id            String   @id @default(cuid())
+  prc20Label    String // e.g., "frog"
+  inscriptionId String // inscription ID of the prc20 (can have multiple status records)
+  amount        Int // "frog" 1000
   status        String   @default("unlisted") // unlisted, listed, sold, sent
   psbtBase64    String?
   priceSats     Int?

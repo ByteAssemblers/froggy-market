@@ -1,5 +1,11 @@
 import axios from "axios";
 
+// Next API instance
+export const baseClient = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_BASE_API_BASE,
+  timeout: 30000,
+});
+
 // Backend API instance
 export const apiClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_FROGGY_MARKET_BACKEND,

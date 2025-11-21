@@ -2,7 +2,7 @@
 import { use, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { blockchainClient, apiClient } from "@/lib/axios";
+import { blockchainClient, apiClient, baseClient } from "@/lib/axios";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { sendInscriptionTransaction } from "@/lib/wallet/sendInscription";
 import {
@@ -16,7 +16,6 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -40,6 +39,13 @@ import { toast } from "sonner";
 import { resolveFileContentType } from "@/lib/inscription/inscribe";
 import { processJob } from "@/lib/inscription/inscriptionWorker";
 import { PEPE_PER_KB_FEE, RECOMMENDED_FEE } from "@/constants/inscription";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const ORD_API_BASE = process.env.NEXT_PUBLIC_ORD_API_BASE!;
 
@@ -1082,7 +1088,7 @@ export default function WalletAddress({
       }
       setAmount("");
     };
-    console.log(statusMessage);
+
     return (
       <>
         <div className="mb-2 flex max-h-104 flex-wrap justify-center gap-2.5 overflow-y-auto">
@@ -1125,7 +1131,7 @@ export default function WalletAddress({
               priority
               className="mt-2 mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
             />
-            <span>~0.00015</span>
+            <span>~0.037</span>
             <span className="text-[#fffc]"> ($0.00)</span>
           </div>
         </div>
@@ -1153,9 +1159,27 @@ export default function WalletAddress({
     );
   }
 
-  function PrcListeDialogContent({ item }: { item: any }) {
+  function PrcListDialogContent({ item }: { item: any }) {
     const [price, setPrice] = useState<Number>(0);
     const [loading, setLoading] = useState(false);
+    const [prcBalance, setPrcBalance] = useState<[]>([]);
+    const [selectedBalance, setSelectedBalance] = useState("");
+
+    const fetchPrcBalance = async () => {
+      try {
+        const response = await baseClient.get(
+          `belindex/address/${walletAddress}/${item.tick}/balance`,
+        );
+        const data = response.data;
+        setPrcBalance(data.transfers);
+      } catch (error: any) {
+        throw new Error(`Failed to fetch Prc-20 balance: ${error.message}`);
+      }
+    };
+
+    useEffect(() => {
+      fetchPrcBalance();
+    }, []);
 
     async function handlePrc20List() {
       if (Number(price) <= 0) {
@@ -1206,18 +1230,30 @@ export default function WalletAddress({
         );
       }
     }
+
     return (
       <>
         <div className="mb-2 flex max-h-104 flex-wrap justify-center gap-2.5 overflow-y-auto">
           <div className="rounded-[12px] bg-[#00000080] p-2">
             <Avatar text={item.tick} xl />
-            <div className="mt-2 text-center text-[1rem] text-white">
-              <div className="text-center text-[0.8rem] text-[#dfc0fd]">
-                {item.tick}
-              </div>
-            </div>
+            <Select
+              value={selectedBalance}
+              onValueChange={(value) => setSelectedBalance(value)}
+            >
+              <SelectTrigger className="w-full border-none">
+                <SelectValue placeholder="Transfers" />
+              </SelectTrigger>
+              <SelectContent>
+                {prcBalance.map((item: any, index: number) => (
+                  <SelectItem key={index} value={item.outpoint}>
+                    {item.amount}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
+
         <div className="my-4 flex w-full items-center justify-center">
           <div className="mr-8 ml-14 pt-4 font-semibold">Price:</div>
           <Image
@@ -1431,7 +1467,6 @@ export default function WalletAddress({
     );
   }
 
-  console.log(ticks);
   return (
     <>
       <h1 className="leading-[1.1 ] text-3xl">
@@ -1529,7 +1564,7 @@ export default function WalletAddress({
                     <>
                       <TableCell className="flex flex-row gap-2">
                         <Dialog>
-                          <DialogTrigger className="font-inherit inline-flex w-auto flex-1 items-center justify-center rounded-xl border border-transparent bg-[#00c85342] px-4 py-2 text-base font-bold text-[#00c853] transition-all duration-200 ease-in-out hover:bg-[#00c853] hover:text-white disabled:bg-[#333] disabled:text-white">
+                          <DialogTrigger className="font-inherit inline-flex w-auto flex-1 cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#00c85342] px-4 py-2 text-base font-bold text-[#00c853] transition-all duration-200 ease-in-out hover:bg-[#00c853] hover:text-white disabled:bg-[#333] disabled:text-white">
                             Inscribe
                           </DialogTrigger>
                           <DialogContent className="my-[50px] box-border flex min-h-[500px] max-w-[calc(100%-1rem)] min-w-[700px] shrink-0 grow-0 scale-100 flex-col overflow-visible rounded-[12px] bg-[#ffffff1f] p-6 opacity-100 backdrop-blur-xl transition-opacity duration-200 ease-linear">
@@ -1539,14 +1574,15 @@ export default function WalletAddress({
                                   Inscribe Prc-20
                                 </div>
                               </DialogTitle>
-                              <DialogDescription></DialogDescription>
-
                               <PrcInscribeDialogContent item={item} />
                             </DialogHeader>
                           </DialogContent>
                         </Dialog>
                         <Dialog>
-                          <DialogTrigger className="font-inherit inline-flex w-auto items-center justify-center rounded-xl border border-transparent bg-[#8fc5ff] px-4 py-2 text-base font-bold text-[#007aff] transition-all duration-200 ease-in-out hover:bg-[#007aff] hover:text-white disabled:bg-[#333] disabled:text-white">
+                          <DialogTrigger
+                            disabled={item.transfers_count == 0}
+                            className="font-inherit inline-flex w-auto cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#8fc5ff] px-4 py-2 text-base font-bold text-[#007aff] transition-all duration-200 ease-in-out hover:bg-[#007aff] hover:text-white disabled:cursor-auto disabled:bg-[#333] disabled:text-white"
+                          >
                             <svg
                               data-v-51cc9e0e=""
                               xmlns="http://www.w3.org/2000/svg"
@@ -1572,15 +1608,13 @@ export default function WalletAddress({
                                   List Prc-20 for sale
                                 </div>
                               </DialogTitle>
-                              <DialogDescription></DialogDescription>
-
-                              <PrcListeDialogContent item={item} />
+                              <PrcListDialogContent item={item} />
                             </DialogHeader>
                           </DialogContent>
                         </Dialog>
                         {/* <button
                           onClick={() => handlePrcUnlist(item)}
-                          className="font-inherit inline-flex w-full items-center justify-center rounded-xl border border-transparent bg-[#1a1a1a] px-4 py-2 text-base font-bold text-white transition-all duration-200 ease-in-out hover:bg-[#222]"
+                          className="font-inherit inline-flex w-full items-center justify-center rounded-xl border border-transparent bg-[#1a1a1a] px-4 py-2 text-base font-bold text-white transition-all duration-200 ease-in-out hover:bg-[#222] cursor-pointer"
                         >
                           <svg
                             data-v-51cc9e0e=""
@@ -1601,7 +1635,10 @@ export default function WalletAddress({
                           <span className="ml-2">Unlist</span>
                         </button> */}
                         <Dialog>
-                          <DialogTrigger className="font-inherit inline-flex grow-0 cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#3c1295] px-4 py-2 text-base font-bold text-[#d94fff] transition-all duration-200 ease-in-out hover:bg-[#9d12c8] hover:text-white">
+                          <DialogTrigger
+                            disabled={item.transfers_count == 0}
+                            className="font-inherit inline-flex grow-0 cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#3c1295] px-4 py-2 text-base font-bold text-[#d94fff] transition-all duration-200 ease-in-out hover:bg-[#9d12c8] hover:text-white disabled:cursor-auto disabled:bg-[#333] disabled:text-white"
+                          >
                             <svg
                               data-v-51cc9e0e=""
                               xmlns="http://www.w3.org/2000/svg"
@@ -1626,7 +1663,6 @@ export default function WalletAddress({
                                   Send Prc-20
                                 </div>
                               </DialogTitle>
-                              <DialogDescription></DialogDescription>
                               <PrcSendDialogContent item={item} />
                             </DialogHeader>
                           </DialogContent>
@@ -1760,7 +1796,7 @@ export default function WalletAddress({
                                         item.inscription_id,
                                       )
                                     }
-                                    className="font-inherit inline-flex w-full items-center justify-center rounded-xl border border-transparent bg-[#8fc5ff] px-4 py-2 text-base font-bold text-[#007aff] transition-all duration-200 ease-in-out hover:bg-[#007aff] hover:text-white disabled:bg-[#333] disabled:text-white"
+                                    className="font-inherit inline-flex w-full cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#8fc5ff] px-4 py-2 text-base font-bold text-[#007aff] transition-all duration-200 ease-in-out hover:bg-[#007aff] hover:text-white disabled:cursor-auto disabled:bg-[#333] disabled:text-white"
                                   >
                                     <svg
                                       data-v-51cc9e0e=""
@@ -1787,8 +1823,6 @@ export default function WalletAddress({
                                           List NFT for sale
                                         </div>
                                       </DialogTitle>
-                                      <DialogDescription></DialogDescription>
-
                                       <ListDialogContent item={item} />
                                     </DialogHeader>
                                   </DialogContent>
@@ -1796,7 +1830,7 @@ export default function WalletAddress({
                               ) : (
                                 <button
                                   onClick={() => handleUnlist(item)}
-                                  className="font-inherit inline-flex w-full items-center justify-center rounded-xl border border-transparent bg-[#1a1a1a] px-4 py-2 text-base font-bold text-white transition-all duration-200 ease-in-out hover:bg-[#222]"
+                                  className="font-inherit inline-flex w-full cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#1a1a1a] px-4 py-2 text-base font-bold text-white transition-all duration-200 ease-in-out hover:bg-[#222]"
                                 >
                                   <svg
                                     data-v-51cc9e0e=""
@@ -1818,7 +1852,7 @@ export default function WalletAddress({
                                 </button>
                               )}
                               <Dialog>
-                                <DialogTrigger className="font-inherit inline-flex grow-0 cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#3c1295] px-4 py-2 text-base font-bold text-[#d94fff] transition-all duration-200 ease-in-out hover:bg-[#9d12c8] hover:text-white">
+                                <DialogTrigger className="font-inherit inline-flex grow-0 cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#3c1295] px-4 py-2 text-base font-bold text-[#d94fff] transition-all duration-200 ease-in-out hover:bg-[#9d12c8] hover:text-white disabled:cursor-auto">
                                   <svg
                                     data-v-51cc9e0e=""
                                     xmlns="http://www.w3.org/2000/svg"
@@ -1843,7 +1877,6 @@ export default function WalletAddress({
                                         Send NFT
                                       </div>
                                     </DialogTitle>
-                                    <DialogDescription></DialogDescription>
                                     <SendDialogContent item={item} />
                                   </DialogHeader>
                                 </DialogContent>
@@ -1921,7 +1954,7 @@ export default function WalletAddress({
                                         item.inscription_id,
                                       )
                                     }
-                                    className="font-inherit inline-flex w-full items-center justify-center rounded-xl border border-transparent bg-[#8fc5ff] px-4 py-2 text-base font-bold text-[#007aff] transition-all duration-200 ease-in-out hover:bg-[#007aff] hover:text-white disabled:bg-[#333] disabled:text-white"
+                                    className="font-inherit inline-flex w-full cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#8fc5ff] px-4 py-2 text-base font-bold text-[#007aff] transition-all duration-200 ease-in-out hover:bg-[#007aff] hover:text-white disabled:cursor-auto disabled:bg-[#333] disabled:text-white"
                                   >
                                     <svg
                                       data-v-51cc9e0e=""
@@ -1948,8 +1981,6 @@ export default function WalletAddress({
                                           List Pepemap for sale
                                         </div>
                                       </DialogTitle>
-                                      <DialogDescription></DialogDescription>
-
                                       <PepemapListDialogContent item={item} />
                                     </DialogHeader>
                                   </DialogContent>
@@ -1957,7 +1988,7 @@ export default function WalletAddress({
                               ) : (
                                 <button
                                   onClick={() => handlePepemapUnlist(item)}
-                                  className="font-inherit inline-flex w-full items-center justify-center rounded-xl border border-transparent bg-[#1a1a1a] px-4 py-2 text-base font-bold text-white transition-all duration-200 ease-in-out hover:bg-[#222]"
+                                  className="font-inherit inline-flex w-full cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#1a1a1a] px-4 py-2 text-base font-bold text-white transition-all duration-200 ease-in-out hover:bg-[#222]"
                                 >
                                   <svg
                                     data-v-51cc9e0e=""
@@ -1979,7 +2010,7 @@ export default function WalletAddress({
                                 </button>
                               )}
                               <Dialog>
-                                <DialogTrigger className="font-inherit inline-flex grow-0 cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#3c1295] px-4 py-2 text-base font-bold text-[#d94fff] transition-all duration-200 ease-in-out hover:bg-[#9d12c8] hover:text-white">
+                                <DialogTrigger className="font-inherit inline-flex grow-0 cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#3c1295] px-4 py-2 text-base font-bold text-[#d94fff] transition-all duration-200 ease-in-out hover:bg-[#9d12c8] hover:text-white disabled:cursor-auto">
                                   <svg
                                     data-v-51cc9e0e=""
                                     xmlns="http://www.w3.org/2000/svg"
@@ -2004,7 +2035,6 @@ export default function WalletAddress({
                                         Send Pepemap
                                       </div>
                                     </DialogTitle>
-                                    <DialogDescription></DialogDescription>
                                     <PepemapSendDialogContent item={item} />
                                   </DialogHeader>
                                 </DialogContent>
