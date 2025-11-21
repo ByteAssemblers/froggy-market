@@ -1242,7 +1242,7 @@ export default function WalletAddress({
         );
       }
     }
-    console.log(selectedAmount);
+console.log(prcBalance)
     return (
       <>
         <div className="mb-2 flex max-h-104 flex-wrap justify-center gap-2.5 overflow-y-auto">

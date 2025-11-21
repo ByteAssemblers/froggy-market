@@ -258,11 +258,70 @@ export default function Inscribe() {
     setTotalSize(newTotalSize);
   };
 
+  // Helper function to process a single inscription
+  const processInscription = async (file: {
+    name: string;
+    size: number;
+    type: string;
+    arrayBuffer: () => Promise<ArrayBuffer>;
+  }) => {
+    let payload: Uint8Array;
+    try {
+      const buffer = await file.arrayBuffer();
+      payload = new Uint8Array(buffer);
+    } catch (_readErr) {
+      throw new Error("Failed to read the selected file. Please try again.");
+    }
+
+    const contentType = resolveFileContentType(file);
+    const feeRate = computeFeeRate();
+
+    // Create job in IndexedDB
+    const job: InscriptionJob = {
+      id: `job_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
+      fileName: file.name,
+      fileSize: file.size,
+      contentType,
+      status: "processing",
+      progress: 0,
+      currentCommit: 0,
+      totalCommits: 0,
+      createdAt: Date.now(),
+    };
+
+    // Save job and file data to IndexedDB
+    await saveJob(job);
+    await saveFileData(job.id, payload);
+
+    console.log(`📝 Job saved to IndexedDB: ${file.name} (ID: ${job.id})`);
+
+    // Process the job and AWAIT completion
+    await processJob(
+      job.id,
+      wallet,
+      feeRate,
+      (update: Partial<InscriptionJob>) => {
+        console.log("📊 Progress update:", update);
+        // Update UI with progress
+        if (update.currentCommit && update.totalCommits) {
+          setStatusMessage(
+            `Processing commit ${update.currentCommit}/${update.totalCommits}...`,
+          );
+        }
+        // Refresh history to show progress updates
+        fetchInscriptions();
+      },
+    );
+
+    console.log(`✅ Inscription complete for ${file.name}`);
+  };
+
   const handleInscribe = async () => {
     const hasTextInput = textInput.trim().length > 0;
+    const hasPepemapInput = startNumber.trim().length > 0;
 
-    if (files.length === 0 && !hasTextInput) {
-      toast.error("Please input text or select a file to inscribe.");
+    if (files.length === 0 && !hasTextInput && !hasPepemapInput) {
+      toast.error("Please input text, select a file, or enter pepemap numbers.");
       return;
     }
 
@@ -290,6 +349,63 @@ export default function Inscribe() {
     try {
       setIsInscribing(true);
 
+      // PEPEMAP mode
+      if (hasPepemapInput) {
+        const start = parseInt(startNumber);
+        const end = endNumber.trim().length > 0 ? parseInt(endNumber) : null;
+
+        // Validate numbers
+        if (isNaN(start) || start < 0) {
+          toast.error("Please enter a valid start number.");
+          setIsInscribing(false);
+          return;
+        }
+
+        if (end !== null && (isNaN(end) || end < start)) {
+          toast.error("End number must be greater than or equal to start number.");
+          setIsInscribing(false);
+          return;
+        }
+
+        // Generate pepemap contents
+        const pepemapNumbers = end !== null
+          ? Array.from({ length: end - start + 1 }, (_, i) => start + i)
+          : [start];
+
+        // Process each pepemap inscription sequentially
+        for (let i = 0; i < pepemapNumbers.length; i++) {
+          const num = pepemapNumbers[i];
+          const content = `${num}.pepemap`;
+          const blob = new Blob([content], { type: "text/plain" });
+
+          const file = {
+            name: `${num}.pepemap`,
+            size: blob.size,
+            type: "text/plain",
+            arrayBuffer: () => blob.arrayBuffer(),
+          };
+
+          setStatusMessage(
+            `Inscribing pepemap ${i + 1}/${pepemapNumbers.length}: ${num}.pepemap`
+          );
+
+          await processInscription(file);
+
+          // Small delay between inscriptions
+          if (i < pepemapNumbers.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+
+        toast.success(`Successfully inscribed ${pepemapNumbers.length} pepemap file(s)!`);
+        setStartNumber("");
+        setEndNumber("");
+        setStatusMessage("");
+        fetchInscriptions();
+        setIsInscribing(false);
+        return;
+      }
+
       let file: {
         name: string;
         size: number;
@@ -315,35 +431,6 @@ export default function Inscribe() {
         setStatusMessage("Preparing text and adding to queue…");
       }
 
-      let payload: Uint8Array;
-      try {
-        const buffer = await file.arrayBuffer();
-        payload = new Uint8Array(buffer);
-      } catch (_readErr) {
-        throw new Error("Failed to read the selected file. Please try again.");
-      }
-
-      const contentType = resolveFileContentType(file);
-      const feeRate = computeFeeRate();
-
-      // Create job in IndexedDB
-      const job: InscriptionJob = {
-        id: `job_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
-        fileName: file.name,
-        fileSize: file.size,
-        contentType,
-        status: "processing",
-        progress: 0,
-        currentCommit: 0,
-        totalCommits: 0,
-        createdAt: Date.now(),
-      };
-
-      // Save job and file data to IndexedDB
-      await saveJob(job);
-      await saveFileData(job.id, payload);
-
-      console.log(`📝 Job saved to IndexedDB: ${file.name} (ID: ${job.id})`);
       toast.success(`${file.name} started inscribing!`);
 
       // Clear files after queuing
@@ -353,27 +440,11 @@ export default function Inscribe() {
       // Trigger history refresh to show the new job immediately
       fetchInscriptions();
 
-      // Process the job and AWAIT completion
-      await processJob(
-        job.id,
-        wallet,
-        feeRate,
-        (update: Partial<InscriptionJob>) => {
-          console.log("📊 Progress update:", update);
-          // Update UI with progress
-          if (update.currentCommit && update.totalCommits) {
-            setStatusMessage(
-              `Processing commit ${update.currentCommit}/${update.totalCommits}...`,
-            );
-          }
-          // Refresh history to show progress updates
-          fetchInscriptions();
-        },
-      );
+      // Process the inscription
+      await processInscription(file);
 
       setStatusMessage("Inscription complete.");
       toast.success(`${file.name} inscribed successfully!`);
-      console.log(`✅ Inscription complete for ${file.name}`);
       fetchInscriptions();
     } catch (error: any) {
       console.error("❌ Inscription failed:", error);
