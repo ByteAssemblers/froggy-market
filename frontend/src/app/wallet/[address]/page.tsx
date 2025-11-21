@@ -398,6 +398,11 @@ export default function WalletAddress({
             type="number"
             value={Number(price)}
             onChange={(e) => setPrice(Number(e.target.value))}
+            onKeyDown={(e) => {
+              if (e.key === "." || e.key === "e" || e.key === "-") {
+                e.preventDefault();
+              }
+            }}
             className="font-inherit mr-2 w-20 max-w-md border-b border-[tan] bg-transparent p-[0.4em] text-center text-inherit outline-none focus:border-[violet]"
           />
         </div>
@@ -575,7 +580,7 @@ export default function WalletAddress({
               priority
               className="mt-2 mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
             />
-            <span>~0.00015</span>
+            <span>~0.016</span>
             <span className="text-[#fffc]"> ($0.00)</span>
           </div>
         </div>
@@ -683,6 +688,11 @@ export default function WalletAddress({
             type="number"
             value={Number(price)}
             onChange={(e) => setPrice(Number(e.target.value))}
+            onKeyDown={(e) => {
+              if (e.key === "." || e.key === "e" || e.key === "-") {
+                e.preventDefault();
+              }
+            }}
             className="font-inherit mr-2 w-20 max-w-md border-b border-[tan] bg-transparent p-[0.4em] text-center text-inherit outline-none focus:border-[violet]"
           />
         </div>
@@ -854,7 +864,7 @@ export default function WalletAddress({
               priority
               className="mt-2 mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
             />
-            <span>~0.00015</span>
+            <span>~0.016</span>
             <span className="text-[#fffc]"> ($0.00)</span>
           </div>
         </div>
@@ -1164,6 +1174,7 @@ export default function WalletAddress({
     const [loading, setLoading] = useState(false);
     const [prcBalance, setPrcBalance] = useState<[]>([]);
     const [selectedBalance, setSelectedBalance] = useState("");
+    const [selectedAmount, setSelectedAmount] = useState("");
 
     const fetchPrcBalance = async () => {
       try {
@@ -1198,7 +1209,7 @@ export default function WalletAddress({
         // Step 1: Find the UTXO containing the inscription
         const inscriptionUtxo = await findInscriptionUTXO(
           walletAddress,
-          item.inscription_id,
+          selectedBalance.split(":")[0] + "i0",
         );
 
         // Step 2: Create PSBT for the listing
@@ -1211,8 +1222,9 @@ export default function WalletAddress({
 
         // Step 3: Save prc20 listing to database with PSBT
         await apiClient.post("/prc20-listings/list", {
-          inscriptionId: item.inscription_id,
-          prc20Label: item.content,
+          inscriptionId: selectedBalance.split(":")[0] + "i0",
+          prc20Label: item.tick,
+          amount: Number(selectedAmount),
           priceSats: Number(price),
           sellerAddress: walletAddress,
           psbtBase64: psbtBase64,
@@ -1230,7 +1242,7 @@ export default function WalletAddress({
         );
       }
     }
-
+    console.log(selectedAmount);
     return (
       <>
         <div className="mb-2 flex max-h-104 flex-wrap justify-center gap-2.5 overflow-y-auto">
@@ -1238,7 +1250,15 @@ export default function WalletAddress({
             <Avatar text={item.tick} xl />
             <Select
               value={selectedBalance}
-              onValueChange={(value) => setSelectedBalance(value)}
+              onValueChange={(value) => {
+                setSelectedBalance(value);
+                const selected: any = prcBalance.find(
+                  (i: any) => i.outpoint === value,
+                );
+                if (selected) {
+                  setSelectedAmount(selected.amount);
+                }
+              }}
             >
               <SelectTrigger className="w-full border-none">
                 <SelectValue placeholder="Transfers" />
@@ -1268,6 +1288,11 @@ export default function WalletAddress({
             type="number"
             value={Number(price)}
             onChange={(e) => setPrice(Number(e.target.value))}
+            onKeyDown={(e) => {
+              if (e.key === "." || e.key === "e" || e.key === "-") {
+                e.preventDefault();
+              }
+            }}
             className="font-inherit mr-2 w-20 max-w-md border-b border-[tan] bg-transparent p-[0.4em] text-center text-inherit outline-none focus:border-[violet]"
           />
         </div>
@@ -1319,9 +1344,9 @@ export default function WalletAddress({
 
         <button
           onClick={handlePrc20List}
-          disabled={loading || Number(price) <= 0}
+          disabled={loading || Number(price) <= 0 || selectedAmount == ""}
           className={`font-inherit mt-4 flex w-full justify-center rounded-xl border border-transparent px-4 py-2 text-base font-bold transition-all duration-200 ease-in-out ${
-            loading || Number(price) <= 0
+            loading || Number(price) <= 0 || selectedAmount == ""
               ? "bg-[#1a1a1a]"
               : "bg-[#007aff] hover:bg-[#3b82f6]"
           }`}
@@ -1337,13 +1362,32 @@ export default function WalletAddress({
     const [isValid, setIsValid] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [message, setMessage] = useState("");
+    const [prcBalance, setPrcBalance] = useState<[]>([]);
+    const [selectedBalance, setSelectedBalance] = useState("");
+    const [selectedAmount, setSelectedAmount] = useState("");
+
+    const fetchPrcBalance = async () => {
+      try {
+        const response = await baseClient.get(
+          `belindex/address/${walletAddress}/${item.tick}/balance`,
+        );
+        const data = response.data;
+        setPrcBalance(data.transfers);
+      } catch (error: any) {
+        throw new Error(`Failed to fetch Prc-20 balance: ${error.message}`);
+      }
+    };
+
+    useEffect(() => {
+      fetchPrcBalance();
+    }, []);
 
     const validateAddress = (address: string) =>
       /^[P][a-zA-Z0-9]{25,34}$/.test(address);
 
     useEffect(() => {
-      setIsValid(validateAddress(toAddress));
-    }, [toAddress]);
+      setIsValid(validateAddress(toAddress) && selectedBalance !== "");
+    }, [toAddress, selectedBalance]);
 
     async function handlePrc20Send() {
       if (!isValid || !toAddress) {
@@ -1363,7 +1407,7 @@ export default function WalletAddress({
         // Step 1: Find the UTXO containing the inscription
         const inscriptionUtxo = await findInscriptionUTXO(
           walletAddress,
-          item.inscription_id,
+          selectedBalance.split(":")[0] + "i0",
         );
 
         console.log("Found inscription UTXO:", inscriptionUtxo);
@@ -1384,8 +1428,9 @@ export default function WalletAddress({
 
         // Step 3: Record the send in the database
         await apiClient.post("/prc20-listings/send", {
-          inscriptionId: item.inscription_id,
-          prc20Label: item.content,
+          inscriptionId: selectedBalance.split(":")[0] + "i0",
+          prc20Label: item.tick,
+          amount: Number(selectedAmount),
           fromAddress: walletAddress,
           toAddress: toAddress,
           txid: txid,
@@ -1412,11 +1457,29 @@ export default function WalletAddress({
         <div className="mb-2 flex max-h-104 flex-wrap justify-center gap-2.5 overflow-y-auto">
           <div className="rounded-[12px] bg-[#00000080] p-2">
             <Avatar text={item.tick} xl />
-            <div className="mt-2 text-center text-[1rem] text-white">
-              <div className="text-center text-[0.8rem] text-[#dfc0fd]">
-                {item.tick}
-              </div>
-            </div>
+            <Select
+              value={selectedBalance}
+              onValueChange={(value) => {
+                setSelectedBalance(value);
+                const selected: any = prcBalance.find(
+                  (i: any) => i.outpoint === value,
+                );
+                if (selected) {
+                  setSelectedAmount(selected.amount);
+                }
+              }}
+            >
+              <SelectTrigger className="w-full border-none">
+                <SelectValue placeholder="Transfers" />
+              </SelectTrigger>
+              <SelectContent className="text-center">
+                {prcBalance.map((item: any, index: number) => (
+                  <SelectItem key={index} value={item.outpoint}>
+                    {item.amount}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
         <div className="my-4 flex w-full items-center justify-center">
@@ -1439,7 +1502,7 @@ export default function WalletAddress({
               priority
               className="mt-2 mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
             />
-            <span>~0.00015</span>
+            <span>~0.016</span>
             <span className="text-[#fffc]"> ($0.00)</span>
           </div>
         </div>
@@ -1852,7 +1915,13 @@ export default function WalletAddress({
                                 </button>
                               )}
                               <Dialog>
-                                <DialogTrigger className="font-inherit inline-flex grow-0 cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#3c1295] px-4 py-2 text-base font-bold text-[#d94fff] transition-all duration-200 ease-in-out hover:bg-[#9d12c8] hover:text-white disabled:cursor-auto">
+                                <DialogTrigger
+                                  disabled={
+                                    listingStatuses.get(item.inscription_id)
+                                      ?.status === "listed"
+                                  }
+                                  className="font-inherit inline-flex grow-0 cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#3c1295] px-4 py-2 text-base font-bold text-[#d94fff] transition-all duration-200 ease-in-out hover:bg-[#9d12c8] hover:text-white disabled:cursor-auto disabled:bg-[#333] disabled:text-white"
+                                >
                                   <svg
                                     data-v-51cc9e0e=""
                                     xmlns="http://www.w3.org/2000/svg"
@@ -2010,7 +2079,14 @@ export default function WalletAddress({
                                 </button>
                               )}
                               <Dialog>
-                                <DialogTrigger className="font-inherit inline-flex grow-0 cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#3c1295] px-4 py-2 text-base font-bold text-[#d94fff] transition-all duration-200 ease-in-out hover:bg-[#9d12c8] hover:text-white disabled:cursor-auto">
+                                <DialogTrigger
+                                  disabled={
+                                    pepemapListingStatuses.get(
+                                      item.inscription_id,
+                                    )?.status === "listed"
+                                  }
+                                  className="font-inherit inline-flex grow-0 cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#3c1295] px-4 py-2 text-base font-bold text-[#d94fff] transition-all duration-200 ease-in-out hover:bg-[#9d12c8] hover:text-white disabled:cursor-auto disabled:bg-[#333] disabled:text-white"
+                                >
                                   <svg
                                     data-v-51cc9e0e=""
                                     xmlns="http://www.w3.org/2000/svg"

@@ -63,6 +63,10 @@ export default function Inscribe() {
   const [transferTick, setTransferTick] = useState("");
   const [transferAmt, setTransferAmt] = useState("");
 
+  // Pepemap
+  const [startNumber, setStartNumber] = useState("");
+  const [endNumber, setEndNumber] = useState("");
+
   const [successTx, setSuccessTx] = useState<any>(null);
   const [inscriptions, setInscriptions] = useState<any[]>([]);
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
@@ -478,6 +482,9 @@ export default function Inscribe() {
             <TabsTrigger value="text" className="text-md">
               Text
             </TabsTrigger>
+            <TabsTrigger value="pepemap" className="text-md">
+              Pepemap
+            </TabsTrigger>
             <TabsTrigger value="deploy" className="text-md">
               Deploy
             </TabsTrigger>
@@ -538,6 +545,36 @@ export default function Inscribe() {
             onChange={(e) => setTextInput(e.target.value)}
           />
         </TabsContent>
+        <TabsContent value="pepemap" className="flex flex-row gap-8">
+          <div className="mb-6">
+            <input
+              type="number"
+              placeholder="start"
+              value={startNumber}
+              onChange={(e) => setStartNumber(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "." || e.key === "e" || e.key === "-") {
+                  e.preventDefault();
+                }
+              }}
+              className="font-inherit mr-2 w-36 max-w-full border-b border-[tan] bg-transparent p-1.5 text-center text-inherit outline-none focus:border-[violet]"
+            />
+          </div>
+          <div className="mb-6">
+            <input
+              type="number"
+              placeholder="end"
+              value={endNumber}
+              onChange={(e) => setEndNumber(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "." || e.key === "e" || e.key === "-") {
+                  e.preventDefault();
+                }
+              }}
+              className="font-inherit mr-2 w-36 max-w-full border-b border-[tan] bg-transparent p-1.5 text-center text-inherit outline-none focus:border-[violet]"
+            />
+          </div>
+        </TabsContent>
         <TabsContent value="deploy">
           <div className="mb-6">
             <div className="mb-2">Token tick:</div>
@@ -557,6 +594,11 @@ export default function Inscribe() {
                 placeholder="Total supply"
                 value={deployMax}
                 onChange={(e) => setDeployMax(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "." || e.key === "e" || e.key === "-") {
+                    e.preventDefault();
+                  }
+                }}
                 className="font-inherit mr-4 w-40 max-w-full border-b border-[tan] bg-transparent p-1.5 text-center text-inherit outline-none focus:border-[violet]"
               />
             </div>
@@ -567,6 +609,11 @@ export default function Inscribe() {
                 placeholder="Limit per mint"
                 value={deployLim}
                 onChange={(e) => setDeployLim(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "." || e.key === "e" || e.key === "-") {
+                    e.preventDefault();
+                  }
+                }}
                 className="font-inherit mr-4 w-40 max-w-full border-b border-[tan] bg-transparent p-1.5 text-center text-inherit outline-none focus:border-[violet]"
               />
             </div>
@@ -577,6 +624,11 @@ export default function Inscribe() {
                 placeholder="18"
                 value={deployDec}
                 onChange={(e) => setDeployDec(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "." || e.key === "e" || e.key === "-") {
+                    e.preventDefault();
+                  }
+                }}
                 className="font-inherit mr-2 w-40 max-w-full border-b border-[tan] bg-transparent p-1.5 text-center text-inherit outline-none focus:border-[violet]"
               />
             </div>
@@ -600,6 +652,11 @@ export default function Inscribe() {
               placeholder="Enter amount"
               value={mintAmt}
               onChange={(e) => setMintAmt(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "." || e.key === "e" || e.key === "-") {
+                  e.preventDefault();
+                }
+              }}
               className="font-inherit mr-2 w-lg max-w-full border-b border-[tan] bg-transparent p-1.5 text-center text-inherit outline-none focus:border-[violet]"
             />
           </div>
@@ -622,6 +679,11 @@ export default function Inscribe() {
               placeholder="Enter amount"
               value={transferAmt}
               onChange={(e) => setTransferAmt(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "." || e.key === "e" || e.key === "-") {
+                  e.preventDefault();
+                }
+              }}
               className="font-inherit mr-2 w-lg max-w-full border-b border-[tan] bg-transparent p-1.5 text-center text-inherit outline-none focus:border-[violet]"
             />
           </div>
@@ -667,6 +729,11 @@ export default function Inscribe() {
                       type="number"
                       value={pepePer}
                       onChange={(e) => setPepePer(Number(e.target.value))}
+                      onKeyDown={(e) => {
+                        if (e.key === "." || e.key === "e" || e.key === "-") {
+                          e.preventDefault();
+                        }
+                      }}
                       placeholder={String(PEPE_PER_KB_FEE)}
                       className="w-10 rounded-md bg-transparent text-white focus:ring-0 focus:outline-none"
                     />

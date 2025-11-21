@@ -253,6 +253,11 @@ export default function Creators() {
                     type="number"
                     placeholder="10000"
                     value={collectionData.totalSupply}
+                    onKeyDown={(e) => {
+                      if (e.key === "." || e.key === "e" || e.key === "-") {
+                        e.preventDefault();
+                      }
+                    }}
                     onChange={handleChange}
                     className="font-inherit mr-2 w-80 max-w-full border-b border-[tan] bg-transparent p-1.5 text-center text-inherit outline-none focus:border-[violet]"
                   />

@@ -754,6 +754,15 @@ export default function Wallet() {
                             placeholder="Enter amount"
                             value={amount}
                             onChange={(e) => setAmount(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (
+                                e.key === "." ||
+                                e.key === "e" ||
+                                e.key === "-"
+                              ) {
+                                e.preventDefault();
+                              }
+                            }}
                             className="mr-0 w-full border-0 px-[0.6em] py-[0.3em] text-left outline-none"
                           />
                         </div>
