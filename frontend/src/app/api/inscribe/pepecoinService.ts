@@ -1,8 +1,8 @@
 import axios from "axios";
 
-const pepecoinRpcUrl = process.env.PEPECOIN_RPC_URL!;
-const pepecoinRpcUser = process.env.PEPECOIN_RPC_USER!;
-const pepecoinRpcPassword = process.env.PEPECOIN_RPC_PASSWORD!;
+const pepecoinRpcUrl = process.env.NEXT_PUBLIC_PEPECOIN_RPC_URL!;
+const pepecoinRpcUser = process.env.NEXT_PUBLIC_PEPECOIN_RPC_USER!;
+const pepecoinRpcPassword = process.env.NEXT_PUBLIC_PEPECOIN_RPC_PASSWORD!;
 
 function ensureRpcConfigured() {
   if (!pepecoinRpcUrl) {

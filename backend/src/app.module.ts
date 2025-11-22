@@ -15,7 +15,8 @@ import { Prc20ListingsModule } from './prc20-listings/prc20-listings.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
+      envFilePath:
+        process.env.NODE_ENV === 'production' ? '.env.production' : '.env.local',
     }),
     DatabaseModule,
     CollectionsModule,
