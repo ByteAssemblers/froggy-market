@@ -1175,6 +1175,8 @@ export default function WalletAddress({
     const [prcBalance, setPrcBalance] = useState<[]>([]);
     const [selectedBalance, setSelectedBalance] = useState("");
     const [selectedAmount, setSelectedAmount] = useState("");
+    const [isListed, setIsListed] = useState(false);
+    const [listingData, setListingData] = useState<any>(null);
 
     const fetchPrcBalance = async () => {
       try {
@@ -1188,9 +1190,53 @@ export default function WalletAddress({
       }
     };
 
+    const fetchListingStatus = async (inscriptionId: string) => {
+      try {
+        const statusResponse = await apiClient.get(
+          `/prc20-listings/inscription/${inscriptionId}`,
+        );
+        const status = statusResponse.data;
+        setIsListed(status.status === "listed");
+        setListingData(status);
+      } catch (error) {
+        setIsListed(false);
+        setListingData(null);
+      }
+    };
+
     useEffect(() => {
       fetchPrcBalance();
     }, []);
+
+    useEffect(() => {
+      if (selectedBalance) {
+        const inscriptionId = selectedBalance.split(":")[0] + "i0";
+        fetchListingStatus(inscriptionId);
+      } else {
+        setIsListed(false);
+        setListingData(null);
+      }
+    }, [selectedBalance]);
+
+    async function handlePrc20Unlist() {
+      try {
+        setLoading(true);
+        await apiClient.post("/prc20-listings/unlist", {
+          inscriptionId: selectedBalance.split(":")[0] + "i0",
+          sellerAddress: walletAddress,
+        });
+
+        alert("Transfer unlisted successfully!");
+        setLoading(false);
+        window.location.reload();
+      } catch (error: any) {
+        setLoading(false);
+        console.error(error);
+        alert(
+          `Failed to unlist: ${error.response?.data?.message || error.message}`,
+        );
+      }
+    }
 
     async function handlePrc20List() {
       if (Number(price) <= 0) {
@@ -1342,17 +1388,31 @@ console.log(prcBalance)
           </div>
         </div>
 
-        <button
-          onClick={handlePrc20List}
-          disabled={loading || Number(price) <= 0 || selectedAmount == ""}
-          className={`font-inherit mt-4 flex w-full justify-center rounded-xl border border-transparent px-4 py-2 text-base font-bold transition-all duration-200 ease-in-out ${
-            loading || Number(price) <= 0 || selectedAmount == ""
-              ? "bg-[#1a1a1a]"
-              : "bg-[#007aff] hover:bg-[#3b82f6]"
-          }`}
-        >
-          {loading ? "Listing..." : "Confirm Listing"}
-        </button>
+        {isListed ? (
+          <button
+            onClick={handlePrc20Unlist}
+            disabled={loading || selectedAmount == ""}
+            className={`font-inherit mt-4 flex w-full justify-center rounded-xl border border-transparent px-4 py-2 text-base font-bold transition-all duration-200 ease-in-out ${
+              loading || selectedAmount == ""
+                ? "bg-[#1a1a1a]"
+                : "bg-[#dc3545] hover:bg-[#c82333]"
+            }`}
+          >
+            {loading ? "Unlisting..." : "Unlist Transfer"}
+          </button>
+        ) : (
+          <button
+            onClick={handlePrc20List}
+            disabled={loading || Number(price) <= 0 || selectedAmount == ""}
+            className={`font-inherit mt-4 flex w-full justify-center rounded-xl border border-transparent px-4 py-2 text-base font-bold transition-all duration-200 ease-in-out ${
+              loading || Number(price) <= 0 || selectedAmount == ""
+                ? "bg-[#1a1a1a]"
+                : "bg-[#007aff] hover:bg-[#3b82f6]"
+            }`}
+          >
+            {loading ? "Listing..." : "Confirm Listing"}
+          </button>
+        )}
       </>
     );
   }
@@ -1365,6 +1425,7 @@ console.log(prcBalance)
     const [prcBalance, setPrcBalance] = useState<[]>([]);
     const [selectedBalance, setSelectedBalance] = useState("");
     const [selectedAmount, setSelectedAmount] = useState("");
+    const [isListed, setIsListed] = useState(false);
 
     const fetchPrcBalance = async () => {
       try {
@@ -1378,16 +1439,37 @@ console.log(prcBalance)
       }
     };
 
+    const fetchListingStatus = async (inscriptionId: string) => {
+      try {
+        const statusResponse = await apiClient.get(
+          `/prc20-listings/inscription/${inscriptionId}`,
+        );
+        const status = statusResponse.data;
+        setIsListed(status.status === "listed");
+      } catch (error) {
+        setIsListed(false);
+      }
+    };
+
     useEffect(() => {
       fetchPrcBalance();
     }, []);
+
+    useEffect(() => {
+      if (selectedBalance) {
+        const inscriptionId = selectedBalance.split(":")[0] + "i0";
+        fetchListingStatus(inscriptionId);
+      } else {
+        setIsListed(false);
+      }
+    }, [selectedBalance]);
 
     const validateAddress = (address: string) =>
       /^[P][a-zA-Z0-9]{25,34}$/.test(address);
 
     useEffect(() => {
-      setIsValid(validateAddress(toAddress) && selectedBalance !== "");
-    }, [toAddress, selectedBalance]);
+      setIsValid(validateAddress(toAddress) && selectedBalance !== "" && !isListed);
+    }, [toAddress, selectedBalance, isListed]);
 
     async function handlePrc20Send() {
       if (!isValid || !toAddress) {
@@ -1508,17 +1590,19 @@ console.log(prcBalance)
         </div>
 
         <button
-          disabled={!isValid || isLoading}
+          disabled={!isValid || isLoading || isListed}
           onClick={handlePrc20Send}
           className={`font-inherit mt-4 flex w-full justify-center rounded-xl border border-transparent px-4 py-2 text-base font-bold transition-all duration-200 ease-in-out ${
-            !isValid ? "bg-[#1a1a1a]" : "bg-[#007aff]"
+            !isValid || isListed ? "bg-[#1a1a1a]" : "bg-[#007aff]"
           }`}
         >
           {isLoading
             ? "Creating transfer"
-            : isValid
-              ? "Confirm"
-              : "Enter valid address"}
+            : isListed
+              ? "Transfer is listed"
+              : isValid
+                ? "Confirm"
+                : "Enter valid address"}
         </button>
 
         {message && (

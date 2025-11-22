@@ -81,13 +81,13 @@ export default function Pepemaps() {
         </div>
       </div>
       <div className="tiny:gap-5 four:grid-cols-5 three:grid-cols-4 two:grid-cols-3 tiny:grid-cols-2 mt-4 grid grid-cols-2 gap-2">
-        {visibleData.map((item) => (
+        {/* {visibleData.map((item) => (
           <PepemapCard
             key={item.id}
             item={item}
             pepecoinPrice={pepecoinPrice}
           />
-        ))}
+        ))} */}
         <Link
           href="/pepemaps"
           className="flex min-h-56 items-center justify-center rounded-[12px] border border-transparent bg-[#4c505c33] font-bold text-[#fbb9fb] transition-all duration-250 ease-in-out hover:border-[violet] hover:text-[violet]"
