@@ -7,9 +7,6 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "api.doggy.market",
-        port: "",
-        pathname: "",
-        search: "",
       },
     ],
   },
