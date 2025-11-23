@@ -19,7 +19,25 @@ export const useProfile = () => {
     "empty" | "password" | "import" | "secret" | "mywallet" | "send" | "lock"
   >("empty");
 
-  // Fetch active pepemap listings from backend
+  // Fetch active prc20s listings from backend
+  const {
+    data: prc20,
+    isLoading: isPrc20Loading,
+    error: prc20Error,
+  } = useQuery({
+    queryKey: ["prc20"],
+    queryFn: async (): Promise<any> => {
+      try {
+        const response = await apiClient.get("/prc20-listings/active");
+        return response.data;
+      } catch (error) {
+        console.error("Failed to fetch prc20 listings:", error);
+      }
+    },
+    staleTime: 1 * 60 * 1000,
+  });
+
+    // Fetch active pepemap listings from backend
   const {
     data: pepemaps,
     isLoading: isPepemapsLoading,
@@ -195,18 +213,21 @@ export const useProfile = () => {
 
   return {
     // Data
+    prc20,
     pepemaps,
     collections,
     pepecoinPrice,
     tokens,
 
     // Loading states
+    isPrc20Loading,
     isPepemapsLoading,
     isCollectionsLoading,
     isPepecoinPriceLoading,
     isTokensLoading,
 
     // Errors
+    prc20Error,
     pepemapsError,
     collectionsError,
     pepecoinPriceError,

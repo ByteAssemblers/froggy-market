@@ -39,13 +39,7 @@ import { toast } from "sonner";
 import { resolveFileContentType } from "@/lib/inscription/inscribe";
 import { processJob } from "@/lib/inscription/inscriptionWorker";
 import { PEPE_PER_KB_FEE, RECOMMENDED_FEE } from "@/constants/inscription";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Spinner } from "@/components/ui/spinner";
 
 const ORD_API_BASE = process.env.NEXT_PUBLIC_ORD_API_BASE!;
 
@@ -1169,38 +1163,45 @@ export default function WalletAddress({
     );
   }
 
-  function PrcListDialogContent({ item }: { item: any }) {
-    const [price, setPrice] = useState<Number>(0);
-    const [loading, setLoading] = useState(false);
-    const [prcBalance, setPrcBalance] = useState<[]>([]);
-    const [selectedBalance, setSelectedBalance] = useState("");
-    const [selectedAmount, setSelectedAmount] = useState("");
-    const [isListed, setIsListed] = useState(false);
-    const [listingData, setListingData] = useState<any>(null);
+  function PrcTransfersDialogContent({ item }: { item: any }) {
+    const [prcBalance, setPrcBalance] = useState<any[]>([]);
+    const [listingStatuses, setListingStatuses] = useState<
+      Map<string, boolean>
+    >(new Map());
+    const [loading, setLoading] = useState(true);
 
     const fetchPrcBalance = async () => {
       try {
+        setLoading(true);
         const response = await baseClient.get(
           `belindex/address/${walletAddress}/${item.tick}/balance`,
         );
         const data = response.data;
-        setPrcBalance(data.transfers);
-      } catch (error: any) {
-        throw new Error(`Failed to fetch Prc-20 balance: ${error.message}`);
-      }
-    };
+        const allTransfers = data.transfers || [];
 
-    const fetchListingStatus = async (inscriptionId: string) => {
-      try {
-        const statusResponse = await apiClient.get(
-          `/prc20-listings/inscription/${inscriptionId}`,
-        );
-        const status = statusResponse.data;
-        setIsListed(status.status === "listed");
-        setListingData(status);
-      } catch (error) {
-        setIsListed(false);
-        setListingData(null);
+        // Check listing status for each transfer and store it
+        const statusMap = new Map<string, boolean>();
+        for (const transfer of allTransfers) {
+          const inscriptionId = transfer.outpoint.split(":")[0] + "i0";
+          try {
+            const statusResponse = await apiClient.get(
+              `/prc20-listings/inscription/${inscriptionId}`,
+            );
+            const status = statusResponse.data;
+            statusMap.set(inscriptionId, status.status === "listed");
+          } catch (error) {
+            // If error (not found in DB), it's not listed
+            statusMap.set(inscriptionId, false);
+          }
+        }
+
+        setListingStatuses(statusMap);
+        setPrcBalance(allTransfers);
+      } catch (error: any) {
+        console.error(`Failed to fetch Prc-20 balance: ${error.message}`);
+        setPrcBalance([]);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -1208,35 +1209,177 @@ export default function WalletAddress({
       fetchPrcBalance();
     }, []);
 
-    useEffect(() => {
-      if (selectedBalance) {
-        const inscriptionId = selectedBalance.split(":")[0] + "i0";
-        fetchListingStatus(inscriptionId);
-      } else {
-        setIsListed(false);
-        setListingData(null);
-      }
-    }, [selectedBalance]);
+    function TransferRow({ transfer }: { transfer: any }) {
+      const inscriptionId = transfer.outpoint.split(":")[0] + "i0";
+      const isListed = listingStatuses.get(inscriptionId) || false;
 
-    async function handlePrc20Unlist() {
-      try {
-        setLoading(true);
-        await apiClient.post("/prc20-listings/unlist", {
-          inscriptionId: selectedBalance.split(":")[0] + "i0",
-          sellerAddress: walletAddress,
-        });
+      const handleUnlistTransfer = async () => {
+        try {
+          await apiClient.post("/prc20-listings/unlist", {
+            inscriptionId,
+            sellerAddress: walletAddress,
+          });
 
-        alert("Transfer unlisted successfully!");
-        setLoading(false);
-        window.location.reload();
-      } catch (error: any) {
-        setLoading(false);
-        console.error(error);
-        alert(
-          `Failed to unlist: ${error.response?.data?.message || error.message}`,
-        );
-      }
+          alert("Transfer unlisted successfully!");
+          window.location.reload();
+        } catch (error: any) {
+          console.error(error);
+          alert(
+            `Failed to unlist: ${error.response?.data?.message || error.message}`,
+          );
+        }
+      };
+
+      return (
+        <div className="flex items-center justify-between rounded-xl border border-white/10 bg-[#4c505c33] p-2">
+          <Avatar text={item.tick} />
+          <div className="font-semibold">{transfer.amount}</div>
+          <div className="flex gap-2">
+            {!isListed ? (
+              <Dialog>
+                <DialogTrigger className="font-inherit inline-flex w-auto cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#8fc5ff] px-4 py-2 text-base font-bold text-[#007aff] transition-all duration-200 ease-in-out hover:bg-[#007aff] hover:text-white">
+                  <svg
+                    data-v-51cc9e0e=""
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    width="20"
+                    height="20"
+                  >
+                    <path
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M3 11.172V5a2 2 0 0 1 2-2h6.172a2 2 0 0 1 1.414.586l8 8a2 2 0 0 1 0 2.828l-6.172 6.172a2 2 0 0 1-2.828 0l-8-8A2 2 0 0 1 3 11.172zM7 7h.001"
+                    ></path>
+                  </svg>
+                  <span className="ml-2">List</span>
+                </DialogTrigger>
+                <DialogContent className="my-[50px] box-border flex min-h-[500px] max-w-[calc(100%-1rem)] min-w-[700px] shrink-0 grow-0 scale-100 flex-col overflow-visible rounded-[12px] bg-[#ffffff1f] p-6 opacity-100 backdrop-blur-xl transition-opacity duration-200 ease-linear">
+                  <DialogHeader>
+                    <DialogTitle>
+                      <div className="mt-0 text-center text-3xl leading-[1.1] font-semibold text-[#8fc5ff]">
+                        List Prc-20 for sale
+                      </div>
+                    </DialogTitle>
+                    <PrcListDialogContent item={item} transfer={transfer} />
+                  </DialogHeader>
+                </DialogContent>
+              </Dialog>
+            ) : (
+              <button
+                onClick={handleUnlistTransfer}
+                className="font-inherit inline-flex w-auto cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#1a1a1a] px-4 py-2 text-base font-bold text-white transition-all duration-200 ease-in-out hover:bg-[#222]"
+              >
+                <svg
+                  data-v-51cc9e0e=""
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  width="20"
+                  height="20"
+                >
+                  <path
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="m14 5-1.414-1.414A2 2 0 0 0 11.172 3H5a2 2 0 0 0-2 2v6.172a2 2 0 0 0 .586 1.414L5 14m14-4 1.586 1.586a2 2 0 0 1 0 2.828l-6.172 6.172a2 2 0 0 1-2.828 0L10 19M7 7h.001M21 3 3 21"
+                  ></path>
+                </svg>
+                <span className="ml-2">Unlist</span>
+              </button>
+            )}
+            <Dialog>
+              <DialogTrigger
+                disabled={isListed}
+                className={`font-inherit inline-flex grow-0 items-center justify-center rounded-xl border border-transparent px-4 py-2 text-base font-bold transition-all duration-200 ease-in-out ${
+                  isListed
+                    ? "cursor-not-allowed bg-[#333] text-white/50"
+                    : "cursor-pointer bg-[#3c1295] text-[#d94fff] hover:bg-[#9d12c8] hover:text-white"
+                }`}
+              >
+                <svg
+                  data-v-51cc9e0e=""
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  width="20"
+                  height="20"
+                >
+                  <path
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="m6 12-3 9 18-9L3 3l3 9zm0 0h6"
+                  ></path>
+                </svg>
+              </DialogTrigger>
+              <DialogContent className="my-[50px] box-border flex min-h-[500px] max-w-[calc(100%-1rem)] min-w-[700px] shrink-0 grow-0 scale-100 flex-col overflow-visible rounded-[12px] bg-[#ffffff1f] p-6 opacity-100 backdrop-blur-xl transition-opacity duration-200 ease-linear">
+                <DialogHeader>
+                  <DialogTitle>
+                    <div className="mt-0 text-center text-3xl leading-[1.1] font-semibold text-[#d94fff]">
+                      Send Prc-20
+                    </div>
+                  </DialogTitle>
+                  <PrcSendDialogContent item={item} transfer={transfer} />
+                </DialogHeader>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
+      );
     }
+
+    return (
+      <>
+        <div className="mb-2 flex max-h-104 flex-wrap justify-center gap-2.5 overflow-y-auto">
+          <div className="rounded-[12px] bg-[#00000080] p-2">
+            <Avatar text={item.tick} xl />
+            <div className="mt-2 text-center text-[1rem] text-white">
+              <div className="text-center text-[0.8rem] text-[#dfc0fd]">
+                {item.tick}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-2 w-full">
+          <div className="h-52 overflow-y-auto">
+            {loading ? (
+              <div className="flex items-center justify-center py-8 text-white">
+                <Spinner className="size-6" />
+              </div>
+            ) : prcBalance.length === 0 ? (
+              <div className="flex items-center justify-center py-8 text-white/60">
+                No transfers available
+              </div>
+            ) : (
+              <div className="my-2 flex flex-col gap-2 px-1 text-white">
+                {prcBalance.map((transfer: any, index: number) => (
+                  <TransferRow key={index} transfer={transfer} />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  function PrcListDialogContent({
+    item,
+    transfer,
+  }: {
+    item: any;
+    transfer: any;
+  }) {
+    const [price, setPrice] = useState<Number>(0);
+    const [loading, setLoading] = useState(false);
+
+    const inscriptionId = transfer.outpoint.split(":")[0] + "i0";
 
     async function handlePrc20List() {
       if (Number(price) <= 0) {
@@ -1255,7 +1398,7 @@ export default function WalletAddress({
         // Step 1: Find the UTXO containing the inscription
         const inscriptionUtxo = await findInscriptionUTXO(
           walletAddress,
-          selectedBalance.split(":")[0] + "i0",
+          inscriptionId,
         );
 
         // Step 2: Create PSBT for the listing
@@ -1268,9 +1411,9 @@ export default function WalletAddress({
 
         // Step 3: Save prc20 listing to database with PSBT
         await apiClient.post("/prc20-listings/list", {
-          inscriptionId: selectedBalance.split(":")[0] + "i0",
+          inscriptionId,
           prc20Label: item.tick,
-          amount: Number(selectedAmount),
+          amount: Number(transfer.amount),
           priceSats: Number(price),
           sellerAddress: walletAddress,
           psbtBase64: psbtBase64,
@@ -1288,35 +1431,17 @@ export default function WalletAddress({
         );
       }
     }
-console.log(prcBalance)
+
     return (
       <>
         <div className="mb-2 flex max-h-104 flex-wrap justify-center gap-2.5 overflow-y-auto">
           <div className="rounded-[12px] bg-[#00000080] p-2">
             <Avatar text={item.tick} xl />
-            <Select
-              value={selectedBalance}
-              onValueChange={(value) => {
-                setSelectedBalance(value);
-                const selected: any = prcBalance.find(
-                  (i: any) => i.outpoint === value,
-                );
-                if (selected) {
-                  setSelectedAmount(selected.amount);
-                }
-              }}
-            >
-              <SelectTrigger className="w-full border-none">
-                <SelectValue placeholder="Transfers" />
-              </SelectTrigger>
-              <SelectContent>
-                {prcBalance.map((item: any, index: number) => (
-                  <SelectItem key={index} value={item.outpoint}>
-                    {item.amount}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="mt-2 text-center text-[1rem] text-white">
+              <div className="text-center text-[0.8rem] text-[#dfc0fd]">
+                Amount: {transfer.amount}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1388,88 +1513,41 @@ console.log(prcBalance)
           </div>
         </div>
 
-        {isListed ? (
-          <button
-            onClick={handlePrc20Unlist}
-            disabled={loading || selectedAmount == ""}
-            className={`font-inherit mt-4 flex w-full justify-center rounded-xl border border-transparent px-4 py-2 text-base font-bold transition-all duration-200 ease-in-out ${
-              loading || selectedAmount == ""
-                ? "bg-[#1a1a1a]"
-                : "bg-[#dc3545] hover:bg-[#c82333]"
-            }`}
-          >
-            {loading ? "Unlisting..." : "Unlist Transfer"}
-          </button>
-        ) : (
-          <button
-            onClick={handlePrc20List}
-            disabled={loading || Number(price) <= 0 || selectedAmount == ""}
-            className={`font-inherit mt-4 flex w-full justify-center rounded-xl border border-transparent px-4 py-2 text-base font-bold transition-all duration-200 ease-in-out ${
-              loading || Number(price) <= 0 || selectedAmount == ""
-                ? "bg-[#1a1a1a]"
-                : "bg-[#007aff] hover:bg-[#3b82f6]"
-            }`}
-          >
-            {loading ? "Listing..." : "Confirm Listing"}
-          </button>
-        )}
+        <button
+          onClick={handlePrc20List}
+          disabled={loading || Number(price) <= 0}
+          className={`font-inherit mt-4 flex w-full justify-center rounded-xl border border-transparent px-4 py-2 text-base font-bold transition-all duration-200 ease-in-out ${
+            loading || Number(price) <= 0
+              ? "bg-[#1a1a1a]"
+              : "bg-[#007aff] hover:bg-[#3b82f6]"
+          }`}
+        >
+          {loading ? "Listing..." : "Confirm Listing"}
+        </button>
       </>
     );
   }
 
-  function PrcSendDialogContent({ item }: { item: any }) {
+  function PrcSendDialogContent({
+    item,
+    transfer,
+  }: {
+    item: any;
+    transfer: any;
+  }) {
     const [toAddress, setToAddress] = useState("");
     const [isValid, setIsValid] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [message, setMessage] = useState("");
-    const [prcBalance, setPrcBalance] = useState<[]>([]);
-    const [selectedBalance, setSelectedBalance] = useState("");
-    const [selectedAmount, setSelectedAmount] = useState("");
-    const [isListed, setIsListed] = useState(false);
 
-    const fetchPrcBalance = async () => {
-      try {
-        const response = await baseClient.get(
-          `belindex/address/${walletAddress}/${item.tick}/balance`,
-        );
-        const data = response.data;
-        setPrcBalance(data.transfers);
-      } catch (error: any) {
-        throw new Error(`Failed to fetch Prc-20 balance: ${error.message}`);
-      }
-    };
-
-    const fetchListingStatus = async (inscriptionId: string) => {
-      try {
-        const statusResponse = await apiClient.get(
-          `/prc20-listings/inscription/${inscriptionId}`,
-        );
-        const status = statusResponse.data;
-        setIsListed(status.status === "listed");
-      } catch (error) {
-        setIsListed(false);
-      }
-    };
-
-    useEffect(() => {
-      fetchPrcBalance();
-    }, []);
-
-    useEffect(() => {
-      if (selectedBalance) {
-        const inscriptionId = selectedBalance.split(":")[0] + "i0";
-        fetchListingStatus(inscriptionId);
-      } else {
-        setIsListed(false);
-      }
-    }, [selectedBalance]);
+    const inscriptionId = transfer.outpoint.split(":")[0] + "i0";
 
     const validateAddress = (address: string) =>
       /^[P][a-zA-Z0-9]{25,34}$/.test(address);
 
     useEffect(() => {
-      setIsValid(validateAddress(toAddress) && selectedBalance !== "" && !isListed);
-    }, [toAddress, selectedBalance, isListed]);
+      setIsValid(validateAddress(toAddress));
+    }, [toAddress]);
 
     async function handlePrc20Send() {
       if (!isValid || !toAddress) {
@@ -1489,7 +1567,7 @@ console.log(prcBalance)
         // Step 1: Find the UTXO containing the inscription
         const inscriptionUtxo = await findInscriptionUTXO(
           walletAddress,
-          selectedBalance.split(":")[0] + "i0",
+          inscriptionId,
         );
 
         console.log("Found inscription UTXO:", inscriptionUtxo);
@@ -1510,9 +1588,9 @@ console.log(prcBalance)
 
         // Step 3: Record the send in the database
         await apiClient.post("/prc20-listings/send", {
-          inscriptionId: selectedBalance.split(":")[0] + "i0",
+          inscriptionId,
           prc20Label: item.tick,
-          amount: Number(selectedAmount),
+          amount: Number(transfer.amount),
           fromAddress: walletAddress,
           toAddress: toAddress,
           txid: txid,
@@ -1539,29 +1617,11 @@ console.log(prcBalance)
         <div className="mb-2 flex max-h-104 flex-wrap justify-center gap-2.5 overflow-y-auto">
           <div className="rounded-[12px] bg-[#00000080] p-2">
             <Avatar text={item.tick} xl />
-            <Select
-              value={selectedBalance}
-              onValueChange={(value) => {
-                setSelectedBalance(value);
-                const selected: any = prcBalance.find(
-                  (i: any) => i.outpoint === value,
-                );
-                if (selected) {
-                  setSelectedAmount(selected.amount);
-                }
-              }}
-            >
-              <SelectTrigger className="w-full border-none">
-                <SelectValue placeholder="Transfers" />
-              </SelectTrigger>
-              <SelectContent className="text-center">
-                {prcBalance.map((item: any, index: number) => (
-                  <SelectItem key={index} value={item.outpoint}>
-                    {item.amount}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="mt-2 text-center text-[1rem] text-white">
+              <div className="text-center text-[0.8rem] text-[#dfc0fd]">
+                Amount: {transfer.amount}
+              </div>
+            </div>
           </div>
         </div>
         <div className="my-4 flex w-full items-center justify-center">
@@ -1590,19 +1650,17 @@ console.log(prcBalance)
         </div>
 
         <button
-          disabled={!isValid || isLoading || isListed}
+          disabled={!isValid || isLoading}
           onClick={handlePrc20Send}
           className={`font-inherit mt-4 flex w-full justify-center rounded-xl border border-transparent px-4 py-2 text-base font-bold transition-all duration-200 ease-in-out ${
-            !isValid || isListed ? "bg-[#1a1a1a]" : "bg-[#007aff]"
+            !isValid ? "bg-[#1a1a1a]" : "bg-[#007aff]"
           }`}
         >
           {isLoading
             ? "Creating transfer"
-            : isListed
-              ? "Transfer is listed"
-              : isValid
-                ? "Confirm"
-                : "Enter valid address"}
+            : isValid
+              ? "Confirm"
+              : "Enter valid address"}
         </button>
 
         {message && (
@@ -1709,9 +1767,9 @@ console.log(prcBalance)
                   </TableCell>
                   {walletAddress === address && (
                     <>
-                      <TableCell className="flex flex-row gap-2">
+                      <TableCell className="w-20">
                         <Dialog>
-                          <DialogTrigger className="font-inherit inline-flex w-auto flex-1 cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#00c85342] px-4 py-2 text-base font-bold text-[#00c853] transition-all duration-200 ease-in-out hover:bg-[#00c853] hover:text-white disabled:bg-[#333] disabled:text-white">
+                          <DialogTrigger className="font-inherit inline-flex w-auto cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#00c85342] px-4 py-2 text-base font-bold text-[#00c853] transition-all duration-200 ease-in-out hover:bg-[#00c853] hover:text-white disabled:bg-[#333] disabled:text-white">
                             Inscribe
                           </DialogTrigger>
                           <DialogContent className="my-[50px] box-border flex min-h-[500px] max-w-[calc(100%-1rem)] min-w-[700px] shrink-0 grow-0 scale-100 flex-col overflow-visible rounded-[12px] bg-[#ffffff1f] p-6 opacity-100 backdrop-blur-xl transition-opacity duration-200 ease-linear">
@@ -1725,92 +1783,23 @@ console.log(prcBalance)
                             </DialogHeader>
                           </DialogContent>
                         </Dialog>
+                      </TableCell>
+                      <TableCell className="w-20">
                         <Dialog>
                           <DialogTrigger
                             disabled={item.transfers_count == 0}
-                            className="font-inherit inline-flex w-auto cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#8fc5ff] px-4 py-2 text-base font-bold text-[#007aff] transition-all duration-200 ease-in-out hover:bg-[#007aff] hover:text-white disabled:cursor-auto disabled:bg-[#333] disabled:text-white"
+                            className="font-inherit inline-flex w-auto cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#3d301b] px-4 py-2 text-base font-bold text-[#fea326] transition-all duration-200 ease-in-out hover:bg-[#B8860B] hover:text-white disabled:cursor-auto disabled:bg-[#333] disabled:text-white"
                           >
-                            <svg
-                              data-v-51cc9e0e=""
-                              xmlns="http://www.w3.org/2000/svg"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              width="20"
-                              height="20"
-                            >
-                              <path
-                                stroke="currentColor"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth="2"
-                                d="M3 11.172V5a2 2 0 0 1 2-2h6.172a2 2 0 0 1 1.414.586l8 8a2 2 0 0 1 0 2.828l-6.172 6.172a2 2 0 0 1-2.828 0l-8-8A2 2 0 0 1 3 11.172zM7 7h.001"
-                              ></path>
-                            </svg>
-                            <span className="ml-2">List</span>
+                            Transfers
                           </DialogTrigger>
-                          <DialogContent className="my-[50px] box-border flex min-h-[500px] max-w-[calc(100%-1rem)] min-w-[700px] shrink-0 grow-0 scale-100 flex-col overflow-visible rounded-[12px] bg-[#ffffff1f] p-6 opacity-100 backdrop-blur-xl transition-opacity duration-200 ease-linear">
+                          <DialogContent className="my-[50px] box-border flex min-h-[400px] max-w-[calc(100%-1rem)] min-w-[480px] shrink-0 grow-0 scale-100 flex-col overflow-visible rounded-[12px] bg-[#ffffff1f] p-6 opacity-100 backdrop-blur-xl transition-opacity duration-200 ease-linear">
                             <DialogHeader>
                               <DialogTitle>
-                                <div className="mt-0 text-center text-3xl leading-[1.1] font-semibold text-[#8fc5ff]">
-                                  List Prc-20 for sale
+                                <div className="mt-0 text-center text-3xl leading-[1.1] font-semibold text-[#fea326]">
+                                  List & Send Prc-20
                                 </div>
                               </DialogTitle>
-                              <PrcListDialogContent item={item} />
-                            </DialogHeader>
-                          </DialogContent>
-                        </Dialog>
-                        {/* <button
-                          onClick={() => handlePrcUnlist(item)}
-                          className="font-inherit inline-flex w-full items-center justify-center rounded-xl border border-transparent bg-[#1a1a1a] px-4 py-2 text-base font-bold text-white transition-all duration-200 ease-in-out hover:bg-[#222] cursor-pointer"
-                        >
-                          <svg
-                            data-v-51cc9e0e=""
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            width="20"
-                            height="20"
-                          >
-                            <path
-                              stroke="currentColor"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth="2"
-                              d="m14 5-1.414-1.414A2 2 0 0 0 11.172 3H5a2 2 0 0 0-2 2v6.172a2 2 0 0 0 .586 1.414L5 14m14-4 1.586 1.586a2 2 0 0 1 0 2.828l-6.172 6.172a2 2 0 0 1-2.828 0L10 19M7 7h.001M21 3 3 21"
-                            ></path>
-                          </svg>
-                          <span className="ml-2">Unlist</span>
-                        </button> */}
-                        <Dialog>
-                          <DialogTrigger
-                            disabled={item.transfers_count == 0}
-                            className="font-inherit inline-flex grow-0 cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#3c1295] px-4 py-2 text-base font-bold text-[#d94fff] transition-all duration-200 ease-in-out hover:bg-[#9d12c8] hover:text-white disabled:cursor-auto disabled:bg-[#333] disabled:text-white"
-                          >
-                            <svg
-                              data-v-51cc9e0e=""
-                              xmlns="http://www.w3.org/2000/svg"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              width="20"
-                              height="20"
-                            >
-                              <path
-                                stroke="currentColor"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth="2"
-                                d="m6 12-3 9 18-9L3 3l3 9zm0 0h6"
-                              ></path>
-                            </svg>
-                          </DialogTrigger>
-                          <DialogContent className="my-[50px] box-border flex min-h-[500px] max-w-[calc(100%-1rem)] min-w-[700px] shrink-0 grow-0 scale-100 flex-col overflow-visible rounded-[12px] bg-[#ffffff1f] p-6 opacity-100 backdrop-blur-xl transition-opacity duration-200 ease-linear">
-                            <DialogHeader>
-                              <DialogTitle>
-                                <div className="mt-0 text-center text-3xl leading-[1.1] font-semibold text-[#d94fff]">
-                                  Send Prc-20
-                                </div>
-                              </DialogTitle>
-                              <PrcSendDialogContent item={item} />
+                              <PrcTransfersDialogContent item={item} />
                             </DialogHeader>
                           </DialogContent>
                         </Dialog>
@@ -2167,7 +2156,10 @@ console.log(prcBalance)
                                   disabled={
                                     pepemapListingStatuses.get(
                                       item.inscription_id,
-                                    )?.status === "listed"
+                                    )?.status === "listed" ||
+                                    !inscriptionIdsInPepemaps.includes(
+                                      item.inscription_id,
+                                    )
                                   }
                                   className="font-inherit inline-flex grow-0 cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#3c1295] px-4 py-2 text-base font-bold text-[#d94fff] transition-all duration-200 ease-in-out hover:bg-[#9d12c8] hover:text-white disabled:cursor-auto disabled:bg-[#333] disabled:text-white"
                                 >

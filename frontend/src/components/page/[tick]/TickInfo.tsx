@@ -7,10 +7,31 @@ import { FloorPriceChart } from "@/components/FloorPriceChart";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Avatar from "@/components/Avatar";
-import axios from 'axios';
+import axios from "axios";
+import { useProfile } from "@/hooks/useProfile";
+import { Spinner } from "@/components/ui/spinner";
+import { apiClient } from "@/lib/axios";
+import { completeBuyPSBT } from "@/lib/marketplace/psbt";
 
 export default function TickInfo({ tick }: { tick: string }) {
   const [info, setInfo] = useState<any>();
+  const [prc20List, setPrc20List] = useState<[]>([]);
+  const [isBuying, setIsBuying] = useState(false);
+  const {
+    walletInfo,
+    wallet,
+    walletAddress,
+    privateKey,
+    prc20,
+    isPrc20Loading,
+    prc20Error,
+    pepecoinPrice,
+  } = useProfile();
+
+  useEffect(() => {
+    walletInfo();
+  }, []);
+
   useEffect(() => {
     const fetchData = async () => {
       const response = await axios.get(`/api/belindex/token?tick=${tick}`);
@@ -18,6 +39,69 @@ export default function TickInfo({ tick }: { tick: string }) {
     };
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (prc20) {
+      const prc20List = prc20.filter(
+        (item: any) => item.prc20Label.toLowerCase() == tick,
+      );
+      setPrc20List(prc20List);
+    }
+  }, [tick, prc20]);
+
+  const handlePrc20Buy = async (item: any) => {
+    if (!walletAddress) {
+      alert("Please connect your wallet first");
+      return;
+    }
+
+    if (!privateKey) {
+      alert("Wallet not connected. Please unlock your wallet.");
+      return;
+    }
+
+    try {
+      setIsBuying(true);
+
+      // Step 1: Get the listing with PSBT from backend
+      const listingResponse = await apiClient.get(
+        `/prc20-listings/inscription/${item.inscriptionId}`,
+      );
+
+      if (!listingResponse.data.listing?.psbtBase64) {
+        throw new Error("Listing PSBT not found");
+      }
+
+      const psbtBase64 = listingResponse.data.listing.psbtBase64;
+
+      // Step 2: Complete the PSBT with buyer's payment and broadcast
+      const txid = await completeBuyPSBT(
+        psbtBase64,
+        privateKey,
+        walletAddress,
+        item.priceSats,
+      );
+
+      // Step 3: Update backend with the sale
+      await apiClient.post("/prc20-listings/buy", {
+        inscriptionId: item.inscriptionId,
+        buyerAddress: walletAddress,
+        priceSats: item.priceSats,
+        txid: txid,
+      });
+
+      alert(`PRC-20 purchased successfully! Transaction: ${txid}`);
+      // Refresh to show updated status
+      window.location.reload();
+    } catch (error: any) {
+      console.error(error);
+      alert(
+        `Failed to buy PRC-20: ${error.response?.data?.message || error.message}`,
+      );
+    } finally {
+      setIsBuying(false);
+    }
+  };
 
   if (!info) {
     return <div>Loading...</div>;
@@ -149,7 +233,9 @@ export default function TickInfo({ tick }: { tick: string }) {
               </div>
             </div>
             <div className="mb-2 ml-12">
-              <div className="font-bold">{info.mint_percent}%</div>
+              <div className="font-bold">
+                {Number(info.mint_percent).toFixed(2)}%
+              </div>
               <div className="text-[90%] leading-none text-[#fffc]">Minted</div>
             </div>
             <div className="mb-2 ml-12">
@@ -167,107 +253,77 @@ export default function TickInfo({ tick }: { tick: string }) {
       <div className="mt-6 w-105">
         <div className="h-160 overflow-y-auto">
           <div className="flex flex-col gap-4 px-1 text-white">
-            {[...Array(40)].map((_, i) => (
-              <div key={i}>
-                <div className="my-1 flex justify-between px-1 text-[1.05rem] font-medium">
-                  <div className="flex">
-                    <Image
-                      src="/assets/coin.gif"
-                      alt="coin"
-                      width={18}
-                      height={18}
-                      priority
-                      className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
-                    />
-                    0.52
-                    <span className="text-[0.9rem] font-normal text-white/80">
-                      /{tick}
-                    </span>
-                  </div>
-                  <div className="text-base text-white/80">$0.1</div>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between rounded-xl border border-white/10 bg-[#4c505c33] p-2">
-                    <div className="ml-1">
-                      <div className="flex font-medium">
-                        <Image
-                          src="/assets/coin.gif"
-                          alt="coin"
-                          width={18}
-                          height={18}
-                          priority
-                          className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
-                        />
-                        519
-                      </div>
-                      <div className="text-[0.9rem] text-white/75">$104.90</div>
-                    </div>
-                    <div className="flex grow justify-center text-[#bb8e20]">
-                      <ArrowRight />
-                    </div>
-                    <div className="leading-[1.2]">
-                      <div className="flex items-center">
-                        <Image
-                          src="https://api.doggy.market/static/drc-20/dogi.png"
-                          alt="coin"
-                          width={19}
-                          height={19}
-                          priority
-                          className="mr-1 h-[1.2em] w-[1.2em]"
-                          unoptimized
-                        />
-                        <div className="font-medium">155</div>
-                      </div>
-                      <div className="w-full text-right text-[0.9rem] text-white/80">
-                        {tick}
-                      </div>
-                    </div>
-                    <Button className="text-md ml-4 bg-[#3d301b] text-[#feae32] hover:cursor-pointer hover:bg-[#b8860b] hover:text-white">
-                      Buy
-                    </Button>
-                  </div>
-                  <div className="flex items-center justify-between rounded-xl border border-white/10 bg-[#4c505c33] p-2">
-                    <div className="ml-1">
-                      <div className="flex font-medium">
-                        <Image
-                          src="/assets/coin.gif"
-                          alt="coin"
-                          width={18}
-                          height={18}
-                          priority
-                          className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
-                        />
-                        519
-                      </div>
-                      <div className="text-[0.9rem] text-white/75">$104.90</div>
-                    </div>
-                    <div className="flex grow justify-center text-[#bb8e20]">
-                      <ArrowRight />
-                    </div>
-                    <div className="leading-[1.2]">
-                      <div className="flex items-center">
-                        <Image
-                          src="https://api.doggy.market/static/drc-20/dogi.png"
-                          alt="coin"
-                          width={19}
-                          height={19}
-                          priority
-                          className="mr-1 h-[1.2em] w-[1.2em]"
-                          unoptimized
-                        />
-                        <div className="font-medium">155</div>
-                      </div>
-                      <div className="w-full text-right text-[0.9rem] text-white/80">
-                        {tick}
-                      </div>
-                    </div>
-                    <Button className="text-md ml-4 bg-[#3d301b] text-[#feae32] hover:cursor-pointer hover:bg-[#b8860b] hover:text-white">
-                      Buy
-                    </Button>
-                  </div>
-                </div>
+            {isPrc20Loading ? (
+              <div className="flex justify-center">
+                <Spinner className="size-6" />
               </div>
-            ))}
+            ) : prc20List.length !== 0 ? (
+              prc20List.map((item: any, index) => (
+                <div key={index}>
+                  <div className="my-1 flex justify-between px-1 text-[1.05rem] font-medium">
+                    <div className="flex">
+                      <Image
+                        src="/assets/coin.gif"
+                        alt="coin"
+                        width={18}
+                        height={18}
+                        priority
+                        className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                      />
+                      {item.priceSats / item.amount}
+                      <span className="text-[0.9rem] font-normal text-white/80">
+                        /{tick}
+                      </span>
+                    </div>
+                    <div className="text-base text-white/80">
+                      $
+                      {((item.priceSats / item.amount) * pepecoinPrice).toFixed(
+                        2,
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between rounded-xl border border-white/10 bg-[#4c505c33] p-2">
+                      <div className="ml-1">
+                        <div className="flex font-medium">
+                          <Image
+                            src="/assets/coin.gif"
+                            alt="coin"
+                            width={18}
+                            height={18}
+                            priority
+                            className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                          />
+                          {item.priceSats}
+                        </div>
+                        <div className="text-[0.9rem] text-white/75">
+                          ${(item.priceSats * pepecoinPrice).toFixed(2)}
+                        </div>
+                      </div>
+                      <div className="flex grow justify-center text-[#bb8e20]">
+                        <ArrowRight />
+                      </div>
+                      <div className="leading-[1.2]">
+                        <div className="flex items-center">
+                          <div className="font-medium">{item.amount}</div>
+                        </div>
+                        <div className="w-full text-right text-[0.9rem] text-white/80">
+                          {tick}
+                        </div>
+                      </div>
+                      <Button
+                        onClick={() => handlePrc20Buy(item)}
+                        className="text-md ml-4 bg-[#3d301b] text-[#feae32] hover:cursor-pointer hover:bg-[#b8860b] hover:text-white"
+                      >
+                        Buy
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center">nothing to show</div>
+            )}
           </div>
         </div>
       </div>
