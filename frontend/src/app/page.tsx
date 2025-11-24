@@ -27,10 +27,10 @@ export default function Home() {
 
   return (
     <>
+      <BiggestSalesOfDay />
       <Pepemaps />
       <Collections />
       <PRCTwenty />
-      <BiggestSalesOfDay />
     </>
   );
 }

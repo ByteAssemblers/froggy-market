@@ -183,7 +183,7 @@ export default function BiggestSalesOfDay() {
 
   return (
     <>
-      <h2 className="mt-8 mb-6 text-[1.6rem] leading-[1.1]">
+      <h2 className="mt-8 mb-6 text-[1.6rem] leading-[1.1] font-bold text-[#00c853]">
         Biggest sales of day
       </h2>
       <Carousel className="w-full">

@@ -15,10 +15,22 @@ import {
 } from "@/components/ui/table";
 import { useProfile } from "@/hooks/useProfile";
 import Avatar from "../Avatar";
+import { Skeleton } from "../ui/skeleton";
 
 export default function PRCTwenty() {
   const router = useRouter();
   const { pepecoinPrice, tokens, isTokensLoading } = useProfile();
+
+  const [delayedLoading, setDelayedLoading] = useState(true);
+
+  useEffect(() => {
+    // Minimum 2-second loading
+    const timer = setTimeout(() => {
+      setDelayedLoading(false);
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   function toFullNumber(value: number) {
     return value.toString().includes("e")
@@ -39,11 +51,11 @@ export default function PRCTwenty() {
     return formatted;
   }
 
-  if (isTokensLoading) return <div>Loading...</div>;
-
   return (
     <>
-      <h2 className="mt-8 mb-6 text-[1.6rem] leading-[1.1]">PRC-20</h2>
+      <h2 className="mt-8 mb-6 text-[1.6rem] leading-[1.1] font-bold text-[#00c853]">
+        PRC-20
+      </h2>
       <div className="px-2.0 w-full overflow-x-auto">
         <Table className="w-full max-w-full border-separate border-spacing-0 leading-[1.2]">
           <TableHeader className="text-left text-[0.95rem] font-normal text-[#8a939b]">
@@ -59,11 +71,110 @@ export default function PRCTwenty() {
               <TableHead>Holders</TableHead>
             </TableRow>
           </TableHeader>
-          {isTokensLoading ? (
-            <></>
-          ) : (
-            <TableBody>
-              {tokens.slice(0, 10).map((item: any, index: any) => (
+          <TableBody>
+            {isTokensLoading || delayedLoading ? (
+              <>
+                {[
+                  Array.from({ length: 10 }).map((_, index) => (
+                    <TableRow
+                      key={index}
+                      className="cursor-pointer text-[16px] text-white transition-all duration-150 ease-in-out"
+                    >
+                      <TableCell className="w-auto rounded-tl-[12px] rounded-bl-[12px] px-3 py-4 align-middle font-bold">
+                        <Skeleton className="bg-transparent">
+                          {index + 1}
+                        </Skeleton>
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-12 w-12 items-center justify-center rounded-md bg-[#4c505c33] text-lg font-bold shadow-md"></Skeleton>
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="bg-transparent">----</Skeleton>
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="bg-transparent">
+                          <div className="flex">
+                            <Image
+                              src="/assets/coin.gif"
+                              alt="coin"
+                              width={18}
+                              height={18}
+                              priority
+                              className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                            />
+                            ----
+                          </div>
+                          <div className="ml-5 text-[90%] leading-none font-medium text-[#fffc]">
+                            $----
+                          </div>
+                        </Skeleton>
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="bg-transparent">0%</Skeleton>
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="bg-transparent">
+                          <div className="flex">
+                            <Image
+                              src="/assets/coin.gif"
+                              alt="coin"
+                              width={18}
+                              height={18}
+                              priority
+                              className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                            />
+                            ----
+                          </div>
+                          <div className="ml-5 text-[90%] leading-none font-medium text-[#fffc]">
+                            $----
+                          </div>
+                        </Skeleton>
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="bg-transparent">
+                          <div className="flex">
+                            <Image
+                              src="/assets/coin.gif"
+                              alt="coin"
+                              width={18}
+                              height={18}
+                              priority
+                              className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                            />
+                            ----
+                          </div>
+                          <div className="ml-5 text-[90%] leading-none font-medium text-[#fffc]">
+                            $----
+                          </div>
+                        </Skeleton>
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="bg-transparent">
+                          <div className="flex">
+                            <Image
+                              src="/assets/coin.gif"
+                              alt="coin"
+                              width={18}
+                              height={18}
+                              priority
+                              className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                            />
+                            ----
+                          </div>
+                          <div className="ml-5 text-[90%] leading-none font-medium text-[#fffc]">
+                            $----
+                          </div>
+                        </Skeleton>
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="bg-transparent">----</Skeleton>
+                      </TableCell>
+                    </TableRow>
+                  )),
+                ]}
+              </>
+            ) : (
+              tokens.slice(0, 10).map((item: any, index: any) => (
                 <TableRow
                   key={item.id || index}
                   className="cursor-pointer text-[16px] text-white transition-all duration-150 ease-in-out"
@@ -86,9 +197,10 @@ export default function PRCTwenty() {
                         priority
                         className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
                       />
-                      {/* {toFullNumber(item.price)} */}
+                      {/* {toFullNumber(item.price)} */}----
                     </div>
                     <div className="ml-5 text-[90%] leading-none font-medium text-[#fffc]">
+                      $----
                       {/* ${formatNumber(item.price * pepecoinPrice)} */}
                     </div>
                   </TableCell>
@@ -142,10 +254,10 @@ export default function PRCTwenty() {
                             priority
                             className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
                           />
-                          {/* {item.twentyfourhourvolume} */}
+                          {/* {item.twentyfourhourvolume} */}----
                         </div>
                         <div className="ml-5 text-[90%] leading-none font-medium text-[#fffc]">
-                          $
+                          $----
                           {/* {(item.twentyfourhourvolume * pepecoinPrice).toFixed(
                             2,
                           )} */}
@@ -163,10 +275,10 @@ export default function PRCTwenty() {
                         priority
                         className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
                       />
-                      {/* {item.totalvolume.toLocaleString()} */}
+                      {/* {item.totalvolume.toLocaleString()} */}----
                     </div>
                     <div className="ml-5 text-[90%] leading-none font-medium text-[#fffc]">
-                      $
+                      $----
                       {/* {Number(
                         (item.totalvolume * pepecoinPrice).toFixed(0),
                       ).toLocaleString()} */}
@@ -182,10 +294,10 @@ export default function PRCTwenty() {
                         priority
                         className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
                       />
-                      {/* {item.marketcap.toLocaleString()} */}
+                      {/* {item.marketcap.toLocaleString()} */}----
                     </div>
                     <div className="ml-5 text-[90%] leading-none font-medium text-[#fffc]">
-                      $
+                      $----
                       {/* {Number(
                         (item.marketcap * pepecoinPrice).toFixed(0),
                       ).toLocaleString()} */}
@@ -193,9 +305,9 @@ export default function PRCTwenty() {
                   </TableCell>
                   <TableCell>{item.holders.toLocaleString()}</TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          )}
+              ))
+            )}
+          </TableBody>
         </Table>
       </div>
       <div className="my-4 flex items-center justify-center">
