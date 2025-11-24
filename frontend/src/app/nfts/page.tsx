@@ -13,13 +13,23 @@ import {
 } from "@/components/ui/table";
 import Image from "next/image";
 import { useProfile } from "@/hooks/useProfile";
+import { Skeleton } from "@/components/ui/skeleton";
+import { formatPrice } from "@/components/page/PRCTwenty";
 
 const ORD_API_BASE = process.env.NEXT_PUBLIC_ORD_API_BASE!;
 
 export default function nfts() {
   const router = useRouter();
   const [nfts, setNfts] = useState<any[]>([]);
-  const { collections, isCollectionsLoading, collectionsError } = useProfile();
+  const {
+    collections,
+    isCollectionsLoading,
+    collectionsError,
+    collectionInfo,
+    isCollectionInfoLoading,
+  } = useProfile();
+
+  const isLoading = isCollectionsLoading || isCollectionInfoLoading;
 
   useEffect(() => {
     if (collections && !isCollectionsLoading) {
@@ -27,8 +37,11 @@ export default function nfts() {
     }
   }, [collections, isCollectionsLoading]);
 
-  if (isCollectionsLoading) return <div>Loading...</div>;
-  if (collectionsError) return <div>Error loading collections</div>;
+  // Helper function to get collection stats by symbol
+  const getCollectionStats = (symbol: string) => {
+    if (!collectionInfo || !Array.isArray(collectionInfo)) return null;
+    return collectionInfo.find((info: any) => info.symbol === symbol);
+  };
 
   return (
     <>
@@ -53,72 +66,127 @@ export default function nfts() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {nfts.map((item, index) => (
-              <TableRow
-                key={index}
-                className="cursor-pointer text-[16px] text-white transition-all duration-150 ease-in-out"
-                onClick={() => router.push(`/nfts/${item.symbol}`)}
-              >
-                <TableCell className="w-auto rounded-tl-[12px] rounded-bl-[12px] px-3 py-4 align-middle font-bold">
-                  {index + 1}
-                </TableCell>
-                <TableCell>
-                  <div className="relative mx-[1.4rem] my-0 shrink-0">
-                    <Image
-                      src={`${ORD_API_BASE}/content/${item.profileInscriptionId}`}
-                      alt={`Inscription #${item.profileInscriptionId}`}
-                      width={42}
-                      height={42}
-                      className="h-[42px] w-[42px] rounded-full object-cover align-middle"
-                      unoptimized
-                    />
-                  </div>
-                </TableCell>
-                <TableCell>{item.name}</TableCell>
-                <TableCell>
-                  <div className="flex">
-                    <Image
-                      src="/assets/coin.gif"
-                      alt="coin"
-                      width={18}
-                      height={18}
-                      priority
-                      className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
-                    />
-                    {/* {item.floorprice.toLocaleString()} */}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex">
-                    <Image
-                      src="/assets/coin.gif"
-                      alt="coin"
-                      width={18}
-                      height={18}
-                      priority
-                      className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
-                    />
-                    {/* {item.twentyfourhourvolume.toLocaleString()} */}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex">
-                    <Image
-                      src="/assets/coin.gif"
-                      alt="coin"
-                      width={18}
-                      height={18}
-                      priority
-                      className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
-                    />
-                    {/* {item.totalvolume.toLocaleString()} */}
-                  </div>
-                </TableCell>
-                <TableCell>{/* {item.trades.toLocaleString()} */}</TableCell>
-                <TableCell>{/* {item.items.toLocaleString()} */}</TableCell>
-                <TableCell>{/* {item.owners.toLocaleString()} */}</TableCell>
-              </TableRow>
-            ))}
+            {isLoading
+              ? [...Array(5)].map((_, index) => (
+                  <TableRow key={index} className="text-[16px]">
+                    <TableCell className="w-auto rounded-tl-[12px] rounded-bl-[12px] px-3 py-4 align-middle">
+                      <Skeleton className="h-5 w-6 bg-[#4c505c33]" />
+                    </TableCell>
+                    <TableCell>
+                      <div className="relative mx-[1.4rem] my-0 shrink-0">
+                        <Skeleton className="h-[42px] w-[42px] rounded-full bg-[#4c505c33]" />
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-5 w-32 bg-[#4c505c33]" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-5 w-20 bg-[#4c505c33]" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-5 w-20 bg-[#4c505c33]" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-5 w-20 bg-[#4c505c33]" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-5 w-12 bg-[#4c505c33]" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-5 w-12 bg-[#4c505c33]" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-5 w-12 bg-[#4c505c33]" />
+                    </TableCell>
+                  </TableRow>
+                ))
+              : nfts.map((item, index) => {
+                  const stats = getCollectionStats(item.symbol);
+                  return (
+                    <TableRow
+                      key={index}
+                      className="cursor-pointer text-[16px] text-white transition-all duration-150 ease-in-out"
+                      onClick={() => router.push(`/nfts/${item.symbol}`)}
+                    >
+                      <TableCell className="w-auto rounded-tl-[12px] rounded-bl-[12px] px-3 py-4 align-middle font-bold">
+                        {index + 1}
+                      </TableCell>
+                      <TableCell>
+                        <div className="relative mx-[1.4rem] my-0 shrink-0">
+                          <Image
+                            src={`${ORD_API_BASE}/content/${item.profileInscriptionId}`}
+                            alt={`Inscription #${item.profileInscriptionId}`}
+                            width={42}
+                            height={42}
+                            className="h-[42px] w-[42px] rounded-full object-cover align-middle"
+                            unoptimized
+                          />
+                        </div>
+                      </TableCell>
+                      <TableCell>{item.name}</TableCell>
+                      <TableCell>
+                        <div className="flex">
+                          <Image
+                            src="/assets/coin.gif"
+                            alt="coin"
+                            width={18}
+                            height={18}
+                            priority
+                            className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                          />
+                          {stats?.floorPrice
+                            ? formatPrice(stats.floorPrice)
+                            : "-"}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex">
+                          <Image
+                            src="/assets/coin.gif"
+                            alt="coin"
+                            width={18}
+                            height={18}
+                            priority
+                            className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                          />
+                          {stats?.volume24h
+                            ? formatPrice(stats.volume24h)
+                            : "-"}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex">
+                          <Image
+                            src="/assets/coin.gif"
+                            alt="coin"
+                            width={18}
+                            height={18}
+                            priority
+                            className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                          />
+                          {stats?.totalVolume
+                            ? formatPrice(stats.totalVolume)
+                            : "-"}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {stats?.trades24h !== undefined
+                          ? stats.trades24h.toLocaleString()
+                          : "-"}
+                      </TableCell>
+                      <TableCell>
+                        {stats?.supply !== undefined
+                          ? stats.supply.toLocaleString()
+                          : "-"}
+                      </TableCell>
+                      <TableCell>
+                        {stats?.owners !== undefined
+                          ? stats.owners.toLocaleString()
+                          : "-"}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
           </TableBody>
         </Table>
       </div>

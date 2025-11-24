@@ -14,172 +14,26 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useProfile } from "@/hooks/useProfile";
+import Avatar from "../Avatar";
+import { PepemapImage } from "@/app/wallet/[address]/page";
+import { Skeleton } from "../ui/skeleton";
 
-const database = [
-  {
-    id: 196131,
-    imageurl:
-      "https://cdn.doggy.market/content/1664d918636420f88bc990675b75afb4ade4a907f0c417f0a81ea85a90bb1c57i0",
-    collectionname: "Pepinal Mini Pepes",
-    collectionid: 4997,
-    price: 1190,
-  },
-  {
-    id: 17137,
-    imageurl:
-      "https://cdn.doggy.market/content/1664d918636420f88bc990675b75afb4ade4a907f0c417f0a81ea85a90bb1c57i0",
-    collectionname: "BoredPackClub",
-    collectionid: 2503,
-    price: 740,
-  },
-  {
-    id: 54326,
-    imageurl:
-      "https://cdn.doggy.market/content/80cb46523223f88e18f392bb47690cbb36fa439084e2bff6de63c692b34c49bdi0",
-    collectionname: "PEPE AGENT",
-    collectionid: 7672,
-    price: 1114,
-  },
-  {
-    id: 8567,
-    imageurl:
-      "https://cdn.doggy.market/content/1664d918636420f88bc990675b75afb4ade4a907f0c417f0a81ea85a90bb1c57i0",
-    collectionname: "BoredPackClub",
-    collectionid: 4568,
-    price: 6875,
-  },
-  {
-    id: 3245,
-    imageurl:
-      "https://cdn.doggy.market/content/67ffe2e2ea372bf2bfca3e7c8dc1aadab650eed3e522e825e0fd9840e8f090cci0",
-    collectionname: "Pepinal Mini Pepes",
-    collectionid: 4868,
-    price: 112,
-  },
-  {
-    id: 3473,
-    imageurl:
-      "https://cdn.doggy.market/content/1664d918636420f88bc990675b75afb4ade4a907f0c417f0a81ea85a90bb1c57i0",
-    collectionname: "PEPE AGENT",
-    collectionid: 2798,
-    price: 786,
-  },
-  {
-    id: 896544,
-    imageurl:
-      "https://cdn.doggy.market/content/67ffe2e2ea372bf2bfca3e7c8dc1aadab650eed3e522e825e0fd9840e8f090cci0",
-    collectionname: "Pepinal Mini Pepes",
-    collectionid: 4997,
-    price: 1190,
-  },
-  {
-    id: 753577,
-    imageurl:
-      "https://cdn.doggy.market/content/1664d918636420f88bc990675b75afb4ade4a907f0c417f0a81ea85a90bb1c57i0",
-    collectionname: "Pepinal Mini Pepes",
-    collectionid: 4997,
-    price: 1190,
-  },
-  {
-    id: 196131,
-    imageurl:
-      "https://cdn.doggy.market/content/80cb46523223f88e18f392bb47690cbb36fa439084e2bff6de63c692b34c49bdi0",
-    collectionname: "Pepinal Mini Pepes",
-    collectionid: 4997,
-    price: 1190,
-  },
-  {
-    id: 196131,
-    imageurl:
-      "https://cdn.doggy.market/content/67ffe2e2ea372bf2bfca3e7c8dc1aadab650eed3e522e825e0fd9840e8f090cci0",
-    collectionname: "Pepinal Mini Pepes",
-    collectionid: 4997,
-    price: 1190,
-  },
-  {
-    id: 196131,
-    imageurl:
-      "https://cdn.doggy.market/content/1664d918636420f88bc990675b75afb4ade4a907f0c417f0a81ea85a90bb1c57i0",
-    collectionname: "Pepinal Mini Pepes",
-    collectionid: 4997,
-    price: 1190,
-  },
-  {
-    id: 196131,
-    imageurl:
-      "https://cdn.doggy.market/content/67ffe2e2ea372bf2bfca3e7c8dc1aadab650eed3e522e825e0fd9840e8f090cci0",
-    collectionname: "Pepinal Mini Pepes",
-    collectionid: 4997,
-    price: 1190,
-  },
-  {
-    id: 196131,
-    imageurl:
-      "https://cdn.doggy.market/content/80cb46523223f88e18f392bb47690cbb36fa439084e2bff6de63c692b34c49bdi0",
-    collectionname: "Pepinal Mini Pepes",
-    collectionid: 4997,
-    price: 1190,
-  },
-  {
-    id: 196131,
-    imageurl:
-      "https://cdn.doggy.market/content/67ffe2e2ea372bf2bfca3e7c8dc1aadab650eed3e522e825e0fd9840e8f090cci0",
-    collectionname: "Pepinal Mini Pepes",
-    collectionid: 4997,
-    price: 1190,
-  },
-  {
-    id: 196131,
-    imageurl:
-      "https://cdn.doggy.market/content/1664d918636420f88bc990675b75afb4ade4a907f0c417f0a81ea85a90bb1c57i0",
-    collectionname: "Pepinal Mini Pepes",
-    collectionid: 4997,
-    price: 1190,
-  },
-  {
-    id: 196131,
-    imageurl:
-      "https://cdn.doggy.market/content/80cb46523223f88e18f392bb47690cbb36fa439084e2bff6de63c692b34c49bdi0",
-    collectionname: "Pepinal Mini Pepes",
-    collectionid: 4997,
-    price: 1190,
-  },
-  {
-    id: 196131,
-    imageurl:
-      "https://cdn.doggy.market/content/67ffe2e2ea372bf2bfca3e7c8dc1aadab650eed3e522e825e0fd9840e8f090cci0",
-    collectionname: "Pepinal Mini Pepes",
-    collectionid: 4997,
-    price: 1190,
-  },
-  {
-    id: 196131,
-    imageurl:
-      "https://cdn.doggy.market/content/1664d918636420f88bc990675b75afb4ade4a907f0c417f0a81ea85a90bb1c57i0",
-    collectionname: "Pepinal Mini Pepes",
-    collectionid: 4997,
-    price: 1190,
-  },
-  {
-    id: 196131,
-    imageurl:
-      "https://cdn.doggy.market/content/80cb46523223f88e18f392bb47690cbb36fa439084e2bff6de63c692b34c49bdi0",
-    collectionname: "Pepinal Mini Pepes",
-    collectionid: 4997,
-    price: 1190,
-  },
-  {
-    id: 196131,
-    imageurl:
-      "https://cdn.doggy.market/content/1664d918636420f88bc990675b75afb4ade4a907f0c417f0a81ea85a90bb1c57i0",
-    collectionname: "Pepinal Mini Pepes",
-    collectionid: 4997,
-    price: 1190,
-  },
-];
+const ORD_API_BASE = process.env.NEXT_PUBLIC_ORD_API_BASE!;
 
 export default function BiggestSalesOfDay() {
-  const { pepecoinPrice } = useProfile();
+  const {
+    pepecoinPrice,
+    biggestSalesOfDay,
+    isBiggestSalesOfDayLoading,
+    biggestSalesOfDayError,
+  } = useProfile();
+  const [bsodList, setBsodList] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (biggestSalesOfDay && !isBiggestSalesOfDayLoading) {
+      setBsodList(biggestSalesOfDay);
+    }
+  }, [biggestSalesOfDay, isBiggestSalesOfDayLoading]);
 
   return (
     <>
@@ -188,56 +42,107 @@ export default function BiggestSalesOfDay() {
       </h2>
       <Carousel className="w-full">
         <CarouselContent className="-ml-1 w-full">
-          {database.map((item, index) => (
-            <CarouselItem
-              key={`${item.id}-${index}`}
-              className="tiny:basis-1/2 basis-1/1 pl-1 md:basis-1/3 lg:basis-1/4 xl:basis-1/5"
-            >
-              <Card className="relative w-56 pt-0 pb-0">
-                <div className="pointer-events-none absolute top-0 right-0 rounded-bl-[12px] bg-[#0000006b] px-2 py-0 text-[0.9rem] font-semibold text-white">
-                  #{item.id}
-                </div>
-                <Link href={`/inscription/${item.id}`}>
-                  <Image
-                    src={item.imageurl}
-                    alt={`BSOD #${item.id}`}
-                    width={224}
-                    height={224}
-                    className="block aspect-square w-full rounded-[12px] bg-[#00000080] object-contain [image-rendering:pixelated]"
-                    unoptimized
-                  />
-                </Link>
-                <div className="flex h-full flex-col px-3 pt-1 pb-3">
-                  <div className="my-1 flex justify-center gap-4 text-[1.1rem] leading-[1.2] font-semibold text-white">
-                    <span>{item.collectionname}</span>
-                    <span>#{item.collectionid}</span>
-                  </div>
-                  <div className="mt-auto border-t border-white/10 py-1">
-                    <div className="flex justify-center text-center">
-                      <Image
-                        src="/assets/coin.gif"
-                        alt="coin"
-                        width={18}
-                        height={18}
-                        priority
-                        className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
-                      />
-                      {item.price}&#xA0;
-                      <span className="text-[0.9rem] text-[#fffc]">
-                        (${(item.price * pepecoinPrice).toFixed(2)})
-                      </span>
+          {isBiggestSalesOfDayLoading ? (
+            Array.from({ length: 5 }).map((_, i) => (
+              <CarouselItem
+                key={i}
+                className="tiny:basis-1/2 basis-1/1 pl-1 md:basis-1/3 lg:basis-1/4 xl:basis-1/5"
+              >
+                <Skeleton className="bg-transparent">
+                  <Card className="relative h-89 w-56"></Card>
+                </Skeleton>
+              </CarouselItem>
+            ))
+          ) : (
+            <>
+              {bsodList.map((item, index) => (
+                <CarouselItem
+                  key={index}
+                  className="tiny:basis-1/2 basis-1/1 pl-1 md:basis-1/3 lg:basis-1/4 xl:basis-1/5"
+                >
+                  <Card className="relative w-56 pt-0 pb-0">
+                    <div className="pointer-events-none absolute top-0 right-0 rounded-bl-[12px] bg-[#0000006b] px-2 py-0 text-[0.9rem] font-semibold text-white">
+                      {item.type === "nft" && <>#{item.asdf}</>}
                     </div>
-                  </div>
-                  <Button
-                    disabled
-                    className="w-full border-none bg-[#ffffff12] font-extrabold text-[#cacaca] transition-all duration-200 ease-in-out"
-                  >
-                    Sold
-                  </Button>
-                </div>
-              </Card>
-            </CarouselItem>
-          ))}
+                    <Link href={`/inscription/${item.inscriptionId}`}>
+                      {item.type === "nft" && (
+                        <Image
+                          src={`${ORD_API_BASE}/content/${item.inscriptionId}`}
+                          alt={`BSOD #${item.inscriptionId}`}
+                          width={224}
+                          height={224}
+                          className="block aspect-square w-full rounded-[12px] bg-[#00000080] object-contain [image-rendering:pixelated]"
+                          unoptimized
+                        />
+                      )}
+                      {item.type == "pepemap" && (
+                        <div className="block aspect-square h-56 w-56 rounded-[12px] bg-[#00000000] object-contain p-12 [image-rendering:pixelated]">
+                          <PepemapImage item={item} />
+                        </div>
+                      )}
+                      {item.type == "prc20" && (
+                        <div className="block aspect-square h-56 w-56 rounded-[12px] bg-[#00000000] object-contain p-10 [image-rendering:pixelated]">
+                          <Avatar text={item.prc20Label} xl />
+                        </div>
+                      )}
+                    </Link>
+                    <div className="flex h-full flex-col px-3 pt-1 pb-3">
+                      <div className="my-1 flex justify-center gap-4 text-[1.1rem] leading-[1.2] font-semibold text-white">
+                        {item.type === "nft" && (
+                          <>
+                            <span>{item.collectionName}</span>
+                            <span>#{item.collectionid}</span>
+                          </>
+                        )}
+                        {item.type === "pepemap" && item.pepemapLabel}
+                        {item.type === "prc20" && (
+                          <>
+                            <span>{item.amount}</span>
+                            <span>{item.prc20Label}</span>
+                          </>
+                        )}
+                      </div>
+                      <div className="text-[0.8rem] text-[#fffc]">
+                        <div className="flex justify-between">
+                          <div>Seller:</div>
+                          <Link
+                            href={`/wallet/${item.sellerAddress || ""}`}
+                            className="cursor-pointer font-medium text-[#c891ff] no-underline"
+                          >
+                            {item.sellerAddress
+                              ? `${item.sellerAddress.slice(0, 5)}...${item.sellerAddress.slice(-5)}`
+                              : "Unknown"}
+                          </Link>
+                        </div>
+                      </div>
+                      <div className="mt-auto border-t border-white/10 py-1">
+                        <div className="flex justify-center text-center">
+                          <Image
+                            src="/assets/coin.gif"
+                            alt="coin"
+                            width={18}
+                            height={18}
+                            priority
+                            className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                          />
+                          {item.priceSats}&#xA0;
+                          <span className="text-[0.9rem] text-[#fffc]">
+                            (${(item.priceSats * pepecoinPrice).toFixed(2)})
+                          </span>
+                        </div>
+                      </div>
+                      <Button
+                        disabled
+                        className="w-full border-none bg-[#ffffff12] font-extrabold text-[#cacaca] transition-all duration-200 ease-in-out"
+                      >
+                        Sold
+                      </Button>
+                    </div>
+                  </Card>
+                </CarouselItem>
+              ))}
+            </>
+          )}
         </CarouselContent>
         <CarouselPrevious />
         <CarouselNext />

@@ -14,30 +14,18 @@ import {
 import Image from "next/image";
 import Avatar from "@/components/Avatar";
 import { useProfile } from "@/hooks/useProfile";
+import { formatPrice, formatMarketCap } from "@/components/page/PRCTwenty";
 
 export default function PRC() {
-  const { pepecoinPrice, tokens, isTokensLoading } = useProfile();
+  const {
+    pepecoinPrice,
+    tokens,
+    isTokensLoading,
+    prc20Info,
+    isPrc20InfoLoading,
+  } = useProfile();
 
   const router = useRouter();
-
-  function toFullNumber(value: number) {
-    return value.toString().includes("e")
-      ? value.toFixed(20).replace(/\.?0+$/, "")
-      : value.toString();
-  }
-
-  function formatNumber(value: number, decimals = 6): string {
-    if (value === 0) return "0";
-
-    // Handle very small numbers (avoid scientific notation)
-    if (Math.abs(value) < 0.000001) {
-      return value.toFixed(12).replace(/\.?0+$/, ""); // up to 12 decimals, trimmed
-    }
-
-    // Normal numbers: format with a dynamic number of decimals
-    const formatted = value.toFixed(decimals).replace(/\.?0+$/, "");
-    return formatted;
-  }
 
   if (isTokensLoading) return <div>Loading...</div>;
 
@@ -104,109 +92,253 @@ export default function PRC() {
                           priority
                           className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
                         />
-                        {/* {toFullNumber(item.price)} */}
+                        {prc20Info?.filter(
+                          (i: any) =>
+                            i.tick.toLowerCase() == item.tick.toLowerCase(),
+                        )[0]?.floorPrice
+                          ? formatPrice(
+                              prc20Info?.filter(
+                                (i: any) =>
+                                  i.tick.toLowerCase() == item.tick.toLowerCase(),
+                              )[0]?.floorPrice,
+                            )
+                          : 0}
                       </div>
                       <div className="ml-5 text-[90%] leading-none font-medium text-[#fffc]">
-                        {/* ${formatNumber(item.price * pepecoinPrice)} */}
+                        $
+                        {prc20Info?.filter(
+                          (i: any) =>
+                            i.tick.toLowerCase() == item.tick.toLowerCase(),
+                        )[0]?.floorPrice
+                          ? formatPrice(
+                              prc20Info?.filter(
+                                (i: any) =>
+                                  i.tick.toLowerCase() == item.tick.toLowerCase(),
+                              )[0]?.floorPrice * pepecoinPrice,
+                            )
+                          : 0}
                       </div>
                     </TableCell>
                     <TableCell>
-                      {item.twentyfourhourpercent == 0 && <>0%</>}
-                      {item.twentyfourhourpercent > 0 && (
-                        <span className="flex text-[#00FF7F]">
-                          <svg
-                            viewBox="-139.52 -43.52 599.04 599.04"
-                            fill="currentColor"
-                            style={{
-                              width: "1.5em",
-                              marginBottom: "-0.35em",
-                            }}
-                          >
-                            <path d="M288.662 352H31.338c-17.818 0-26.741-21.543-14.142-34.142l128.662-128.662c7.81-7.81 20.474-7.81 28.284 0l128.662 128.662c12.6 12.599 3.676 34.142-14.142 34.142z"></path>
-                          </svg>
-
-                          <span className="pt-1">
-                            {/* <span>{item.twentyfourhourpercent}%</span> */}
-                          </span>
-                        </span>
-                      )}
-                      {item.twentyfourhourpercent < 0 && (
-                        <span className="flex text-[#ff6347]">
-                          <svg
-                            viewBox="-139.52 -43.52 599.04 599.04"
-                            fill="currentColor"
-                            style={{
-                              width: "1.5em",
-                              marginBottom: "-0.35em",
-                            }}
-                          >
-                            <path d="M31.3 192h257.3c17.8 0 26.7 21.5 14.1 34.1L174.1 354.8c-7.8 7.8-20.5 7.8-28.3 0L17.2 226.1C4.6 213.5 13.5 192 31.3 192z"></path>
-                          </svg>
-                          <span className="pt-1">
-                            {/* <span>{-item.twentyfourhourpercent}%</span> */}
-                          </span>
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {item.twentyfourhourvolume == 0 && <>-</>}
-                      {item.twentyfourhourvolume != 0 && (
+                      {prc20Info?.filter(
+                        (i: any) =>
+                          i.tick.toLowerCase() == item.tick.toLowerCase(),
+                      )[0] ? (
                         <>
-                          <div className="flex">
-                            <Image
-                              src="/assets/coin.gif"
-                              alt="coin"
-                              width={18}
-                              height={18}
-                              priority
-                              className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
-                            />
-                            {/* {item.twentyfourhourvolume} */}
-                          </div>
-                          <div className="ml-5 text-[90%] leading-none font-medium text-[#fffc]">
-                            $
-                            {/* {(item.twentyfourhourvolume * pepecoinPrice).toFixed(2)} */}
-                          </div>
+                          {prc20Info?.filter(
+                            (i: any) =>
+                              i.tick.toLowerCase() == item.tick.toLowerCase(),
+                          )[0]?.change24h == 0 && "0%"}
+                          {prc20Info?.filter(
+                            (i: any) =>
+                              i.tick.toLowerCase() == item.tick.toLowerCase(),
+                          )[0]?.change24h > 0 && (
+                            <span className="flex text-[#00FF7F]">
+                              <svg
+                                viewBox="-139.52 -43.52 599.04 599.04"
+                                fill="currentColor"
+                                style={{
+                                  width: "1.5em",
+                                  marginBottom: "-0.35em",
+                                }}
+                              >
+                                <path d="M288.662 352H31.338c-17.818 0-26.741-21.543-14.142-34.142l128.662-128.662c7.81-7.81 20.474-7.81 28.284 0l128.662 128.662c12.6 12.599 3.676 34.142-14.142 34.142z"></path>
+                              </svg>
+                              <span className="pt-1">
+                                <span>
+                                  {Number(
+                                    prc20Info?.filter(
+                                      (i: any) =>
+                                        i.tick.toLowerCase() ==
+                                        item.tick.toLowerCase(),
+                                    )[0]?.change24h,
+                                  ).toFixed(2)}
+                                  %
+                                </span>
+                              </span>
+                            </span>
+                          )}
+                          {prc20Info?.filter(
+                            (i: any) =>
+                              i.tick.toLowerCase() == item.tick.toLowerCase(),
+                          )[0]?.change24h < 0 && (
+                            <span className="flex text-[#ff6347]">
+                              <svg
+                                viewBox="-139.52 -43.52 599.04 599.04"
+                                fill="currentColor"
+                                style={{
+                                  width: "1.5em",
+                                  marginBottom: "-0.35em",
+                                }}
+                              >
+                                <path d="M31.3 192h257.3c17.8 0 26.7 21.5 14.1 34.1L174.1 354.8c-7.8 7.8-20.5 7.8-28.3 0L17.2 226.1C4.6 213.5 13.5 192 31.3 192z"></path>
+                              </svg>
+                              <span className="pt-1">
+                                <span>
+                                  -
+                                  {Number(
+                                    prc20Info?.filter(
+                                      (i: any) =>
+                                        i.tick.toLowerCase() ==
+                                        item.tick.toLowerCase(),
+                                    )[0]?.change24h,
+                                  ).toFixed(2)}
+                                  %
+                                </span>
+                              </span>
+                            </span>
+                          )}
                         </>
+                      ) : (
+                        "0%"
                       )}
                     </TableCell>
                     <TableCell>
-                      <div className="flex">
-                        <Image
-                          src="/assets/coin.gif"
-                          alt="coin"
-                          width={18}
-                          height={18}
-                          priority
-                          className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
-                        />
-                        {/* {item.totalvolume.toLocaleString()} */}
-                      </div>
-                      <div className="ml-5 text-[90%] leading-none font-medium text-[#fffc]">
-                        $
-                        {/* {Number(
-                      (item.totalvolume * pepecoinPrice).toFixed(0),
-                    ).toLocaleString()} */}
-                      </div>
+                      {prc20Info?.filter(
+                        (i: any) =>
+                          i.tick.toLowerCase() == item.tick.toLowerCase(),
+                      )[0] ? (
+                        <>
+                          {prc20Info?.filter(
+                            (i: any) =>
+                              i.tick.toLowerCase() == item.tick.toLowerCase(),
+                          )[0]?.volume24h == 0 && "-"}
+                          {prc20Info?.filter(
+                            (i: any) =>
+                              i.tick.toLowerCase() == item.tick.toLowerCase(),
+                          )[0]?.volume24h != 0 && (
+                            <>
+                              <div className="flex">
+                                <Image
+                                  src="/assets/coin.gif"
+                                  alt="coin"
+                                  width={18}
+                                  height={18}
+                                  priority
+                                  className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                                />
+                                {formatMarketCap(
+                                  prc20Info?.filter(
+                                    (i: any) =>
+                                      i.tick.toLowerCase() ==
+                                      item.tick.toLowerCase(),
+                                  )[0]?.volume24h,
+                                )}
+                              </div>
+                              <div className="ml-5 text-[90%] leading-none font-medium text-[#fffc]">
+                                $
+                                {formatMarketCap(
+                                  prc20Info?.filter(
+                                    (i: any) =>
+                                      i.tick.toLowerCase() ==
+                                      item.tick.toLowerCase(),
+                                  )[0]?.volume24h * pepecoinPrice,
+                                )}
+                              </div>
+                            </>
+                          )}
+                        </>
+                      ) : (
+                        "-"
+                      )}
                     </TableCell>
                     <TableCell>
-                      <div className="flex">
-                        <Image
-                          src="/assets/coin.gif"
-                          alt="coin"
-                          width={18}
-                          height={18}
-                          priority
-                          className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
-                        />
-                        {/* {item.marketcap.toLocaleString()} */}
-                      </div>
-                      <div className="ml-5 text-[90%] leading-none font-medium text-[#fffc]">
-                        $
-                        {/* {Number(
-                      (item.marketcap * pepecoinPrice).toFixed(0),
-                    ).toLocaleString()} */}
-                      </div>
+                      {prc20Info?.filter(
+                        (i: any) =>
+                          i.tick.toLowerCase() == item.tick.toLowerCase(),
+                      )[0] ? (
+                        <>
+                          {prc20Info?.filter(
+                            (i: any) =>
+                              i.tick.toLowerCase() == item.tick.toLowerCase(),
+                          )[0]?.totalVolume == 0 && "-"}
+                          {prc20Info?.filter(
+                            (i: any) =>
+                              i.tick.toLowerCase() == item.tick.toLowerCase(),
+                          )[0]?.totalVolume != 0 && (
+                            <>
+                              <div className="flex">
+                                <Image
+                                  src="/assets/coin.gif"
+                                  alt="coin"
+                                  width={18}
+                                  height={18}
+                                  priority
+                                  className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                                />
+                                {formatMarketCap(
+                                  prc20Info?.filter(
+                                    (i: any) =>
+                                      i.tick.toLowerCase() ==
+                                      item.tick.toLowerCase(),
+                                  )[0]?.totalVolume,
+                                )}
+                              </div>
+                              <div className="ml-5 text-[90%] leading-none font-medium text-[#fffc]">
+                                $
+                                {formatMarketCap(
+                                  prc20Info?.filter(
+                                    (i: any) =>
+                                      i.tick.toLowerCase() ==
+                                      item.tick.toLowerCase(),
+                                  )[0]?.totalVolume * pepecoinPrice,
+                                )}
+                              </div>
+                            </>
+                          )}
+                        </>
+                      ) : (
+                        "-"
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {prc20Info?.filter(
+                        (i: any) =>
+                          i.tick.toLowerCase() == item.tick.toLowerCase(),
+                      )[0] ? (
+                        <>
+                          {prc20Info?.filter(
+                            (i: any) =>
+                              i.tick.toLowerCase() == item.tick.toLowerCase(),
+                          )[0]?.floorPrice == 0 ? (
+                            "-"
+                          ) : (
+                            <>
+                              <div className="flex">
+                                <Image
+                                  src="/assets/coin.gif"
+                                  alt="coin"
+                                  width={18}
+                                  height={18}
+                                  priority
+                                  className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                                />
+                                {formatMarketCap(
+                                  prc20Info?.filter(
+                                    (i: any) =>
+                                      i.tick.toLowerCase() ==
+                                      item.tick.toLowerCase(),
+                                  )[0]?.floorPrice * item.supply,
+                                )}
+                              </div>
+                              <div className="ml-5 text-[90%] leading-none font-medium text-[#fffc]">
+                                $
+                                {formatMarketCap(
+                                  prc20Info?.filter(
+                                    (i: any) =>
+                                      i.tick.toLowerCase() ==
+                                      item.tick.toLowerCase(),
+                                  )[0]?.floorPrice *
+                                    item.supply *
+                                    pepecoinPrice,
+                                )}
+                              </div>
+                            </>
+                          )}
+                        </>
+                      ) : (
+                        "-"
+                      )}
                     </TableCell>
                     <TableCell>{item.holders.toLocaleString()}</TableCell>
                   </TableRow>

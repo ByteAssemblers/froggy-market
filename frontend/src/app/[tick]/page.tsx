@@ -22,6 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { formatPrice, formatMarketCap } from "@/components/page/PRCTwenty";
 
 export default function PRC({ params }: { params: Promise<{ tick: string }> }) {
   const { tick } = use(params);
@@ -40,6 +41,8 @@ export default function PRC({ params }: { params: Promise<{ tick: string }> }) {
     isPrc20Loading,
     prc20Error,
     pepecoinPrice,
+    prc20Info,
+    isPrc20InfoLoading,
   } = useProfile();
 
   useEffect(() => {
@@ -212,7 +215,15 @@ console.log(info)
                     priority
                     className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
                   />
-                  -
+                  {prc20Info?.filter(
+                    (i: any) => i.tick.toLowerCase() == tick.toLowerCase(),
+                  )[0]?.floorPrice
+                    ? formatPrice(
+                        prc20Info?.filter(
+                          (i: any) => i.tick.toLowerCase() == tick.toLowerCase(),
+                        )[0]?.floorPrice,
+                      )
+                    : "-"}
                 </div>
                 <div className="text-[90%] leading-none text-[#fffc]">
                   Price
@@ -220,16 +231,62 @@ console.log(info)
               </div>
               <div className="mb-2 ml-12">
                 <div className="font-bold">
-                  <span className="flex text-[#00ff7f]">
-                    <svg
-                      viewBox="-139.52 -43.52 599.04 599.04"
-                      fill="currentColor"
-                      className="mb-[-0.35em] w-[1.5em]"
-                    >
-                      <path d="M288.662 352H31.338c-17.818 0-26.741-21.543-14.142-34.142l128.662-128.662c7.81-7.81 20.474-7.81 28.284 0l128.662 128.662c12.6 12.599 3.676 34.142-14.142 34.142z"></path>
-                    </svg>
-                    <span>-%</span>
-                  </span>
+                  {prc20Info?.filter(
+                    (i: any) => i.tick.toLowerCase() == tick.toLowerCase(),
+                  )[0] ? (
+                    <>
+                      {prc20Info?.filter(
+                        (i: any) => i.tick.toLowerCase() == tick.toLowerCase(),
+                      )[0]?.change24h == 0 && "0%"}
+                      {prc20Info?.filter(
+                        (i: any) => i.tick.toLowerCase() == tick.toLowerCase(),
+                      )[0]?.change24h > 0 && (
+                        <span className="flex text-[#00ff7f]">
+                          <svg
+                            viewBox="-139.52 -43.52 599.04 599.04"
+                            fill="currentColor"
+                            className="mb-[-0.35em] w-[1.5em]"
+                          >
+                            <path d="M288.662 352H31.338c-17.818 0-26.741-21.543-14.142-34.142l128.662-128.662c7.81-7.81 20.474-7.81 28.284 0l128.662 128.662c12.6 12.599 3.676 34.142-14.142 34.142z"></path>
+                          </svg>
+                          <span>
+                            {Number(
+                              prc20Info?.filter(
+                                (i: any) =>
+                                  i.tick.toLowerCase() == tick.toLowerCase(),
+                              )[0]?.change24h,
+                            ).toFixed(2)}
+                            %
+                          </span>
+                        </span>
+                      )}
+                      {prc20Info?.filter(
+                        (i: any) => i.tick.toLowerCase() == tick.toLowerCase(),
+                      )[0]?.change24h < 0 && (
+                        <span className="flex text-[#ff6347]">
+                          <svg
+                            viewBox="-139.52 -43.52 599.04 599.04"
+                            fill="currentColor"
+                            className="mb-[-0.35em] w-[1.5em]"
+                          >
+                            <path d="M31.3 192h257.3c17.8 0 26.7 21.5 14.1 34.1L174.1 354.8c-7.8 7.8-20.5 7.8-28.3 0L17.2 226.1C4.6 213.5 13.5 192 31.3 192z"></path>
+                          </svg>
+                          <span>
+                            -
+                            {Number(
+                              prc20Info?.filter(
+                                (i: any) =>
+                                  i.tick.toLowerCase() == tick.toLowerCase(),
+                              )[0]?.change24h,
+                            ).toFixed(2)}
+                            %
+                          </span>
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    "-"
+                  )}
                 </div>
                 <div className="text-[90%] leading-none text-[#fffc]">
                   24h %
@@ -245,7 +302,15 @@ console.log(info)
                     priority
                     className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
                   />
-                  -
+                  {prc20Info?.filter(
+                    (i: any) => i.tick.toLowerCase() == tick.toLowerCase(),
+                  )[0]?.volume24h
+                    ? formatMarketCap(
+                        prc20Info?.filter(
+                          (i: any) => i.tick.toLowerCase() == tick.toLowerCase(),
+                        )[0]?.volume24h,
+                      )
+                    : "-"}
                 </div>
                 <div className="text-[90%] leading-none text-[#fffc]">
                   Volume (24h)
@@ -261,14 +326,35 @@ console.log(info)
                     priority
                     className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
                   />
-                  -
+                  {prc20Info?.filter(
+                    (i: any) => i.tick.toLowerCase() == tick.toLowerCase(),
+                  )[0]?.totalVolume
+                    ? formatMarketCap(
+                        prc20Info?.filter(
+                          (i: any) => i.tick.toLowerCase() == tick.toLowerCase(),
+                        )[0]?.totalVolume,
+                      )
+                    : "-"}
                 </div>
                 <div className="text-[90%] leading-none text-[#fffc]">
                   Total volume
                 </div>
               </div>
               <div className="mb-2 ml-12">
-                <div className="font-bold">$-</div>
+                <div className="font-bold">
+                  {prc20Info?.filter(
+                    (i: any) => i.tick.toLowerCase() == tick.toLowerCase(),
+                  )[0]?.floorPrice && info?.max
+                    ? "$" +
+                      formatMarketCap(
+                        prc20Info?.filter(
+                          (i: any) => i.tick.toLowerCase() == tick.toLowerCase(),
+                        )[0]?.floorPrice *
+                          info.max *
+                          pepecoinPrice,
+                      )
+                    : "$-"}
+                </div>
                 <div className="text-[90%] leading-none text-[#fffc]">
                   Market cap
                 </div>
@@ -323,17 +409,17 @@ console.log(info)
                           priority
                           className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
                         />
-                        {item.priceSats / item.amount}
+                        {formatPrice(item.priceSats / item.amount)}
                         <span className="text-[0.9rem] font-normal text-white/80">
                           /{tick}
                         </span>
                       </div>
                       <div className="text-base text-white/80">
                         $
-                        {(
+                        {formatPrice(
                           (item.priceSats / item.amount) *
                           pepecoinPrice
-                        ).toFixed(2)}
+                        )}
                       </div>
                     </div>
                     <div className="flex flex-col gap-2">
@@ -348,10 +434,10 @@ console.log(info)
                               priority
                               className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
                             />
-                            {item.priceSats}
+                            {formatMarketCap(item.priceSats)}
                           </div>
                           <div className="text-[0.9rem] text-white/75">
-                            ${(item.priceSats * pepecoinPrice).toFixed(2)}
+                            ${formatMarketCap(item.priceSats * pepecoinPrice)}
                           </div>
                         </div>
                         <div className="flex grow justify-center text-[#bb8e20]">

@@ -197,9 +197,14 @@ export class InformationsService {
   }
 
   /**
-   * Get collection-specific statistics
+   * Get collection-specific statistics or all collections
    */
-  async getCollectionInfo(collectionSymbol: string) {
+  async getCollectionInfo(collectionSymbol?: string) {
+    // If no symbol provided, get all collections
+    if (!collectionSymbol) {
+      return this.getAllCollectionsInfo();
+    }
+
     // Find collection by symbol
     const collection = await this.prisma.collections.findFirst({
       where: { symbol: collectionSymbol },
@@ -341,9 +346,33 @@ export class InformationsService {
   }
 
   /**
-   * Get PRC20 token statistics
+   * Get all collections info
    */
-  async getPrc20Info(tick: string) {
+  private async getAllCollectionsInfo() {
+    const collections = await this.prisma.collections.findMany();
+
+    const collectionsInfo = await Promise.all(
+      collections.map(async (collection) => {
+        const stats = await this.getCollectionInfo(collection.symbol);
+        return {
+          symbol: collection.symbol,
+          name: collection.name,
+          ...stats,
+        };
+      })
+    );
+
+    return collectionsInfo;
+  }
+
+  /**
+   * Get PRC20 token statistics or all tokens
+   */
+  async getPrc20Info(tick?: string) {
+    // If no tick provided, get all tokens
+    if (!tick) {
+      return this.getAllPrc20Info();
+    }
     const twentyFourHoursAgo = new Date();
     twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
 
@@ -438,6 +467,125 @@ export class InformationsService {
     return {
       floorPrice,
       change24h,
+      volume24h,
+      totalVolume,
+    };
+  }
+
+  /**
+   * Get all PRC20 tokens info
+   */
+  private async getAllPrc20Info() {
+    // Get all unique prc20Labels
+    const allListings = await this.prisma.prc20Listings.findMany({
+      select: { prc20Label: true },
+      distinct: ['prc20Label'],
+    });
+
+    const uniqueTicks = allListings.map((listing) => listing.prc20Label);
+
+    const prc20Info = await Promise.all(
+      uniqueTicks.map(async (tick) => {
+        const stats = await this.getPrc20Info(tick);
+        return {
+          tick,
+          ...stats,
+        };
+      })
+    );
+
+    return prc20Info;
+  }
+
+  /**
+   * Get marketplace-wide statistics (aggregate of all three marketplaces)
+   */
+  async getMarketplaceStats() {
+    const twentyFourHoursAgo = new Date();
+    twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+
+    // 1. Volume (24h) from listings (NFT collections)
+    const nftSoldLast24h = await this.prisma.listings.findMany({
+      where: {
+        status: 'sold',
+        createdAt: {
+          gte: twentyFourHoursAgo,
+        },
+      },
+    });
+    const nftVolume24h = nftSoldLast24h.reduce(
+      (sum, listing) => sum + (listing.priceSats || 0),
+      0,
+    );
+
+    // 2. Volume (24h) from pepemapListings
+    const pepemapSoldLast24h = await this.prisma.pepemapListings.findMany({
+      where: {
+        status: 'sold',
+        createdAt: {
+          gte: twentyFourHoursAgo,
+        },
+      },
+    });
+    const pepemapVolume24h = pepemapSoldLast24h.reduce(
+      (sum, listing) => sum + (listing.priceSats || 0),
+      0,
+    );
+
+    // 3. Volume (24h) from prc20Listings
+    const prc20SoldLast24h = await this.prisma.prc20Listings.findMany({
+      where: {
+        status: 'sold',
+        createdAt: {
+          gte: twentyFourHoursAgo,
+        },
+      },
+    });
+    const prc20Volume24h = prc20SoldLast24h.reduce(
+      (sum, listing) => sum + (listing.priceSats || 0),
+      0,
+    );
+
+    // Total 24h volume across all marketplaces
+    const volume24h = nftVolume24h + pepemapVolume24h + prc20Volume24h;
+
+    // 4. Total Volume (all time) from listings
+    const nftSoldAll = await this.prisma.listings.findMany({
+      where: {
+        status: 'sold',
+      },
+    });
+    const nftTotalVolume = nftSoldAll.reduce(
+      (sum, listing) => sum + (listing.priceSats || 0),
+      0,
+    );
+
+    // 5. Total Volume (all time) from pepemapListings
+    const pepemapSoldAll = await this.prisma.pepemapListings.findMany({
+      where: {
+        status: 'sold',
+      },
+    });
+    const pepemapTotalVolume = pepemapSoldAll.reduce(
+      (sum, listing) => sum + (listing.priceSats || 0),
+      0,
+    );
+
+    // 6. Total Volume (all time) from prc20Listings
+    const prc20SoldAll = await this.prisma.prc20Listings.findMany({
+      where: {
+        status: 'sold',
+      },
+    });
+    const prc20TotalVolume = prc20SoldAll.reduce(
+      (sum, listing) => sum + (listing.priceSats || 0),
+      0,
+    );
+
+    // Total volume across all marketplaces (all time)
+    const totalVolume = nftTotalVolume + pepemapTotalVolume + prc20TotalVolume;
+
+    return {
       volume24h,
       totalVolume,
     };

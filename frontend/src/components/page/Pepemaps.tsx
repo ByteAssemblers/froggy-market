@@ -7,13 +7,20 @@ import Link from "next/link";
 import { useProfile } from "@/hooks/useProfile";
 import PepemapCard from "@/components/PepemapCard";
 import { Skeleton } from "../ui/skeleton";
+import { formatPrice } from "./PRCTwenty";
 
 export default function Pepemaps() {
-  const { pepecoinPrice, pepemaps, isPepemapsLoading } = useProfile();
+  const {
+    pepecoinPrice,
+    pepemaps,
+    isPepemapsLoading,
+    pepemapInfo,
+    isPepemapInfoLoading,
+  } = useProfile();
   const [showPepemaps, setShowPepemaps] = useState<[]>([]);
   const [arrayNumber, setArrayNumber] = useState(0);
   const listing = pepemaps || [];
-  const isLoading = isPepemapsLoading;
+  const isLoading = isPepemapsLoading && isPepemapInfoLoading;
 
   useEffect(() => {
     const updateData = () => {
@@ -41,7 +48,9 @@ export default function Pepemaps() {
     <>
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="mt-0 mb-0 text-[1.6rem] leading-[1.1] text-[#00c853] font-bold">Pepemaps</h2>
+          <h2 className="mt-0 mb-0 text-[1.6rem] leading-[1.1] font-bold text-[#00c853]">
+            Pepemaps
+          </h2>
           <div className="flex">
             Floor price:&#xA0;
             <Image
@@ -56,7 +65,46 @@ export default function Pepemaps() {
             <span className="text-white/95">
               {isLoading
                 ? "-"
-                : Math.min(...listing.map((item: any) => item.priceSats))}
+                : pepemapInfo?.floorPrice
+                  ? formatPrice(pepemapInfo.floorPrice)
+                  : "-"}
+              &#xA0;
+              {pepemapInfo?.change24h == 0 && <></>}
+              {pepemapInfo?.change24h > 0 && (
+                <span className="flex text-[0.8rem] text-[#00FF7F]">
+                  <svg
+                    viewBox="-139.52 -43.52 599.04 599.04"
+                    fill="currentColor"
+                    style={{
+                      width: "1.5em",
+                      marginBottom: "-0.35em",
+                    }}
+                  >
+                    <path d="M288.662 352H31.338c-17.818 0-26.741-21.543-14.142-34.142l128.662-128.662c7.81-7.81 20.474-7.81 28.284 0l128.662 128.662c12.6 12.599 3.676 34.142-14.142 34.142z"></path>
+                  </svg>
+
+                  <span className="pt-1">
+                    <span>{Number(pepemapInfo?.change24h).toFixed(2)}%</span>
+                  </span>
+                </span>
+              )}
+              {pepemapInfo?.change24h < 0 && (
+                <span className="flex text-[0.8rem] text-[#ff6347]">
+                  <svg
+                    viewBox="-139.52 -43.52 599.04 599.04"
+                    fill="currentColor"
+                    style={{
+                      width: "1.5em",
+                      marginBottom: "-0.35em",
+                    }}
+                  >
+                    <path d="M31.3 192h257.3c17.8 0 26.7 21.5 14.1 34.1L174.1 354.8c-7.8 7.8-20.5 7.8-28.3 0L17.2 226.1C4.6 213.5 13.5 192 31.3 192z"></path>
+                  </svg>
+                  <span className="pt-1">
+                    <span>{-Number(pepemapInfo?.change24h).toFixed(2)}%</span>
+                  </span>
+                </span>
+              )}
             </span>
           </div>
         </div>

@@ -19,6 +19,98 @@ export const useProfile = () => {
     "empty" | "password" | "import" | "secret" | "mywallet" | "send" | "lock"
   >("empty");
 
+  // Fetch biggest-sales-of-day from backend
+  const {
+    data: biggestSalesOfDay,
+    isLoading: isBiggestSalesOfDayLoading,
+    error: biggestSalesOfDayError,
+  } = useQuery({
+    queryKey: ["biggestSalesOfDay"],
+    queryFn: async (): Promise<any> => {
+      try {
+        const response = await apiClient.get(
+          "/informations/biggest-sales-of-day",
+        );
+        return response.data;
+      } catch (error) {
+        console.error("Failed to fetch biggest sales of day:", error);
+      }
+    },
+    staleTime: 1 * 60 * 1000,
+  });
+
+  // Fetch prc20-info from backend
+  const {
+    data: prc20Info,
+    isLoading: isPrc20InfoLoading,
+    error: prc20InfoError,
+  } = useQuery({
+    queryKey: ["prc20Info"],
+    queryFn: async (): Promise<any> => {
+      try {
+        const response = await apiClient.get("/informations/prc20-info");
+        return response.data;
+      } catch (error) {
+        console.error("Failed to fetch prc20 info:", error);
+      }
+    },
+    staleTime: 1 * 60 * 1000,
+  });
+
+  // Fetch collection-info from backend
+  const {
+    data: collectionInfo,
+    isLoading: isCollectionInfoLoading,
+    error: collectionInfoError,
+  } = useQuery({
+    queryKey: ["collectionInfo"],
+    queryFn: async (): Promise<any> => {
+      try {
+        const response = await apiClient.get("/informations/collection-info");
+        return response.data;
+      } catch (error) {
+        console.error("Failed to fetch collection info:", error);
+      }
+    },
+    staleTime: 1 * 60 * 1000,
+  });
+
+  // Fetch pepemap-info from backend
+  const {
+    data: pepemapInfo,
+    isLoading: isPepemapInfoLoading,
+    error: pepemapInfoError,
+  } = useQuery({
+    queryKey: ["pepemapInfo"],
+    queryFn: async (): Promise<any> => {
+      try {
+        const response = await apiClient.get("/informations/pepemap-info");
+        return response.data;
+      } catch (error) {
+        console.error("Failed to fetch pepemap info:", error);
+      }
+    },
+    staleTime: 1 * 60 * 1000,
+  });
+
+  // Fetch marketplace-stats from backend
+  const {
+    data: marketplaceStats,
+    isLoading: isMarketplaceStatsLoading,
+    error: marketplaceStatsError,
+  } = useQuery({
+    queryKey: ["marketplaceStats"],
+    queryFn: async (): Promise<any> => {
+      try {
+        const response = await apiClient.get("/informations/marketplace-stats");
+        return response.data;
+      } catch (error) {
+        console.error("Failed to fetch marketplace stats:", error);
+      }
+    },
+    staleTime: 1 * 60 * 1000,
+  });
+
   // Fetch active prc20s listings from backend
   const {
     data: prc20,
@@ -37,7 +129,7 @@ export const useProfile = () => {
     staleTime: 1 * 60 * 1000,
   });
 
-    // Fetch active pepemap listings from backend
+  // Fetch active pepemap listings from backend
   const {
     data: pepemaps,
     isLoading: isPepemapsLoading,
@@ -218,6 +310,11 @@ export const useProfile = () => {
     collections,
     pepecoinPrice,
     tokens,
+    marketplaceStats,
+    pepemapInfo,
+    collectionInfo,
+    prc20Info,
+    biggestSalesOfDay,
 
     // Loading states
     isPrc20Loading,
@@ -225,6 +322,11 @@ export const useProfile = () => {
     isCollectionsLoading,
     isPepecoinPriceLoading,
     isTokensLoading,
+    isMarketplaceStatsLoading,
+    isPepemapInfoLoading,
+    isCollectionInfoLoading,
+    isPrc20InfoLoading,
+    isBiggestSalesOfDayLoading,
 
     // Errors
     prc20Error,
@@ -232,6 +334,11 @@ export const useProfile = () => {
     collectionsError,
     pepecoinPriceError,
     tokensError,
+    marketplaceStatsError,
+    pepemapInfoError,
+    collectionInfoError,
+    prc20InfoError,
+    biggestSalesOfDayError,
 
     // Mutations
     walletInfo: walletInfoMutation.mutate,

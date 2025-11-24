@@ -1,4 +1,4 @@
-import { Controller, Get, Query, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import { InformationsService } from './informations.service';
 
 @Controller('informations')
@@ -16,18 +16,17 @@ export class InformationsController {
   }
 
   @Get('collection-info')
-  async getCollectionInfo(@Query('nft') nft: string) {
-    if (!nft) {
-      throw new BadRequestException('Query parameter "nft" is required');
-    }
+  async getCollectionInfo(@Query('nft') nft?: string) {
     return this.informationsService.getCollectionInfo(nft);
   }
 
   @Get('prc20-info')
-  async getPrc20Info(@Query('tick') tick: string) {
-    if (!tick) {
-      throw new BadRequestException('Query parameter "tick" is required');
-    }
+  async getPrc20Info(@Query('tick') tick?: string) {
     return this.informationsService.getPrc20Info(tick);
+  }
+
+  @Get('marketplace-stats')
+  async getMarketplaceStats() {
+    return this.informationsService.getMarketplaceStats();
   }
 }

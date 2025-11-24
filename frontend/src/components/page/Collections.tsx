@@ -10,7 +10,14 @@ const ORD_API_BASE = process.env.NEXT_PUBLIC_ORD_API_BASE!;
 
 export default function Collections() {
   const [nfts, setNfts] = useState<any[]>([]);
-  const { collections, isCollectionsLoading, collectionsError } = useProfile();
+  const {
+    collections,
+    isCollectionsLoading,
+    collectionsError,
+    collectionInfo,
+    isCollectionInfoLoading,
+    collectionInfoError,
+  } = useProfile();
 
   useEffect(() => {
     if (collections && !isCollectionsLoading) {
@@ -24,7 +31,7 @@ export default function Collections() {
         Collections
       </h2>
       <div className="col:grid col:grid-flow-col col:grid-rows-5 gap-x-4">
-        {isCollectionsLoading ? (
+        {isCollectionsLoading || isCollectionInfoLoading ? (
           [...Array(9)].map((_, i) => (
             <Skeleton
               key={i}
@@ -102,11 +109,20 @@ export default function Collections() {
                         width={16}
                         height={16}
                         priority
-                        // className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                        className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
                       />
-                      {item.floorPrice}&#xA0;12
-                      {item.percent == 0 && <></>}
-                      {item.percent > 0 && (
+                      {
+                        collectionInfo?.filter(
+                          (i: any) => i.symbol == item.symbol,
+                        )[0]?.floorPrice
+                      }
+                      &#xA0;
+                      {collectionInfo?.filter(
+                        (i: any) => i.symbol == item.symbol,
+                      )[0]?.change24h == 0 && <></>}
+                      {collectionInfo?.filter(
+                        (i: any) => i.symbol == item.symbol,
+                      )[0]?.change24h > 0 && (
                         <span className="flex text-[0.8rem] text-[#00FF7F]">
                           <svg
                             viewBox="-139.52 -43.52 599.04 599.04"
@@ -120,11 +136,20 @@ export default function Collections() {
                           </svg>
 
                           <span className="pt-1">
-                            <span>{item.percent}%</span>
+                            <span>
+                              {Number(
+                                collectionInfo?.filter(
+                                  (i: any) => i.symbol == item.symbol,
+                                )[0]?.change24h,
+                              ).toFixed(2)}
+                              %
+                            </span>
                           </span>
                         </span>
                       )}
-                      {item.percent < 0 && (
+                      {collectionInfo?.filter(
+                        (i: any) => i.symbol == item.symbol,
+                      )[0]?.change24h < 0 && (
                         <span className="flex text-[0.8rem] text-[#ff6347]">
                           <svg
                             viewBox="-139.52 -43.52 599.04 599.04"
@@ -137,7 +162,16 @@ export default function Collections() {
                             <path d="M31.3 192h257.3c17.8 0 26.7 21.5 14.1 34.1L174.1 354.8c-7.8 7.8-20.5 7.8-28.3 0L17.2 226.1C4.6 213.5 13.5 192 31.3 192z"></path>
                           </svg>
                           <span className="pt-1">
-                            <span>{-item.percent}%</span>
+                            <span>
+                              {
+                                -Number(
+                                  collectionInfo?.filter(
+                                    (i: any) => i.symbol == item.symbol,
+                                  )[0]?.change24h,
+                                ).toFixed(2)
+                              }
+                              %
+                            </span>
                           </span>
                         </span>
                       )}
@@ -153,7 +187,11 @@ export default function Collections() {
                     priority
                     className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
                   />
-                  {item.volume}1234
+                  {
+                    collectionInfo?.filter(
+                      (i: any) => i.symbol == item.symbol,
+                    )[0]?.volume24h
+                  }
                 </div>
               </Link>
             ))}

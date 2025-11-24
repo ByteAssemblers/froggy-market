@@ -15,11 +15,19 @@ import {
 import { Filter } from "lucide-react";
 import PepemapCard from "@/components/PepemapCard";
 import { useProfile } from "@/hooks/useProfile";
+import { Skeleton } from "@/components/ui/skeleton";
+import { formatPrice } from "@/components/page/PRCTwenty";
 
 export default function Pepemaps() {
-  const { pepecoinPrice, pepemaps, isPepemapsLoading } = useProfile();
+  const {
+    pepecoinPrice,
+    pepemaps,
+    isPepemapsLoading,
+    pepemapInfo,
+    isPepemapInfoLoading,
+  } = useProfile();
   const listings = pepemaps || [];
-  const isLoading = isPepemapsLoading;
+  const isLoading = isPepemapsLoading || isPepemapInfoLoading;
 
   const ITEMS_PER_PAGE = 30;
   const totalPages = Math.ceil(listings.length / ITEMS_PER_PAGE);
@@ -42,74 +50,105 @@ export default function Pepemaps() {
         <h1 className="m-0 text-[2.3rem] leading-[1.1]">Pepemaps</h1>
       </div>
       <div className="mb-8">
-        <div className="-ml-12 flex flex-wrap">
-          <div className="mb-2 ml-12">
-            <div className="flex font-bold">
-              <Image
-                src="/assets/coin.gif"
-                alt="coin"
-                width={18}
-                height={18}
-                priority
-                className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
-              />
-              <span className="text-white/95">1</span>
+        {isLoading ? (
+          <div className="-ml-12 flex flex-wrap">
+            {[...Array(7)].map((_, i) => (
+              <div key={i} className="mb-2 ml-12">
+                <Skeleton className="mb-1 h-6 w-20 bg-[#4c505c33]" />
+                <Skeleton className="h-4 w-16 bg-[#4c505c33]" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="-ml-12 flex flex-wrap">
+            <div className="mb-2 ml-12">
+              <div className="flex font-bold">
+                <Image
+                  src="/assets/coin.gif"
+                  alt="coin"
+                  width={18}
+                  height={18}
+                  priority
+                  className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                />
+                <span className="text-white/95">
+                  {pepemapInfo?.floorPrice
+                    ? formatPrice(pepemapInfo.floorPrice)
+                    : "-"}
+                </span>
+              </div>
+              <div className="text-[90%] leading-none text-white/75">
+                Floor price
+              </div>
             </div>
-            <div className="text-[90%] leading-none text-white/75">
-              Floor price
+            <div className="mb-2 ml-12">
+              <div className="flex font-bold">
+                <Image
+                  src="/assets/coin.gif"
+                  alt="coin"
+                  width={18}
+                  height={18}
+                  priority
+                  className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                />
+                <span className="text-white/95">
+                  {pepemapInfo?.volume24h
+                    ? formatPrice(pepemapInfo.volume24h)
+                    : "-"}
+                </span>
+              </div>
+              <div className="text-[90%] leading-none text-white/75">
+                Volume (24h)
+              </div>
+            </div>
+            <div className="mb-2 ml-12">
+              <div className="flex font-bold">
+                <Image
+                  src="/assets/coin.gif"
+                  alt="coin"
+                  width={18}
+                  height={18}
+                  priority
+                  className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                />
+                <span className="text-white/95">
+                  {pepemapInfo?.totalVolume
+                    ? formatPrice(pepemapInfo.totalVolume)
+                    : "-"}
+                </span>
+              </div>
+              <div className="text-[90%] leading-none text-white/75">
+                Total volume
+              </div>
+            </div>
+            <div className="mb-2 ml-12">
+              <div className="font-bold">
+                {pepemapInfo?.trades24h !== undefined
+                  ? pepemapInfo.trades24h.toLocaleString()
+                  : "-"}
+              </div>
+              <div className="text-[90%] leading-none text-white/75">
+                Trades (24h)
+              </div>
+            </div>
+            <div className="mb-2 ml-12">
+              <div className="font-bold">----</div>
+              <div className="text-[90%] leading-none text-white/75">Owners</div>
+            </div>
+            <div className="mb-2 ml-12">
+              <div className="font-bold">------</div>
+              <div className="text-[90%] leading-none text-white/75">Supply</div>
+            </div>
+            <div className="mb-2 ml-12">
+              <div className="font-bold">
+                {pepemapInfo?.listed !== undefined
+                  ? pepemapInfo.listed.toLocaleString()
+                  : "-"}
+              </div>
+              <div className="text-[90%] leading-none text-white/75">Listed</div>
             </div>
           </div>
-          <div className="mb-2 ml-12">
-            <div className="flex font-bold">
-              <Image
-                src="/assets/coin.gif"
-                alt="coin"
-                width={18}
-                height={18}
-                priority
-                className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
-              />
-              <span className="text-white/95">27</span>
-            </div>
-            <div className="text-[90%] leading-none text-white/75">
-              Volume (24h)
-            </div>
-          </div>
-          <div className="mb-2 ml-12">
-            <div className="flex font-bold">
-              <Image
-                src="/assets/coin.gif"
-                alt="coin"
-                width={18}
-                height={18}
-                priority
-                className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
-              />
-              <span className="text-white/95">14,347,324</span>
-            </div>
-            <div className="text-[90%] leading-none text-white/75">
-              Total volume
-            </div>
-          </div>
-          <div className="mb-2 ml-12">
-            <div className="font-bold">3</div>
-            <div className="text-[90%] leading-none text-white/75">
-              Trades (24h)
-            </div>
-          </div>
-          <div className="mb-2 ml-12">
-            <div className="font-bold">25,880</div>
-            <div className="text-[90%] leading-none text-white/75">Owners</div>
-          </div>
-          <div className="mb-2 ml-12">
-            <div className="font-bold">5,932,711</div>
-            <div className="text-[90%] leading-none text-white/75">Supply</div>
-          </div>
-          <div className="mb-2 ml-12">
-            <div className="font-bold">279,269</div>
-            <div className="text-[90%] leading-none text-white/75">Listed</div>
-          </div>
-        </div>
+        )}
       </div>
       <Tabs defaultValue="listings" className="relative">
         <TabsList className="my-4 flex shrink-0 flex-wrap items-center justify-between bg-transparent">
@@ -135,8 +174,13 @@ export default function Pepemaps() {
         </TabsList>
         <TabsContent value="listings">
           {isLoading ? (
-            <div className="py-8 text-center text-white">
-              Loading pepemaps...
+            <div className="tiny:gap-5 four:grid-cols-5 three:grid-cols-4 two:grid-cols-3 tiny:grid-cols-2 mt-4 grid grid-cols-2 gap-2">
+              {[...Array(30)].map((_, i) => (
+                <Skeleton
+                  key={i}
+                  className="h-69 rounded-[12px] bg-[#4c505c33]"
+                />
+              ))}
             </div>
           ) : listings.length === 0 ? (
             <div className="py-8 text-center text-white">

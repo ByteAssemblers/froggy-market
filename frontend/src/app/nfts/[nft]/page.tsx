@@ -46,6 +46,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useProfile } from "@/hooks/useProfile";
 import { getPepecoinBalance } from "@/lib/wallet/getBalance";
+import { Skeleton } from "@/components/ui/skeleton";
+import { formatPrice } from "@/components/page/PRCTwenty";
 
 const ORD_API_BASE = process.env.NEXT_PUBLIC_ORD_API_BASE!;
 
@@ -71,7 +73,19 @@ export default function NftPage({
     collections,
     isCollectionsLoading,
     collectionsError,
+    collectionInfo,
+    isCollectionInfoLoading,
   } = useProfile();
+
+  const isLoading = isCollectionsLoading || isCollectionInfoLoading;
+
+  // Helper function to get collection stats by symbol
+  const getCollectionStats = () => {
+    if (!collectionInfo || !Array.isArray(collectionInfo)) return null;
+    return collectionInfo.find((info: any) => info.symbol === nft);
+  };
+
+  const stats = getCollectionStats();
 
   useEffect(() => {
     walletInfo();
@@ -100,9 +114,6 @@ export default function NftPage({
   useEffect(() => {
     handleGetBalance();
   }, [wallet]);
-
-  if (isCollectionsLoading) return <div>Loading...</div>;
-  if (collectionsError) return <div>Error loading collections</div>;
 
   if (!inscriptionsList) return <div>Loading NFT info...</div>;
 
@@ -181,7 +192,7 @@ export default function NftPage({
       );
     }
   };
-  console.log(inscriptionsList);
+
   return (
     <>
       <div className="mt-4 mb-8 flex items-center">
@@ -258,74 +269,113 @@ export default function NftPage({
         </div>
       </div>
       <div className="mb-8">
-        <div className="-ml-12 flex flex-wrap">
-          <div className="mb-2 ml-12">
-            <div className="flex font-bold">
-              <Image
-                src="/assets/coin.gif"
-                alt="coin"
-                width={18}
-                height={18}
-                priority
-                className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
-              />
-              <span className="text-white/95">---</span>
+        {isLoading ? (
+          <div className="-ml-12 flex flex-wrap">
+            {[...Array(7)].map((_, i) => (
+              <div key={i} className="mb-2 ml-12">
+                <Skeleton className="mb-1 h-6 w-20 bg-[#4c505c33]" />
+                <Skeleton className="h-4 w-16 bg-[#4c505c33]" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="-ml-12 flex flex-wrap">
+            <div className="mb-2 ml-12">
+              <div className="flex font-bold">
+                <Image
+                  src="/assets/coin.gif"
+                  alt="coin"
+                  width={18}
+                  height={18}
+                  priority
+                  className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                />
+                <span className="text-white/95">
+                  {stats?.floorPrice ? formatPrice(stats.floorPrice) : "-"}
+                </span>
+              </div>
+              <div className="text-[90%] leading-none text-white/75">
+                Floor price
+              </div>
             </div>
-            <div className="text-[90%] leading-none text-white/75">
-              Floor price
+            <div className="mb-2 ml-12">
+              <div className="flex font-bold">
+                <Image
+                  src="/assets/coin.gif"
+                  alt="coin"
+                  width={18}
+                  height={18}
+                  priority
+                  className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                />
+                <span className="text-white/95">
+                  {stats?.volume24h ? formatPrice(stats.volume24h) : "-"}
+                </span>
+              </div>
+              <div className="text-[90%] leading-none text-white/75">
+                Volume (24h)
+              </div>
+            </div>
+            <div className="mb-2 ml-12">
+              <div className="flex font-bold">
+                <Image
+                  src="/assets/coin.gif"
+                  alt="coin"
+                  width={18}
+                  height={18}
+                  priority
+                  className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                />
+                <span className="text-white/95">
+                  {stats?.totalVolume ? formatPrice(stats.totalVolume) : "-"}
+                </span>
+              </div>
+              <div className="text-[90%] leading-none text-white/75">
+                Total volume
+              </div>
+            </div>
+            <div className="mb-2 ml-12">
+              <div className="font-bold">
+                {stats?.trades24h !== undefined
+                  ? stats.trades24h.toLocaleString()
+                  : "-"}
+              </div>
+              <div className="text-[90%] leading-none text-white/75">
+                Trades (24h)
+              </div>
+            </div>
+            <div className="mb-2 ml-12">
+              <div className="font-bold">
+                {stats?.owners !== undefined
+                  ? stats.owners.toLocaleString()
+                  : "-"}
+              </div>
+              <div className="text-[90%] leading-none text-white/75">
+                Owners
+              </div>
+            </div>
+            <div className="mb-2 ml-12">
+              <div className="font-bold">
+                {stats?.supply !== undefined
+                  ? stats.supply.toLocaleString()
+                  : "-"}
+              </div>
+              <div className="text-[90%] leading-none text-white/75">
+                Supply
+              </div>
+            </div>
+            <div className="mb-2 ml-12">
+              <div className="font-bold">
+                {stats?.listed !== undefined
+                  ? stats.listed.toLocaleString()
+                  : "-"}
+              </div>
+              <div className="text-[90%] leading-none text-white/75">
+                Listed
+              </div>
             </div>
           </div>
-          <div className="mb-2 ml-12">
-            <div className="flex font-bold">
-              <Image
-                src="/assets/coin.gif"
-                alt="coin"
-                width={18}
-                height={18}
-                priority
-                className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
-              />
-              <span className="text-white/95">-,---</span>
-            </div>
-            <div className="text-[90%] leading-none text-white/75">
-              Volume (24h)
-            </div>
-          </div>
-          <div className="mb-2 ml-12">
-            <div className="flex font-bold">
-              <Image
-                src="/assets/coin.gif"
-                alt="coin"
-                width={18}
-                height={18}
-                priority
-                className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
-              />
-              <span className="text-white/95">--,---,---</span>
-            </div>
-            <div className="text-[90%] leading-none text-white/75">
-              Total volume
-            </div>
-          </div>
-          <div className="mb-2 ml-12">
-            <div className="font-bold">-</div>
-            <div className="text-[90%] leading-none text-white/75">
-              Trades (24h)
-            </div>
-          </div>
-          <div className="mb-2 ml-12">
-            <div className="font-bold">-,---</div>
-            <div className="text-[90%] leading-none text-white/75">Owners</div>
-          </div>
-          <div className="mb-2 ml-12">
-            <div className="font-bold">--,---</div>
-            <div className="text-[90%] leading-none text-white/75">Supply</div>
-          </div>
-          <div className="mb-2 ml-12">
-            <div className="font-bold">-,---</div>
-            <div className="text-[90%] leading-none text-white/75">Listed</div>
-          </div>
-        </div>
+        )}
       </div>
       <Tabs defaultValue="listings" className="relative">
         <TabsList className="my-4 flex shrink-0 flex-wrap items-center justify-between bg-transparent">

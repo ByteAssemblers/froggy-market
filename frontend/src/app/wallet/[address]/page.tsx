@@ -44,7 +44,7 @@ import { Spinner } from "@/components/ui/spinner";
 const ORD_API_BASE = process.env.NEXT_PUBLIC_ORD_API_BASE!;
 
 // PepemapImage component
-function PepemapImage({ item }: { item: any }) {
+export function PepemapImage({ item }: { item: any }) {
   const [imageSrc, setImageSrc] = useState(PEPEMAP_GREEN_PLACEHOLDER);
   const [isLoading, setIsLoading] = useState(true);
 
