@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Param } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, Query, BadRequestException } from '@nestjs/common';
 import { Prc20ListingsService } from './prc20-listings.service';
 
 @Controller('prc20-listings')
@@ -87,5 +87,17 @@ export class Prc20ListingsController {
   @Get('active')
   async getActivePrc20Listings() {
     return this.prc20ListingsService.getActivePrc20Listings();
+  }
+
+  /**
+   * GET /api/prc20-listings/activity?tick=frog
+   * Get activity for a specific PRC20 token (listed, unlisted, sold)
+   */
+  @Get('activity')
+  async getActivity(@Query('tick') tick: string) {
+    if (!tick) {
+      throw new BadRequestException('Query parameter "tick" is required');
+    }
+    return this.prc20ListingsService.getActivity(tick);
   }
 }

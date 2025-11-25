@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../database/database.service';
+import { DatabaseService } from '../database/database.service';
 import { CreateCollectionDto } from './dto/create-collection.dto';
 
 @Injectable()
 export class CollectionsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: DatabaseService) {}
 
   async create(dto: CreateCollectionDto) {
     // Validate symbol: minimum 4 characters, only lowercase a-z and "-"

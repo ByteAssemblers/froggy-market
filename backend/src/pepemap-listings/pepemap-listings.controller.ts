@@ -88,4 +88,13 @@ export class PepemapListingsController {
   async getActivePepemapListings() {
     return this.pepemapListingsService.getActivePepemapListings();
   }
+
+  /**
+   * GET /api/pepemap-listings/activity
+   * Get all sold pepemap listings
+   */
+  @Get('activity')
+  async getSoldActivity() {
+    return this.pepemapListingsService.getSoldActivity();
+  }
 }

@@ -1,9 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../database/database.service';
+import { DatabaseService } from '../database/database.service';
 
 @Injectable()
 export class InformationsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: DatabaseService) {}
 
   /**
    * Get biggest sales of the day (last 24 hours)
@@ -589,5 +589,420 @@ export class InformationsService {
       volume24h,
       totalVolume,
     };
+  }
+
+  /**
+   * Helper function to format date as YYYY-MM-DD
+   */
+  private formatDate(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  /**
+   * Get pepemap floor price history (all time, daily)
+   */
+  async getPepemapFloorPriceHistory() {
+    // Get all pepemap listings ordered by date
+    const allListings = await this.prisma.pepemapListings.findMany({
+      orderBy: { createdAt: 'asc' },
+    });
+
+    if (allListings.length === 0) {
+      return [];
+    }
+
+    // Get date range
+    const firstDate = new Date(allListings[0].createdAt);
+    const lastDate = new Date();
+
+    // Generate array of dates from first listing to today
+    const dates: string[] = [];
+    const currentDate = new Date(firstDate);
+    currentDate.setHours(0, 0, 0, 0);
+
+    while (currentDate <= lastDate) {
+      dates.push(this.formatDate(currentDate));
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    // Calculate floor price for each day
+    const floorPriceHistory = dates.map((dateStr) => {
+      // Get end of day
+      const endOfDay = new Date(dateStr);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      // Get all listings created up to end of this day
+      const listingsUpToDate = allListings.filter(
+        (listing) => listing.createdAt <= endOfDay,
+      );
+
+      // Group by inscriptionId and get latest status as of end of day
+      const latestListingsMap = new Map();
+      // Sort by createdAt desc to get latest first
+      const sortedListings = [...listingsUpToDate].sort(
+        (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+      );
+
+      for (const listing of sortedListings) {
+        if (!latestListingsMap.has(listing.inscriptionId)) {
+          latestListingsMap.set(listing.inscriptionId, listing);
+        }
+      }
+
+      const latestListings = Array.from(latestListingsMap.values());
+
+      // Filter for status='listed' and has priceSats
+      const listedItems = latestListings.filter(
+        (listing) => listing.status === 'listed' && listing.priceSats,
+      );
+
+      // Calculate floor price
+      const floorPrice =
+        listedItems.length > 0
+          ? Math.min(...listedItems.map((l) => l.priceSats || 0))
+          : 0;
+
+      return {
+        date: dateStr,
+        floorPrice,
+      };
+    });
+
+    return floorPriceHistory;
+  }
+
+  /**
+   * Get collection floor price history (all time, daily) or all collections
+   */
+  async getCollectionFloorPriceHistory(collectionSymbol?: string) {
+    // If no symbol provided, get all collections
+    if (!collectionSymbol) {
+      return this.getAllCollectionsFloorPriceHistory();
+    }
+
+    // Find collection by symbol
+    const collection = await this.prisma.collections.findFirst({
+      where: { symbol: collectionSymbol },
+    });
+
+    if (!collection) {
+      throw new NotFoundException(
+        `Collection with symbol "${collectionSymbol}" not found`,
+      );
+    }
+
+    // Get all inscriptions in this collection
+    const inscriptions = await this.prisma.inscriptions.findMany({
+      where: { collectionId: collection.id },
+    });
+
+    if (inscriptions.length === 0) {
+      return [];
+    }
+
+    const inscriptionIds = inscriptions.map((insc) => insc.id);
+
+    // Get all listings for this collection ordered by date
+    const allListings = await this.prisma.listings.findMany({
+      where: {
+        inscriptionId: { in: inscriptionIds },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    if (allListings.length === 0) {
+      return [];
+    }
+
+    // Get date range
+    const firstDate = new Date(allListings[0].createdAt);
+    const lastDate = new Date();
+
+    // Generate array of dates from first listing to today
+    const dates: string[] = [];
+    const currentDate = new Date(firstDate);
+    currentDate.setHours(0, 0, 0, 0);
+
+    while (currentDate <= lastDate) {
+      dates.push(this.formatDate(currentDate));
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    // Calculate floor price for each day
+    const floorPriceHistory = dates.map((dateStr) => {
+      // Get end of day
+      const endOfDay = new Date(dateStr);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      // Get all listings created up to end of this day
+      const listingsUpToDate = allListings.filter(
+        (listing) => listing.createdAt <= endOfDay,
+      );
+
+      // Group by inscriptionId and get latest status as of end of day
+      const latestListingsMap = new Map();
+      // Sort by createdAt desc to get latest first
+      const sortedListings = [...listingsUpToDate].sort(
+        (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+      );
+
+      for (const listing of sortedListings) {
+        if (
+          listing.inscriptionId &&
+          !latestListingsMap.has(listing.inscriptionId)
+        ) {
+          latestListingsMap.set(listing.inscriptionId, listing);
+        }
+      }
+
+      const latestListings = Array.from(latestListingsMap.values());
+
+      // Filter for status='listed' and has priceSats
+      const listedItems = latestListings.filter(
+        (listing) => listing.status === 'listed' && listing.priceSats,
+      );
+
+      // Calculate floor price
+      const floorPrice =
+        listedItems.length > 0
+          ? Math.min(...listedItems.map((l) => l.priceSats || 0))
+          : 0;
+
+      return {
+        date: dateStr,
+        floorPrice,
+      };
+    });
+
+    return floorPriceHistory;
+  }
+
+  /**
+   * Get all collections floor price history
+   */
+  private async getAllCollectionsFloorPriceHistory() {
+    const collections = await this.prisma.collections.findMany();
+
+    const collectionsFloorPriceHistory = await Promise.all(
+      collections.map(async (collection) => {
+        const history = await this.getCollectionFloorPriceHistory(
+          collection.symbol,
+        );
+        return {
+          symbol: collection.symbol,
+          name: collection.name,
+          history,
+        };
+      }),
+    );
+
+    return collectionsFloorPriceHistory;
+  }
+
+  /**
+   * Get PRC20 floor price history (all time, daily) or all tokens
+   */
+  async getPrc20FloorPriceHistory(tick?: string) {
+    // If no tick provided, get all tokens
+    if (!tick) {
+      return this.getAllPrc20FloorPriceHistory();
+    }
+
+    // Get all prc20 listings for this tick ordered by date
+    const allListings = await this.prisma.prc20Listings.findMany({
+      where: { prc20Label: tick },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    if (allListings.length === 0) {
+      return [];
+    }
+
+    // Get date range
+    const firstDate = new Date(allListings[0].createdAt);
+    const lastDate = new Date();
+
+    // Generate array of dates from first listing to today
+    const dates: string[] = [];
+    const currentDate = new Date(firstDate);
+    currentDate.setHours(0, 0, 0, 0);
+
+    while (currentDate <= lastDate) {
+      dates.push(this.formatDate(currentDate));
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    // Calculate floor price for each day
+    const floorPriceHistory = dates.map((dateStr) => {
+      // Get end of day
+      const endOfDay = new Date(dateStr);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      // Get all listings created up to end of this day
+      const listingsUpToDate = allListings.filter(
+        (listing) => listing.createdAt <= endOfDay,
+      );
+
+      // Group by inscriptionId and get latest status as of end of day
+      const latestListingsMap = new Map();
+      // Sort by createdAt desc to get latest first
+      const sortedListings = [...listingsUpToDate].sort(
+        (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+      );
+
+      for (const listing of sortedListings) {
+        if (!latestListingsMap.has(listing.inscriptionId)) {
+          latestListingsMap.set(listing.inscriptionId, listing);
+        }
+      }
+
+      const latestListings = Array.from(latestListingsMap.values());
+
+      // Filter for status='listed' and has priceSats and amount
+      const listedItems = latestListings.filter(
+        (listing) =>
+          listing.status === 'listed' && listing.priceSats && listing.amount,
+      );
+
+      // Calculate floor price (per unit)
+      const floorPrice =
+        listedItems.length > 0
+          ? Math.min(
+              ...listedItems.map((l) => (l.priceSats || 0) / l.amount),
+            )
+          : 0;
+
+      return {
+        date: dateStr,
+        floorPrice,
+      };
+    });
+
+    return floorPriceHistory;
+  }
+
+  /**
+   * Get all PRC20 tokens floor price history
+   */
+  private async getAllPrc20FloorPriceHistory() {
+    // Get all unique prc20Labels
+    const allListings = await this.prisma.prc20Listings.findMany({
+      select: { prc20Label: true },
+      distinct: ['prc20Label'],
+    });
+
+    const uniqueTicks = allListings.map((listing) => listing.prc20Label);
+
+    const prc20FloorPriceHistory = await Promise.all(
+      uniqueTicks.map(async (tick) => {
+        const history = await this.getPrc20FloorPriceHistory(tick);
+        return {
+          tick,
+          history,
+        };
+      }),
+    );
+
+    return prc20FloorPriceHistory;
+  }
+
+  /**
+   * Get wallet history for a specific address
+   * Returns all listings (NFT, Pepemap, PRC20) where the address is sellerAddress or buyerAddress
+   * Only includes status: listed, unlisted, sold (excludes sent)
+   */
+  async getWalletHistory(address: string) {
+    // Get NFT listings where address is seller or buyer
+    const nftListings = await this.prisma.listings.findMany({
+      where: {
+        OR: [{ sellerAddress: address }, { buyerAddress: address }],
+        status: {
+          in: ['listed', 'unlisted', 'sold'],
+        },
+      },
+      include: {
+        inscription: {
+          include: {
+            collection: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Get Pepemap listings where address is seller or buyer
+    const pepemapListings = await this.prisma.pepemapListings.findMany({
+      where: {
+        OR: [{ sellerAddress: address }, { buyerAddress: address }],
+        status: {
+          in: ['listed', 'unlisted', 'sold'],
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Get PRC20 listings where address is seller or buyer
+    const prc20Listings = await this.prisma.prc20Listings.findMany({
+      where: {
+        OR: [{ sellerAddress: address }, { buyerAddress: address }],
+        status: {
+          in: ['listed', 'unlisted', 'sold'],
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Transform and combine all history
+    const combinedHistory = [
+      ...nftListings.map((listing) => ({
+        type: 'nft' as const,
+        id: listing.id,
+        inscriptionId: listing.inscription?.inscriptionId || null,
+        collectionName: listing.inscription?.collection?.name || null,
+        collectionSymbol: listing.inscription?.collection?.symbol || null,
+        status: listing.status,
+        priceSats: listing.priceSats || 0,
+        sellerAddress: listing.sellerAddress,
+        buyerAddress: listing.buyerAddress,
+        txid: listing.txid,
+        createdAt: listing.createdAt,
+      })),
+      ...pepemapListings.map((listing) => ({
+        type: 'pepemap' as const,
+        id: listing.id,
+        inscriptionId: listing.inscriptionId,
+        pepemapLabel: listing.pepemapLabel,
+        blockNumber: listing.blockNumber,
+        status: listing.status,
+        priceSats: listing.priceSats || 0,
+        sellerAddress: listing.sellerAddress,
+        buyerAddress: listing.buyerAddress,
+        txid: listing.txid,
+        createdAt: listing.createdAt,
+      })),
+      ...prc20Listings.map((listing) => ({
+        type: 'prc20' as const,
+        id: listing.id,
+        inscriptionId: listing.inscriptionId,
+        prc20Label: listing.prc20Label,
+        amount: listing.amount,
+        status: listing.status,
+        priceSats: listing.priceSats || 0,
+        sellerAddress: listing.sellerAddress,
+        buyerAddress: listing.buyerAddress,
+        txid: listing.txid,
+        createdAt: listing.createdAt,
+      })),
+    ];
+
+    // Sort by createdAt descending (most recent first)
+    const sortedHistory = combinedHistory.sort(
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+    );
+
+    return sortedHistory;
   }
 }

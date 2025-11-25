@@ -1,9 +1,9 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../database/database.service';
+import { DatabaseService } from '../database/database.service';
 
 @Injectable()
 export class Prc20ListingsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: DatabaseService) {}
 
   /**
    * List Prc20 - adds a row with status='listed'
@@ -147,7 +147,8 @@ export class Prc20ListingsService {
     toAddress: string;
     txid: string;
   }) {
-    const { inscriptionId, prc20Label, amount, fromAddress, toAddress, txid } = dto;
+    const { inscriptionId, prc20Label, amount, fromAddress, toAddress, txid } =
+      dto;
 
     // Create a new listing record with status='sent'
     const sentListing = await this.prisma.prc20Listings.create({
@@ -214,5 +215,22 @@ export class Prc20ListingsService {
     );
 
     return activeListings;
+  }
+
+  /**
+   * Get activity for a specific PRC20 token (listed, unlisted, sold - excluding sent)
+   */
+  async getActivity(tick: string) {
+    const activityListings = await this.prisma.prc20Listings.findMany({
+      where: {
+        prc20Label: tick,
+        status: {
+          in: ['listed', 'unlisted', 'sold'],
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return activityListings;
   }
 }

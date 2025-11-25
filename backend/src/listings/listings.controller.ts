@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Param } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, Query, BadRequestException } from '@nestjs/common';
 import { ListingsService } from './listings.service';
 
 @Controller('listings')
@@ -65,5 +65,13 @@ export class ListingsController {
     @Param('inscriptionId') inscriptionId: string,
   ) {
     return this.listingsService.getInscriptionListingStatus(inscriptionId);
+  }
+
+  @Get('activity')
+  async getSoldActivity(@Query('collection') collection: string) {
+    if (!collection) {
+      throw new BadRequestException('Query parameter "collection" is required');
+    }
+    return this.listingsService.getSoldActivity(collection);
   }
 }

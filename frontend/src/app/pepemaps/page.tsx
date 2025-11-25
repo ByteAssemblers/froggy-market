@@ -17,6 +17,7 @@ import PepemapCard from "@/components/PepemapCard";
 import { useProfile } from "@/hooks/useProfile";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatPrice } from "@/components/page/PRCTwenty";
+import { FloorPriceChart } from "@/components/FloorPriceChart";
 
 export default function Pepemaps() {
   const {
@@ -156,9 +157,6 @@ export default function Pepemaps() {
             <TabsTrigger value="listings" className="text-md">
               Listings
             </TabsTrigger>
-            <TabsTrigger value="packs" className="text-md">
-              Packs
-            </TabsTrigger>
             <TabsTrigger value="activity" className="text-md">
               Activity
             </TabsTrigger>
@@ -283,8 +281,9 @@ export default function Pepemaps() {
             </>
           )}
         </TabsContent>
-        <TabsContent value="packs">Packs</TabsContent>
-        <TabsContent value="activity">Activity</TabsContent>
+        <TabsContent value="activity">
+          <FloorPriceChart />
+        </TabsContent>
       </Tabs>
     </>
   );

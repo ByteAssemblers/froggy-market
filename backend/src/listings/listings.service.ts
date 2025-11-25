@@ -1,9 +1,9 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../database/database.service';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { DatabaseService } from '../database/database.service';
 
 @Injectable()
 export class ListingsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: DatabaseService) {}
 
   /**
    * List NFT - adds a row with status='listed'
@@ -265,5 +265,44 @@ export class ListingsService {
       status: latestListing?.status || null,
       listing: latestListing,
     };
+  }
+
+  /**
+   * Get sold activity for a specific collection
+   */
+  async getSoldActivity(collectionSymbol: string) {
+    // Find collection by symbol
+    const collection = await this.prisma.collections.findFirst({
+      where: { symbol: collectionSymbol },
+    });
+
+    if (!collection) {
+      throw new NotFoundException(`Collection with symbol "${collectionSymbol}" not found`);
+    }
+
+    // Get all inscriptions in this collection
+    const inscriptions = await this.prisma.inscriptions.findMany({
+      where: { collectionId: collection.id },
+    });
+
+    const inscriptionIds = inscriptions.map((insc) => insc.id);
+
+    // Get all sold listings for these inscriptions
+    const soldListings = await this.prisma.listings.findMany({
+      where: {
+        inscriptionId: { in: inscriptionIds },
+        status: 'sold',
+      },
+      include: {
+        inscription: {
+          include: {
+            collection: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return soldListings;
   }
 }

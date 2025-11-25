@@ -1,9 +1,9 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../database/database.service';
+import { DatabaseService } from '../database/database.service';
 
 @Injectable()
 export class PepemapListingsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: DatabaseService) {}
 
   /**
    * Extract block number from pepemap label (e.g., "12345.pepemap" -> 12345)
@@ -228,5 +228,19 @@ export class PepemapListingsService {
     );
 
     return activeListings;
+  }
+
+  /**
+   * Get all sold pepemap listings (activity)
+   */
+  async getSoldActivity() {
+    const soldListings = await this.prisma.pepemapListings.findMany({
+      where: {
+        status: 'sold',
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return soldListings;
   }
 }
