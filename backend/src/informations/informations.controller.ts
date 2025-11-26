@@ -52,4 +52,12 @@ export class InformationsController {
     }
     return this.informationsService.getWalletHistory(address);
   }
+
+  @Get('wallet-activity')
+  async getWalletActivity(@Query('address') address: string) {
+    if (!address) {
+      throw new BadRequestException('Query parameter "address" is required');
+    }
+    return this.informationsService.getWalletActivity(address);
+  }
 }

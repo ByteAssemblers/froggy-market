@@ -268,9 +268,14 @@ export class ListingsService {
   }
 
   /**
-   * Get sold activity for a specific collection
+   * Get sold activity for a specific collection or all collections
    */
-  async getSoldActivity(collectionSymbol: string) {
+  async getSoldActivity(collectionSymbol?: string) {
+    // If no symbol provided, get all collections' sold activity
+    if (!collectionSymbol) {
+      return this.getAllCollectionsSoldActivity();
+    }
+
     // Find collection by symbol
     const collection = await this.prisma.collections.findFirst({
       where: { symbol: collectionSymbol },
@@ -304,5 +309,25 @@ export class ListingsService {
     });
 
     return soldListings;
+  }
+
+  /**
+   * Get all collections with their sold activity
+   */
+  private async getAllCollectionsSoldActivity() {
+    const collections = await this.prisma.collections.findMany();
+
+    const collectionsActivity = await Promise.all(
+      collections.map(async (collection) => {
+        const activity = await this.getSoldActivity(collection.symbol);
+        return {
+          symbol: collection.symbol,
+          name: collection.name,
+          activity,
+        };
+      }),
+    );
+
+    return collectionsActivity;
   }
 }

@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { decryptWallet } from "@/lib/wallet/storage";
-import { apiClient, baseClient } from "@/lib/axios";
+import { blockchainClient, apiClient, baseClient } from "@/lib/axios";
 import axios from "axios";
 
 export const useProfile = () => {
@@ -18,6 +18,232 @@ export const useProfile = () => {
   const [walletState, setWalletState] = useState<
     "empty" | "password" | "import" | "secret" | "mywallet" | "send" | "lock"
   >("empty");
+  const [inscriptions, setInscriptions] = useState<any[]>([]);
+  const [listingStatuses, setListingStatuses] = useState<Map<string, any>>(
+    new Map(),
+  );
+  const [pepemapListingStatuses, setPepemapListingStatuses] = useState<
+    Map<string, any>
+  >(new Map());
+  const [prc20ListingStatuses, setPrc20ListingStatuses] = useState<
+    Map<string, any>
+  >(new Map());
+
+  // Fetch my wallet nft from wonky-ord
+  const {
+    data: myWalletNft,
+    isLoading: isMyWalletNftLoading,
+    error: myWalletNftError,
+  } = useQuery({
+    queryKey: ["myWalletNft", walletAddress],
+    queryFn: async (): Promise<any> => {
+      try {
+        let page = 1;
+        let allInscriptions: any = [];
+        let continueFetching = true;
+
+        // Fetch all pages of inscriptions
+        while (continueFetching) {
+          const response = await blockchainClient.get(
+            `/inscriptions/balance/${walletAddress}/${page}`,
+          );
+          const data = response.data.inscriptions;
+
+          if (data && data.length > 0) {
+            allInscriptions = [...allInscriptions, ...data];
+            page++;
+          } else {
+            continueFetching = false;
+          }
+        }
+
+        allInscriptions.sort((a: any, b: any) => b.timestamp - a.timestamp);
+        setInscriptions(allInscriptions);
+
+        // Fetch listing status for all inscriptions in parallel
+        const statusMap = new Map();
+        const pepemapStatusMap = new Map();
+
+        // Create array of promises for parallel fetching
+        const statusPromises = allInscriptions.map(async (inscription: any) => {
+          // Check if it's a pepemap
+          const isPepemap =
+            typeof inscription.content === "string" &&
+            inscription.content.endsWith(".pepemap");
+
+          if (isPepemap) {
+            // Fetch pepemap listing status
+            try {
+              const statusResponse = await apiClient.get(
+                `/pepemap-listings/inscription/${inscription.inscription_id}`,
+              );
+              return {
+                id: inscription.inscription_id,
+                type: "pepemap",
+                data: statusResponse.data,
+              };
+            } catch (err) {
+              return {
+                id: inscription.inscription_id,
+                type: "pepemap",
+                data: { status: null, listing: null },
+              };
+            }
+          } else {
+            // Fetch regular NFT listing status
+            try {
+              const statusResponse = await apiClient.get(
+                `/listings/inscription/${inscription.inscription_id}`,
+              );
+              return {
+                id: inscription.inscription_id,
+                type: "listing",
+                data: statusResponse.data,
+              };
+            } catch (err) {
+              return {
+                id: inscription.inscription_id,
+                type: "listing",
+                data: { status: null, listing: null },
+              };
+            }
+          }
+        });
+
+        // Wait for all status fetches to complete
+        const statusResults = await Promise.all(statusPromises);
+
+        // Populate the maps
+        statusResults.forEach((result) => {
+          if (result.type === "pepemap") {
+            pepemapStatusMap.set(result.id, result.data);
+          } else {
+            statusMap.set(result.id, result.data);
+          }
+        });
+
+        setListingStatuses(statusMap);
+        setPepemapListingStatuses(pepemapStatusMap);
+
+        // Return the data
+        return {
+          inscriptions: allInscriptions,
+          listingStatuses: statusMap,
+          pepemapListingStatuses: pepemapStatusMap,
+        };
+      } catch (error) {
+        console.error("Error fetching inscriptions:", error);
+        return {
+          inscriptions: [],
+          listingStatuses: new Map(),
+          pepemapListingStatuses: new Map(),
+        };
+      }
+    },
+    enabled: !!walletAddress,
+    staleTime: 1 * 60 * 1000,
+  });
+
+  // Fetch wallet PRC-20 tokens
+  const {
+    data: myWalletPrc20,
+    isLoading: isMyWalletPrc20Loading,
+    error: myWalletPrc20Error,
+  } = useQuery({
+    queryKey: ["myWalletPrc20", walletAddress],
+    queryFn: async (): Promise<any> => {
+      try {
+        const response = await fetch(`/api/belindex/address/${walletAddress}`);
+        const tokens = await response.json();
+
+        // Fetch detailed balance for each token
+        const tokensWithTransfers = await Promise.all(
+          tokens.map(async (token: any) => {
+            try {
+              const balanceResponse = await baseClient.get(
+                `belindex/address/${walletAddress}/${token.tick}/balance`,
+              );
+              const balanceData = balanceResponse.data;
+              return {
+                ...token,
+                transfers: balanceData.transfers || [],
+              };
+            } catch (error) {
+              console.error(`Failed to fetch balance for ${token.tick}:`, error);
+              return {
+                ...token,
+                transfers: [],
+              };
+            }
+          }),
+        );
+
+        // Collect all transfers from all tokens
+        const allTransfers = tokensWithTransfers.flatMap(
+          (token) => token.transfers,
+        );
+
+        // Fetch listing status for all transfers in parallel
+        const statusMap = new Map();
+        const statusPromises = allTransfers.map(async (transfer: any) => {
+          const inscriptionId = transfer.outpoint.split(":")[0] + "i0";
+          try {
+            const statusResponse = await apiClient.get(
+              `/prc20-listings/inscription/${inscriptionId}`,
+            );
+            return {
+              id: inscriptionId,
+              data: statusResponse.data,
+            };
+          } catch (error) {
+            return {
+              id: inscriptionId,
+              data: { status: null, listing: null },
+            };
+          }
+        });
+
+        // Wait for all status fetches to complete
+        const statusResults = await Promise.all(statusPromises);
+
+        // Populate the status map
+        statusResults.forEach((result) => {
+          statusMap.set(result.id, result.data);
+        });
+
+        setPrc20ListingStatuses(statusMap);
+
+        return tokensWithTransfers;
+      } catch (error) {
+        console.error("Error fetching prc-20:", error);
+        return [];
+      }
+    },
+    enabled: !!walletAddress,
+    staleTime: 1 * 60 * 1000,
+  });
+
+  // Fetch wallet pepemaps
+  const {
+    data: myWalletPepemaps,
+    isLoading: isMyWalletPepemapsLoading,
+    error: myWalletPepemapsError,
+  } = useQuery({
+    queryKey: ["myWalletPepemaps", walletAddress],
+    queryFn: async (): Promise<any> => {
+      try {
+        const response = await blockchainClient.get(
+          `pepemap/address/${walletAddress}`,
+        );
+        return response.data;
+      } catch (error) {
+        console.error("Error fetching pepemap:", error);
+        return [];
+      }
+    },
+    enabled: !!walletAddress,
+    staleTime: 1 * 60 * 1000,
+  });
 
   // Fetch biggest-sales-of-day from backend
   const {
@@ -204,6 +430,142 @@ export const useProfile = () => {
     staleTime: 10 * 60 * 1000,
   });
 
+  // Fetch pepemap activity from backend
+  const {
+    data: pepemapActivity,
+    isLoading: isPepemapActivityLoading,
+    error: pepemapActivityError,
+  } = useQuery({
+    queryKey: ["pepemapActivity"],
+    queryFn: async (): Promise<any> => {
+      try {
+        const response = await apiClient.get("/pepemap-listings/activity");
+        return response.data;
+      } catch (error) {
+        console.error("Failed to fetch pepemap activity:", error);
+        return [];
+      }
+    },
+    staleTime: 1 * 60 * 1000,
+  });
+
+  // Fetch listings activity from backend
+  const {
+    data: listingsActivity,
+    isLoading: isListingsActivityLoading,
+    error: listingsActivityError,
+  } = useQuery({
+    queryKey: ["listingsActivity"],
+    queryFn: async (): Promise<any> => {
+      try {
+        const response = await apiClient.get("/listings/activity");
+        return response.data;
+      } catch (error) {
+        console.error("Failed to fetch listings activity:", error);
+        return [];
+      }
+    },
+    staleTime: 1 * 60 * 1000,
+  });
+
+  // Fetch prc20 activity from backend
+  const {
+    data: prc20Activity,
+    isLoading: isPrc20ActivityLoading,
+    error: prc20ActivityError,
+  } = useQuery({
+    queryKey: ["prc20Activity"],
+    queryFn: async (): Promise<any> => {
+      try {
+        const response = await apiClient.get("/prc20-listings/activity");
+        return response.data;
+      } catch (error) {
+        console.error("Failed to fetch prc20 activity:", error);
+        return [];
+      }
+    },
+    staleTime: 1 * 60 * 1000,
+  });
+
+  // Fetch pepemap floor price from backend
+  const {
+    data: pepemapFloorPrice,
+    isLoading: isPepemapFloorPriceLoading,
+    error: pepemapFloorPriceError,
+  } = useQuery({
+    queryKey: ["pepemapFloorPrice"],
+    queryFn: async (): Promise<any> => {
+      try {
+        const response = await apiClient.get(
+          "/informations/pepemap-floorprice",
+        );
+        return response.data;
+      } catch (error) {
+        console.error("Failed to fetch pepemap floor price:", error);
+        return null;
+      }
+    },
+    staleTime: 1 * 60 * 1000,
+  });
+
+  // Fetch collection floor price from backend
+  const {
+    data: collectionFloorPrice,
+    isLoading: isCollectionFloorPriceLoading,
+    error: collectionFloorPriceError,
+  } = useQuery({
+    queryKey: ["collectionFloorPrice"],
+    queryFn: async (): Promise<any> => {
+      try {
+        const response = await apiClient.get(
+          "/informations/collection-floorprice",
+        );
+        return response.data;
+      } catch (error) {
+        console.error("Failed to fetch collection floor price:", error);
+        return null;
+      }
+    },
+    staleTime: 1 * 60 * 1000,
+  });
+
+  // Fetch prc20 floor price from backend
+  const {
+    data: prc20FloorPrice,
+    isLoading: isPrc20FloorPriceLoading,
+    error: prc20FloorPriceError,
+  } = useQuery({
+    queryKey: ["prc20FloorPrice"],
+    queryFn: async (): Promise<any> => {
+      try {
+        const response = await apiClient.get("/informations/prc20-floorprice");
+        return response.data;
+      } catch (error) {
+        console.error("Failed to fetch prc20 floor price:", error);
+        return null;
+      }
+    },
+    staleTime: 1 * 60 * 1000,
+  });
+
+  // Fetch prc20 transaction from backend
+  const {
+    data: prc20Transaction,
+    isLoading: isPrc20TransactionLoading,
+    error: prc20TransactionError,
+  } = useQuery({
+    queryKey: ["prc20Transaction"],
+    queryFn: async (): Promise<any> => {
+      try {
+        const response = await apiClient.get("/prc20-listings/transaction");
+        return response.data;
+      } catch (error) {
+        console.error("Failed to fetch prc20 transaction:", error);
+        return null;
+      }
+    },
+  });
+
   // Wallet info mutataion
   const walletInfoMutation = useMutation({
     mutationFn: async (): Promise<any> => {
@@ -315,6 +677,20 @@ export const useProfile = () => {
     collectionInfo,
     prc20Info,
     biggestSalesOfDay,
+    pepemapActivity,
+    listingsActivity,
+    prc20Activity,
+    pepemapFloorPrice,
+    collectionFloorPrice,
+    prc20FloorPrice,
+    prc20Transaction,
+    myWalletNft,
+    inscriptions,
+    listingStatuses,
+    pepemapListingStatuses,
+    prc20ListingStatuses,
+    myWalletPrc20,
+    myWalletPepemaps,
 
     // Loading states
     isPrc20Loading,
@@ -327,6 +703,16 @@ export const useProfile = () => {
     isCollectionInfoLoading,
     isPrc20InfoLoading,
     isBiggestSalesOfDayLoading,
+    isPepemapActivityLoading,
+    isListingsActivityLoading,
+    isPrc20ActivityLoading,
+    isPepemapFloorPriceLoading,
+    isCollectionFloorPriceLoading,
+    isPrc20FloorPriceLoading,
+    isPrc20TransactionLoading,
+    isMyWalletNftLoading,
+    isMyWalletPrc20Loading,
+    isMyWalletPepemapsLoading,
 
     // Errors
     prc20Error,
@@ -339,6 +725,16 @@ export const useProfile = () => {
     collectionInfoError,
     prc20InfoError,
     biggestSalesOfDayError,
+    pepemapActivityError,
+    listingsActivityError,
+    prc20ActivityError,
+    pepemapFloorPriceError,
+    collectionFloorPriceError,
+    prc20FloorPriceError,
+    prc20TransactionError,
+    myWalletNftError,
+    myWalletPrc20Error,
+    myWalletPepemapsError,
 
     // Mutations
     walletInfo: walletInfoMutation.mutate,

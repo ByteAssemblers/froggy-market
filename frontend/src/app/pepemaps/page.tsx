@@ -18,6 +18,16 @@ import { useProfile } from "@/hooks/useProfile";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatPrice } from "@/components/page/PRCTwenty";
 import { FloorPriceChart } from "@/components/FloorPriceChart";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import Link from "next/link";
+import { PepemapImage } from "../wallet/[address]/page";
 
 export default function Pepemaps() {
   const {
@@ -26,9 +36,14 @@ export default function Pepemaps() {
     isPepemapsLoading,
     pepemapInfo,
     isPepemapInfoLoading,
+    pepemapFloorPrice,
+    isPepemapFloorPriceLoading,
+    pepemapActivity,
+    isPepemapActivityLoading,
   } = useProfile();
   const listings = pepemaps || [];
-  const isLoading = isPepemapsLoading || isPepemapInfoLoading;
+  const isLoading =
+    isPepemapsLoading || isPepemapInfoLoading || isPepemapActivityLoading;
 
   const ITEMS_PER_PAGE = 30;
   const totalPages = Math.ceil(listings.length / ITEMS_PER_PAGE);
@@ -134,11 +149,15 @@ export default function Pepemaps() {
             </div>
             <div className="mb-2 ml-12">
               <div className="font-bold">----</div>
-              <div className="text-[90%] leading-none text-white/75">Owners</div>
+              <div className="text-[90%] leading-none text-white/75">
+                Owners
+              </div>
             </div>
             <div className="mb-2 ml-12">
               <div className="font-bold">------</div>
-              <div className="text-[90%] leading-none text-white/75">Supply</div>
+              <div className="text-[90%] leading-none text-white/75">
+                Supply
+              </div>
             </div>
             <div className="mb-2 ml-12">
               <div className="font-bold">
@@ -146,7 +165,9 @@ export default function Pepemaps() {
                   ? pepemapInfo.listed.toLocaleString()
                   : "-"}
               </div>
-              <div className="text-[90%] leading-none text-white/75">Listed</div>
+              <div className="text-[90%] leading-none text-white/75">
+                Listed
+              </div>
             </div>
           </div>
         )}
@@ -161,14 +182,14 @@ export default function Pepemaps() {
               Activity
             </TabsTrigger>
           </div>
-          <TabsContent value="listings">
+          {/* <TabsContent value="listings">
             <div className="absolute right-0 flex gap-2 text-center text-white">
               <Filter />
               <Filter />
               <Filter />
               <Filter />
             </div>
-          </TabsContent>
+          </TabsContent> */}
         </TabsList>
         <TabsContent value="listings">
           {isLoading ? (
@@ -282,7 +303,98 @@ export default function Pepemaps() {
           )}
         </TabsContent>
         <TabsContent value="activity">
-          <FloorPriceChart />
+          <FloorPriceChart
+            data={pepemapFloorPrice}
+            isLoading={isPepemapFloorPriceLoading}
+          />
+          <Table className="w-full max-w-full border-separate border-spacing-0 p-8 leading-[1.2]">
+            <TableHeader className="text-left text-[0.95rem] font-normal text-[#8a939b]">
+              <TableRow className="">
+                <TableHead>Item</TableHead>
+                <TableHead></TableHead>
+                <TableHead>Action</TableHead>
+                <TableHead>Price</TableHead>
+                <TableHead>Seller</TableHead>
+                <TableHead>Buyer</TableHead>
+                <TableHead>Date</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <></>
+              ) : (
+                pepemapActivity.map((item: any, index: any) => (
+                  <TableRow key={index}>
+                    <TableCell>
+                      <Link href={`/inscription/${item.inscriptionId}`}>
+                        <PepemapImage item={item} sm />
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <span className="leading-[1.1]">
+                          {item.pepemapLabel}
+                        </span>
+                        <div className="leading-none">
+                          <Link
+                            href={`/inscription/${item.inscriptionId}`}
+                            className="text-[0.7rem] text-[#dfc0fd]"
+                          >
+                            {item.inscriptionId.slice(0, 3) +
+                              "..." +
+                              item.inscriptionId.slice(-3)}
+                          </Link>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="rounded-[6px] bg-[#00d1814d] px-1 py-0.5 text-[0.8rem] text-[#00d181]">
+                        sell
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex">
+                        <Image
+                          src="/assets/coin.gif"
+                          alt="coin"
+                          width={18}
+                          height={18}
+                          priority
+                          className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                        />
+                        {item.priceSats}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Link
+                        href={`/wallet/${item.sellerAddress}`}
+                        className="cursor-pointer font-medium text-[#c891ff] decoration-inherit"
+                      >
+                        {item.sellerAddress.slice(0, 5) +
+                          "..." +
+                          item.sellerAddress.slice(-5)}
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      <Link
+                        href={`/wallet/${item.buyerAddress}`}
+                        className="cursor-pointer font-medium text-[#c891ff] decoration-inherit"
+                      >
+                        {item.buyerAddress.slice(0, 5) +
+                          "..." +
+                          item.buyerAddress.slice(-5)}
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      {item.createdAt.slice(0, 10)}
+                      <br />
+                      {item.createdAt.slice(11, 19)}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </TabsContent>
       </Tabs>
     </>

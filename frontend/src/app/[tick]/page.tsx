@@ -18,6 +18,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -43,7 +44,46 @@ export default function PRC({ params }: { params: Promise<{ tick: string }> }) {
     pepecoinPrice,
     prc20Info,
     isPrc20InfoLoading,
+    prc20FloorPrice,
+    isPrc20FloorPriceLoading,
+    prc20Activity,
+    isPrc20ActivityLoading,
+    prc20Transaction,
+    isPrc20TransactionLoading,
   } = useProfile();
+
+  // Helper function to get prc20 floor price history by tick
+  const getPrc20FloorPriceData = () => {
+    if (!prc20FloorPrice || !Array.isArray(prc20FloorPrice)) return null;
+    const token = prc20FloorPrice.find(
+      (item: any) => item.tick.toLowerCase() === tick.toLowerCase(),
+    );
+    return token?.history || null;
+  };
+
+  const floorPriceData = getPrc20FloorPriceData();
+
+  // Helper function to get prc20 activity by tick
+  const getPrc20ActivityData = () => {
+    if (!prc20Activity || !Array.isArray(prc20Activity)) return null;
+    const token = prc20Activity.find(
+      (item: any) => item.tick.toLowerCase() === tick.toLowerCase(),
+    );
+    return token?.activity || null;
+  };
+
+  const activityData = getPrc20ActivityData();
+
+  // Helper function to get prc20 transaction by tick
+  const getPrc20TransactionData = () => {
+    if (!prc20Transaction || !Array.isArray(prc20Transaction)) return null;
+    const token = prc20Transaction.find(
+      (item: any) => item.tick.toLowerCase() === tick.toLowerCase(),
+    );
+    return token?.transactions || null;
+  };
+
+  const transactionData = getPrc20TransactionData();
 
   useEffect(() => {
     walletInfo();
@@ -155,7 +195,7 @@ export default function PRC({ params }: { params: Promise<{ tick: string }> }) {
     router.push("/"); // Redirect to the first page if 404
     return null;
   }
-console.log(info)
+
   return (
     <>
       <div className="flex gap-x-8">
@@ -220,7 +260,8 @@ console.log(info)
                   )[0]?.floorPrice
                     ? formatPrice(
                         prc20Info?.filter(
-                          (i: any) => i.tick.toLowerCase() == tick.toLowerCase(),
+                          (i: any) =>
+                            i.tick.toLowerCase() == tick.toLowerCase(),
                         )[0]?.floorPrice,
                       )
                     : "-"}
@@ -307,7 +348,8 @@ console.log(info)
                   )[0]?.volume24h
                     ? formatMarketCap(
                         prc20Info?.filter(
-                          (i: any) => i.tick.toLowerCase() == tick.toLowerCase(),
+                          (i: any) =>
+                            i.tick.toLowerCase() == tick.toLowerCase(),
                         )[0]?.volume24h,
                       )
                     : "-"}
@@ -331,7 +373,8 @@ console.log(info)
                   )[0]?.totalVolume
                     ? formatMarketCap(
                         prc20Info?.filter(
-                          (i: any) => i.tick.toLowerCase() == tick.toLowerCase(),
+                          (i: any) =>
+                            i.tick.toLowerCase() == tick.toLowerCase(),
                         )[0]?.totalVolume,
                       )
                     : "-"}
@@ -348,7 +391,8 @@ console.log(info)
                     ? "$" +
                       formatMarketCap(
                         prc20Info?.filter(
-                          (i: any) => i.tick.toLowerCase() == tick.toLowerCase(),
+                          (i: any) =>
+                            i.tick.toLowerCase() == tick.toLowerCase(),
                         )[0]?.floorPrice *
                           info.max *
                           pepecoinPrice,
@@ -386,7 +430,10 @@ console.log(info)
             </div>
           </div>
           <div>
-            <FloorPriceChart />
+            <FloorPriceChart
+              data={floorPriceData}
+              isLoading={isPrc20FloorPriceLoading}
+            />
           </div>
         </div>
         <div className="mt-6 w-105">
@@ -417,8 +464,7 @@ console.log(info)
                       <div className="text-base text-white/80">
                         $
                         {formatPrice(
-                          (item.priceSats / item.amount) *
-                          pepecoinPrice
+                          (item.priceSats / item.amount) * pepecoinPrice,
                         )}
                       </div>
                     </div>
@@ -498,82 +544,131 @@ console.log(info)
                 <TableHead>Date</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody className="text-[16px]">
-              {[...Array(20)].map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell>
-                    <div className="flex items-center gap-x-[1.2rem]">
-                      <Link
-                        href={`/${tick}`}
-                        className="flex-none basis-[42px] leading-0 text-inherit"
-                      >
-                        <Avatar text={tick} />
-                      </Link>
-                      <div>
-                        <span className="leading-[1.1]">{tick}</span>
-                        <div className="leading-none">
-                          <Link
-                            href="inscription/db36e9ab573c91ca9699b142c948a5f110f4ea60fda60a4666182c07fbfb1a0fi0"
-                            className="text-[0.7rem] text-[#dfc0fd]"
-                          >
-                            #179506592
-                          </Link>
-                        </div>
-                      </div>
-                    </div>
+            {isPrc20ActivityLoading ? (
+              <TableFooter className="bg-transparent">
+                <TableRow className="hover:bg-transparent">
+                  <TableCell colSpan={7} className="text-center">
+                    <Spinner className="m-auto size-6" />
                   </TableCell>
-                  <TableCell>
-                    <span className="rounded-[6px] bg-[#00d1814d] px-1 py-0.5 text-[0.8rem] text-[#00d181]">
-                      sell
-                    </span>
-                    {/* <span className="text-[#dc3545] bg-[#dc35454d] text-[0.8rem] px-1 py-0.5 rounded-[6px]">unlist</span> */}
-                    {/* <span className="text-[#027dff] bg-[#027dff4d] text-[0.8rem] px-1 py-0.5 rounded-[6px]">list</span> */}
-                  </TableCell>
-                  <TableCell>500</TableCell>
-                  <TableCell>
-                    <div className="flex">
-                      <Image
-                        src="/assets/coin.gif"
-                        alt="coin"
-                        width={18}
-                        height={18}
-                        priority
-                        className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
-                      />
-                      302
-                    </div>
-                    <div className="flex text-[0.9rem]">
-                      <Image
-                        src="/assets/coin.gif"
-                        alt="coin"
-                        width={16}
-                        height={16}
-                        priority
-                        className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
-                      />
-                      0.6/{tick}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Link
-                      href="https://doggy.market/wallet/DLMmfAuYGjjUABeBHBbkt16kL4zBwWFgtm"
-                      className="cursor-pointer font-medium text-[#c891ff] decoration-inherit"
-                    >
-                      DLMmf...WFgtm
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    <Link
-                      href="https://doggy.market/wallet/DMig5rkKZhpn3F7Mxw6wV2kra7La8sF4DP"
-                      className="cursor-pointer font-medium text-[#c891ff] decoration-inherit"
-                    >
-                      DMig5...sF4DP
-                    </Link>
-                  </TableCell>
-                  <TableCell>14 minutes ago</TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
+              </TableFooter>
+            ) : (
+              <>
+                {activityData ? (
+                  activityData.map((item: any, index: any) => (
+                    <TableBody key={index} className="text-[16px]">
+                      <TableRow>
+                        <TableCell>
+                          <div className="flex items-center gap-x-[1.2rem]">
+                            <Link href={`/inscription/${item.inscriptionId}`}>
+                              <Avatar text={tick} />
+                            </Link>
+                            <div>
+                              <span className="leading-[1.1]">{tick}</span>
+                              <div className="leading-none">
+                                <Link
+                                  href={`/inscription/${item.inscriptionId}`}
+                                  className="text-[0.7rem] text-[#dfc0fd]"
+                                >
+                                  {item.inscriptionId.slice(0, 3) +
+                                    "..." +
+                                    item.inscriptionId.slice(-3)}
+                                </Link>
+                              </div>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {item.status == "sold" && (
+                            <span className="rounded-[6px] bg-[#00d1814d] px-1 py-0.5 text-[0.8rem] text-[#00d181]">
+                              sell
+                            </span>
+                          )}
+                          {item.status == "unlisted" && (
+                            <span className="rounded-[6px] bg-[#dc35454d] px-1 py-0.5 text-[0.8rem] text-[#dc3545]">
+                              unlist
+                            </span>
+                          )}
+                          {item.status == "listed" && (
+                            <span className="rounded-[6px] bg-[#027dff4d] px-1 py-0.5 text-[0.8rem] text-[#027dff]">
+                              list
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {Number(item.amount).toLocaleString()}
+                        </TableCell>
+                        <TableCell>
+                          {item.status != "unlisted" ? (
+                            <>
+                              <div className="flex">
+                                <Image
+                                  src="/assets/coin.gif"
+                                  alt="coin"
+                                  width={18}
+                                  height={18}
+                                  priority
+                                  className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                                />
+                                {Number(item.priceSats).toLocaleString()}
+                              </div>
+                              <div className="flex text-[0.9rem]">
+                                <Image
+                                  src="/assets/coin.gif"
+                                  alt="coin"
+                                  width={16}
+                                  height={16}
+                                  priority
+                                  className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                                />
+                                {formatPrice(item.priceSats / item.amount)}/
+                                {tick}
+                              </div>
+                            </>
+                          ) : (
+                            "-"
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Link
+                            href={`/wallet/${item.sellerAddress}`}
+                            className="cursor-pointer font-medium text-[#c891ff] decoration-inherit"
+                          >
+                            {item.sellerAddress.slice(0, 5) +
+                              "..." +
+                              item.sellerAddress.slice(-5)}
+                          </Link>
+                        </TableCell>
+                        <TableCell>
+                          <Link
+                            href={`/wallet/${item.buyerAddress}`}
+                            className="cursor-pointer font-medium text-[#c891ff] decoration-inherit"
+                          >
+                            {item.buyerAddress &&
+                              item.buyerAddress?.slice(0, 5) +
+                                "..." +
+                                item.buyerAddress?.slice(-5)}
+                          </Link>
+                        </TableCell>
+                        <TableCell>
+                          {item.createdAt.slice(0, 10)}
+                          <br />
+                          {item.createdAt.slice(11, 19)}
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  ))
+                ) : (
+                  <TableFooter className="bg-transparent">
+                    <TableRow className="hover:bg-transparent">
+                      <TableCell colSpan={7} className="text-center">
+                        No activity data available
+                      </TableCell>
+                    </TableRow>
+                  </TableFooter>
+                )}
+              </>
+            )}
           </Table>
         </TabsContent>
         <TabsContent value="holders">
@@ -626,44 +721,88 @@ console.log(info)
                 <TableHead>Date</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody className="text-[16px]">
-              {[...Array(20)].map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell>
-                    <Link
-                      href="/inscription/a93204a8caa7ba24ab3425974277fb39953773101ef0c22e47b8bb15081d777ei0"
-                      className="cursor-pointer font-medium text-[#dfc0fd] decoration-inherit"
-                    >
-                      a93...ei0
-                    </Link>
-                  </TableCell>
-                  <TableCell>transfer</TableCell>
-                  <TableCell>{tick}</TableCell>
-                  <TableCell>100</TableCell>
-                  <TableCell>
-                    <Link
-                      href="wallet/DNKjZ3Tt3bwrVPFkvF43T8WcncXjDoXKVY"
-                      className="cursor-pointer font-medium text-[#c891ff] decoration-inherit"
-                    >
-                      DNKjZ...oXKVY
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    <Link
-                      href="wallet/DRjY9RJfhQGLxmwa4EVh66az2KuXyzh1tB"
-                      className="cursor-pointer font-medium text-[#c891ff] decoration-inherit"
-                    >
-                      DRjY9...zh1tB
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    27.10.2025
-                    <br />
-                    03:49:38
+            {isPrc20TransactionLoading ? (
+              <TableFooter className="bg-transparent">
+                <TableRow className="hover:bg-transparent">
+                  <TableCell colSpan={6} className="text-center">
+                    <Spinner className="m-auto size-6" />
                   </TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
+              </TableFooter>
+            ) : (
+              <>
+                {transactionData ? (
+                  <TableBody className="text-[16px]">
+                    {transactionData.map((item: any, index: any) => (
+                      <TableRow
+                        key={index}
+                        className="cursor-pointer text-[16px] text-white transition-all duration-150 ease-in-out"
+                      >
+                        <TableCell>
+                          <Link
+                            href={`/inscription/${item.inscriptionId}`}
+                            className="cursor-pointer font-medium text-[#dfc0fd] decoration-inherit"
+                          >
+                            {item.inscriptionId.slice(0, 3) +
+                              "..." +
+                              item.inscriptionId.slice(-3)}
+                          </Link>
+                        </TableCell>
+                        <TableCell>
+                          {item.status == "transfer" && (
+                            <>
+                              inscribe-
+                              <br />
+                              transfer
+                            </>
+                          )}
+                          {item.status == "sold" && "transfer"}
+                        </TableCell>
+                        <TableCell>{item.prc20Label}</TableCell>
+                        <TableCell>
+                          {Number(item.amount).toLocaleString()}
+                        </TableCell>
+                        <TableCell>
+                          <Link
+                            href={`/wallet/${item.sellerAddress}`}
+                            className="cursor-pointer font-medium text-[#c891ff] decoration-inherit"
+                          >
+                            {item.sellerAddress.slice(0, 5) +
+                              "..." +
+                              item.sellerAddress.slice(-5)}
+                          </Link>
+                        </TableCell>
+                        <TableCell>
+                          {item.buyerAddress && (
+                            <Link
+                              href={`/wallet/${item.buyerAddress}`}
+                              className="cursor-pointer font-medium text-[#c891ff] decoration-inherit"
+                            >
+                              {item.buyerAddress.slice(0, 5) +
+                                "..." +
+                                item.buyerAddress.slice(-5)}
+                            </Link>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {item.createdAt.slice(0, 10)}
+                          <br />
+                          {item.createdAt.slice(11, 19)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                ) : (
+                  <TableFooter className="bg-transparent">
+                    <TableRow className="hover:bg-transparent">
+                      <TableCell colSpan={6} className="text-center">
+                        No activity data available
+                      </TableCell>
+                    </TableRow>
+                  </TableFooter>
+                )}
+              </>
+            )}
           </Table>
         </TabsContent>
         <TabsContent value="info">

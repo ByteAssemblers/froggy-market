@@ -9,6 +9,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -40,11 +41,13 @@ import { resolveFileContentType } from "@/lib/inscription/inscribe";
 import { processJob } from "@/lib/inscription/inscriptionWorker";
 import { PEPE_PER_KB_FEE, RECOMMENDED_FEE } from "@/constants/inscription";
 import { Spinner } from "@/components/ui/spinner";
+import { formatPrice } from "@/components/page/PRCTwenty";
+import { useSearchParams, useRouter } from "next/navigation";
 
 const ORD_API_BASE = process.env.NEXT_PUBLIC_ORD_API_BASE!;
 
 // PepemapImage component
-export function PepemapImage({ item }: { item: any }) {
+export function PepemapImage({ item, sm }: { item: any; sm?: boolean }) {
   const [imageSrc, setImageSrc] = useState(PEPEMAP_GREEN_PLACEHOLDER);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -70,9 +73,9 @@ export function PepemapImage({ item }: { item: any }) {
     <img
       src={imageSrc}
       alt="pepemap"
-      width={128}
-      height={128}
-      className={`pointer-events-none h-full max-h-32 w-auto max-w-32 rounded-xl object-contain text-[0.8rem] select-none ${
+      width={sm ? 48 : 128}
+      height={sm ? 48 : 128}
+      className={`pointer-events-none rounded-xl object-contain text-[0.8rem] select-none ${
         isLoading ? "opacity-50" : ""
       }`}
     />
@@ -85,6 +88,12 @@ export default function WalletAddress({
   params: Promise<{ address: string }>;
 }) {
   const { address } = use(params);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const tab = searchParams.get("tab") ?? "prc";
+  const handleChange = (value: string) => {
+    router.push(`?tab=${value}`);
+  };
   const [inscriptions, setInscriptions] = useState<any[]>([]);
   const [pepemaps, setPepemaps] = useState<any[]>([]);
   const [ticks, setTicks] = useState<any[]>([]);
@@ -95,6 +104,10 @@ export default function WalletAddress({
     Map<string, any>
   >(new Map());
   const [isLoadingInscriptions, setIsLoadingInscriptions] = useState(false);
+  const [history, setHistory] = useState<[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [activity, setActivity] = useState<[]>([]);
+  const [isLoadingActivity, setIsLoadingActivity] = useState(false);
   const {
     wallet,
     walletInfo,
@@ -213,24 +226,6 @@ export default function WalletAddress({
     }
   }, [address]);
 
-  // useEffect(() => {
-  //   const fetchWalletPrcHistory = async () => {
-  //     try {
-  //       const response = await fetch(
-  //         `/api/belindex/address/${address}/history`,
-  //       );
-  //       const data = await response.json();
-  //       console.log(data);
-  //     } catch (error) {
-  //       console.error("Error fetching prc-20 history", error);
-  //     }
-  //   };
-
-  //   if (address) {
-  //     fetchWalletPrcHistory();
-  //   }
-  // }, [address]);
-
   useEffect(() => {
     const fetchWalletPepemap = async () => {
       try {
@@ -246,6 +241,46 @@ export default function WalletAddress({
 
     if (address) {
       fetchWalletPepemap();
+    }
+  }, [address]);
+
+  useEffect(() => {
+    const fetchWalletPrcHistory = async () => {
+      try {
+        setIsLoadingHistory(true);
+        const response = await apiClient.get(
+          `/informations/wallet-history?address=${address}`,
+        );
+        setHistory(response.data);
+      } catch (error) {
+        console.error("Error fetching prc-20 history", error);
+      } finally {
+        setIsLoadingHistory(false);
+      }
+    };
+
+    if (address) {
+      fetchWalletPrcHistory();
+    }
+  }, [address]);
+
+  useEffect(() => {
+    const fetchWalletPrcActivity = async () => {
+      try {
+        setIsLoadingActivity(true);
+        const response = await apiClient.get(
+          `/informations/wallet-activity?address=${address}`,
+        );
+        setActivity(response.data);
+      } catch (error) {
+        console.error("Error fetching prc-20 activity", error);
+      } finally {
+        setIsLoadingActivity(false);
+      }
+    };
+
+    if (address) {
+      fetchWalletPrcActivity();
     }
   }, [address]);
 
@@ -279,24 +314,6 @@ export default function WalletAddress({
       });
 
       alert("Pepemap unlisted successfully!");
-      // Refresh the wallet data
-      window.location.reload();
-    } catch (error: any) {
-      console.error(error);
-      alert(
-        `Failed to unlist: ${error.response?.data?.message || error.message}`,
-      );
-    }
-  };
-
-  const handlePrcUnlist = async (item: any) => {
-    try {
-      await apiClient.post("/prc20-listings/unlist", {
-        inscriptionId: item.inscription_id,
-        sellerAddress: walletAddress,
-      });
-
-      alert("Prc20 unlisted successfully!");
       // Refresh the wallet data
       window.location.reload();
     } catch (error: any) {
@@ -1061,7 +1078,7 @@ export default function WalletAddress({
         // Trigger history refresh to show the new job immediately
         fetchInscriptions();
         // Process the job and AWAIT completion
-        await processJob(
+        const result = await processJob(
           job.id,
           wallet,
           feeRate,
@@ -1081,6 +1098,29 @@ export default function WalletAddress({
         setStatusMessage("Inscription complete.");
         toast.success(`${file.name} inscribed successfully!`);
         console.log(`✅ Inscription complete for ${file.name}`);
+
+        // Call backend API to record the transfer inscription with status='transfer'
+        try {
+          const inscriptionId = result.revealTxid + "i0";
+          await apiClient.post("/prc20-listings/inscribe", {
+            inscriptionId: inscriptionId,
+            prc20Label: item.tick,
+            amount: Number(amount),
+            sellerAddress: walletAddress,
+            txid: result.revealTxid,
+          });
+          console.log(
+            `✅ PRC-20 transfer registered in backend: ${inscriptionId}`,
+          );
+        } catch (error: any) {
+          console.error(
+            "❌ Failed to register PRC-20 transfer in backend:",
+            error,
+          );
+          // Don't fail the whole operation if backend recording fails
+          toast.error("Warning: Failed to record transfer in marketplace");
+        }
+
         fetchInscriptions();
       } catch (error: any) {
         console.error("❌ Inscription failed:", error);
@@ -1677,7 +1717,7 @@ export default function WalletAddress({
       <h1 className="leading-[1.1 ] text-3xl">
         {walletAddress === address ? "My wallet" : address}
       </h1>
-      <Tabs defaultValue="prc" className="relative">
+      <Tabs value={tab} onValueChange={handleChange} className="relative">
         <TabsList className="my-4 flex shrink-0 flex-wrap items-center justify-between bg-transparent">
           <div className="my-2 flex list-none gap-5 overflow-x-auto p-0 select-none">
             <TabsTrigger value="prc" className="text-md">
@@ -1823,44 +1863,86 @@ export default function WalletAddress({
                 <TableHead>Date</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody className="text-[16px]">
-              {[...Array(5)].map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell>
-                    <Link
-                      href="/inscription/a93204a8caa7ba24ab3425974277fb39953773101ef0c22e47b8bb15081d777ei0"
-                      className="cursor-pointer font-medium text-[#dfc0fd] decoration-inherit"
-                    >
-                      a93...ei0
-                    </Link>
-                  </TableCell>
-                  <TableCell>receive</TableCell>
-                  <TableCell>damm</TableCell>
-                  <TableCell>1000</TableCell>
-                  <TableCell>
-                    <Link
-                      href="wallet/DNKjZ3Tt3bwrVPFkvF43T8WcncXjDoXKVY"
-                      className="cursor-pointer font-medium text-[#c891ff] decoration-inherit"
-                    >
-                      DNKjZ...oXKVY
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    <Link
-                      href="wallet/DRjY9RJfhQGLxmwa4EVh66az2KuXyzh1tB"
-                      className="cursor-pointer font-medium text-[#c891ff] decoration-inherit"
-                    >
-                      DRjY9...zh1tB
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    15.12.2023
-                    <br />
-                    23:24:54
+            {isLoadingActivity ? (
+              <TableFooter className="bg-transparent text-center text-[16px]">
+                <TableRow className="hover:bg-transparent">
+                  <TableCell colSpan={7}>
+                    <Spinner className="m-auto size-6" />
                   </TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
+              </TableFooter>
+            ) : (
+              <>
+                {activity ? (
+                  <TableBody className="text-[16px]">
+                    {activity.map((item: any, index) => (
+                      <TableRow
+                        key={index}
+                        className="cursor-pointer text-[16px] text-white transition-all duration-150 ease-in-out"
+                      >
+                        <TableCell>
+                          <Link
+                            href={`/inscription/${item.inscriptionId}`}
+                            className="cursor-pointer font-medium text-[#dfc0fd] decoration-inherit"
+                          >
+                            {item.inscriptionId.slice(0, 3) +
+                              "..." +
+                              item.inscriptionId.slice(-3)}
+                          </Link>
+                        </TableCell>
+                        <TableCell>
+                          {item.status == "transfer" && (
+                            <>
+                              inscribe-
+                              <br />
+                              transfer
+                            </>
+                          )}
+                          {item.status == "sold" && "transfer"}
+                        </TableCell>
+                        <TableCell>{item.prc20Label}</TableCell>
+                        <TableCell>
+                          {Number(item.amount).toLocaleString()}
+                        </TableCell>
+                        <TableCell>
+                          <Link
+                            href={`/wallet/${item.sellerAddress}`}
+                            className="cursor-pointer font-medium text-[#c891ff] decoration-inherit"
+                          >
+                            {item.sellerAddress.slice(0, 5) +
+                              "..." +
+                              item.sellerAddress.slice(-5)}
+                          </Link>
+                        </TableCell>
+                        <TableCell>
+                          {item.buyerAddress && (
+                            <Link
+                              href={`/wallet/${item.buyerAddress}`}
+                              className="cursor-pointer font-medium text-[#c891ff] decoration-inherit"
+                            >
+                              {item.buyerAddress.slice(0, 5) +
+                                "..." +
+                                item.buyerAddress.slice(-5)}
+                            </Link>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {item.createdAt.slice(0, 10)}
+                          <br />
+                          {item.createdAt.slice(11, 19)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                ) : (
+                  <TableFooter className="bg-transparent text-center text-[16px]">
+                    <TableRow className="hover:bg-transparent">
+                      <TableCell colSpan={7}>nothing to show</TableCell>
+                    </TableRow>
+                  </TableFooter>
+                )}
+              </>
+            )}
           </Table>
         </TabsContent>
         <TabsContent value="nfts">
@@ -2213,16 +2295,163 @@ export default function WalletAddress({
                 <TableHead>Date</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody className="text-[16px]">
-              <TableRow>
-                <TableCell>nothing to show</TableCell>
-                <TableCell></TableCell>
-                <TableCell></TableCell>
-                <TableCell></TableCell>
-                <TableCell></TableCell>
-                <TableCell></TableCell>
-              </TableRow>
-            </TableBody>
+            {isLoadingHistory ? (
+              <TableFooter className="bg-transparent text-center text-[16px]">
+                <TableRow className="hover:bg-transparent">
+                  <TableCell colSpan={6}>
+                    <Spinner className="m-auto size-6" />
+                  </TableCell>
+                </TableRow>
+              </TableFooter>
+            ) : (
+              <>
+                {history ? (
+                  <TableBody>
+                    {history.map((item: any, index) => (
+                      <TableRow
+                        key={index}
+                        className="cursor-pointer text-[16px] text-white transition-all duration-150 ease-in-out"
+                      >
+                        <TableCell>
+                          <div className="flex items-center gap-x-[1.2rem]">
+                            <Link href={`/inscription/${item.inscriptionId}`}>
+                              {item.type == "prc20" && (
+                                <Avatar text={item.prc20Label} />
+                              )}
+                              {item.type == "pepemap" && (
+                                <PepemapImage item={item} sm />
+                              )}
+                              {item.type == "nft" && (
+                                <Image
+                                  src={`${ORD_API_BASE}/content/${item.inscriptionId}`}
+                                  alt={`Inscription #${item.inscriptionId}`}
+                                  width={32}
+                                  height={32}
+                                  className="h-12 w-12 shrink-0 rounded-xl object-cover [image-rendering:pixelated]"
+                                  unoptimized
+                                />
+                              )}
+                            </Link>
+
+                            <div>
+                              <span className="leading-[1.1]">
+                                {item.type == "prc20" &&
+                                  Number(item.amount).toLocaleString() +
+                                    "/" +
+                                    item.prc20Label}
+                                {item.type == "pepemap" && item.pepemapLabel}
+                                {item.type == "nft" && item.collectionName}
+                              </span>
+                              <div className="leading-none">
+                                <Link
+                                  href={`/inscription/${item.inscriptionId}`}
+                                  className="text-[0.7rem] text-[#dfc0fd]"
+                                >
+                                  {item.inscriptionId.slice(0, 3) +
+                                    "..." +
+                                    item.inscriptionId.slice(-3)}
+                                </Link>
+                              </div>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {item.status == "sold" && (
+                            <>
+                              {item.sellerAddress == address ? (
+                                <span className="rounded-[6px] bg-[#00d1814d] px-1 py-0.5 text-[0.8rem] text-[#00d181]">
+                                  sell
+                                </span>
+                              ) : (
+                                <span className="rounded-[6px] bg-[#00d1814d] px-1 py-0.5 text-[0.8rem] text-[#00d181]">
+                                  buy
+                                </span>
+                              )}
+                            </>
+                          )}
+                          {item.status == "unlisted" && (
+                            <span className="rounded-[6px] bg-[#dc35454d] px-1 py-0.5 text-[0.8rem] text-[#dc3545]">
+                              unlist
+                            </span>
+                          )}
+                          {item.status == "listed" && (
+                            <span className="rounded-[6px] bg-[#027dff4d] px-1 py-0.5 text-[0.8rem] text-[#027dff]">
+                              list
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {item.status != "unlisted" ? (
+                            <>
+                              <div className="flex">
+                                <Image
+                                  src="/assets/coin.gif"
+                                  alt="coin"
+                                  width={18}
+                                  height={18}
+                                  priority
+                                  className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                                />
+                                {Number(item.priceSats).toLocaleString()}
+                              </div>
+                              {item.type == "prc20" && (
+                                <div className="flex text-[0.9rem]">
+                                  <Image
+                                    src="/assets/coin.gif"
+                                    alt="coin"
+                                    width={16}
+                                    height={16}
+                                    priority
+                                    className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                                  />
+                                  {formatPrice(item.priceSats / item.amount)}/
+                                  {item.prc20Label}
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            "-"
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Link
+                            href={`/wallet/${item.sellerAddress}`}
+                            className="cursor-pointer font-medium text-[#c891ff] decoration-inherit"
+                          >
+                            {item.sellerAddress.slice(0, 5) +
+                              "..." +
+                              item.sellerAddress.slice(-5)}
+                          </Link>
+                        </TableCell>
+                        <TableCell>
+                          {item.buyerAddress && (
+                            <Link
+                              href={`/wallet/${item.buyerAddress}`}
+                              className="cursor-pointer font-medium text-[#c891ff] decoration-inherit"
+                            >
+                              {item.buyerAddress.slice(0, 5) +
+                                "..." +
+                                item.buyerAddress.slice(-5)}
+                            </Link>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {item.createdAt.slice(0, 10)}
+                          <br />
+                          {item.createdAt.slice(11, 19)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                ) : (
+                  <TableFooter className="bg-transparent text-center text-[16px]">
+                    <TableRow className="hover:bg-transparent">
+                      <TableCell colSpan={6}>nothing to show</TableCell>
+                    </TableRow>
+                  </TableFooter>
+                )}
+              </>
+            )}
           </Table>
         </TabsContent>
       </Tabs>

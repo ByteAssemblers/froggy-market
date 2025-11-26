@@ -40,6 +40,12 @@ import { encryptWallet, decryptWallet } from "@/lib/wallet/storage";
 import { getPepecoinBalance } from "@/lib/wallet/getBalance";
 import { sendPepeTransaction } from "@/lib/wallet/sendPepe";
 import { useProfile } from "@/hooks/useProfile";
+import { apiClient } from "@/lib/axios";
+import Link from "next/link";
+import Avatar from "./Avatar";
+import { PepemapImage } from "@/app/wallet/[address]/page";
+
+const ORD_API_BASE = process.env.NEXT_PUBLIC_ORD_API_BASE!;
 
 export default function Wallet() {
   const [wallet, setWallet] = useState<any>(null);
@@ -74,10 +80,78 @@ export default function Wallet() {
   const {
     pepecoinPrice,
     walletInfo,
-    collections,
-    isCollectionsLoading,
-    collectionsError,
+    myWalletNft,
+    inscriptions,
+    listingStatuses,
+    pepemapListingStatuses,
+    myWalletPrc20,
+    myWalletPepemaps,
+    isMyWalletNftLoading,
+    isMyWalletPrc20Loading,
+    isMyWalletPepemapsLoading,
+    pepemapInfo,
+    isPepemapInfoLoading,
+    prc20Info,
+    isPrc20InfoLoading,
+    collectionInfo,
+    isCollectionInfoLoading,
+    prc20ListingStatuses,
   } = useProfile();
+
+  const grouped = [...listingStatuses.values()].reduce((groups, item) => {
+    const collection = item.listing?.inscription?.collection;
+
+    if (!collection) return groups;
+
+    const name = collection.name;
+
+    if (!groups[name]) {
+      groups[name] = {
+        collection,
+        items: [],
+      };
+    }
+
+    groups[name].items.push(item);
+
+    return groups;
+  }, {});
+
+  const isLoading =
+    isMyWalletNftLoading ||
+    isMyWalletPrc20Loading ||
+    isMyWalletPepemapsLoading ||
+    isPepemapInfoLoading ||
+    isPrc20InfoLoading ||
+    isCollectionInfoLoading;
+
+  // pepemaps total
+  const pepemapTotal =
+    (pepemapInfo?.floorPrice || 0) * myWalletPepemaps?.length;
+
+  // nft collections total
+  const collectionsTotal = Object.values(grouped).reduce(
+    (sum: number, group: any) => {
+      const floor =
+        collectionInfo.find((i: any) => i.symbol === group.collection.symbol)
+          ?.floorPrice || 0;
+
+      return sum + floor * group.items.length;
+    },
+    0,
+  );
+
+  // final total
+  const totalNftValue = pepemapTotal + collectionsTotal;
+
+  const totalPrcValue = myWalletPrc20?.reduce((sum: any, item: any) => {
+    const info = prc20Info?.find((i: any) => i.tick === item.tick);
+    if (!info) return sum;
+
+    const amount = Number(item.balance) + Number(item.transferable_balance);
+
+    return sum + info.floorPrice * amount;
+  }, 0);
 
   useEffect(() => {
     const stored = localStorage.getItem("pepecoin_wallet");
@@ -326,6 +400,109 @@ export default function Wallet() {
       setHasBackedUp(true);
     }
   }, [walletState]);
+
+  // Collect all listed items grouped by type
+  const listedPepemaps = [...pepemapListingStatuses.entries()]
+    .filter(([_, data]) => data.status === "listed")
+    .map(([inscriptionId, data]) => ({
+      inscriptionId,
+      ...data,
+      type: "pepemap",
+    }))
+    .sort(
+      (a, b) =>
+        new Date(b.listing?.createdAt).getTime() -
+        new Date(a.listing?.createdAt).getTime(),
+    );
+
+  const listedNfts = [...listingStatuses.entries()]
+    .filter(([_, data]) => data.status === "listed")
+    .map(([inscriptionId, data]) => ({
+      inscriptionId,
+      ...data,
+      type: "nft",
+    }))
+    .sort(
+      (a, b) =>
+        new Date(b.listing?.createdAt).getTime() -
+        new Date(a.listing?.createdAt).getTime(),
+    );
+
+  const listedPrc20s = [...prc20ListingStatuses.entries()]
+    .filter(([_, data]) => data.status === "listed")
+    .map(([inscriptionId, data]) => ({
+      inscriptionId,
+      ...data,
+      type: "prc20",
+    }))
+    .sort(
+      (a, b) =>
+        new Date(b.listing?.createdAt).getTime() -
+        new Date(a.listing?.createdAt).getTime(),
+    );
+
+  const hasListings =
+    listedPepemaps.length > 0 ||
+    listedNfts.length > 0 ||
+    listedPrc20s.length > 0;
+
+  // Unlist handlers
+  const handleNftUnlist = async (inscriptionId: string) => {
+    try {
+      await apiClient.post("/listings/unlist", {
+        inscriptionId,
+        sellerAddress: walletAddress,
+      });
+
+      alert("NFT unlisted successfully!");
+      // Refresh the wallet data
+      walletInfo();
+      window.location.reload();
+    } catch (error: any) {
+      console.error(error);
+      alert(
+        `Failed to unlist: ${error.response?.data?.message || error.message}`,
+      );
+    }
+  };
+
+  const handlePepemapUnlist = async (inscriptionId: string) => {
+    try {
+      await apiClient.post("/pepemap-listings/unlist", {
+        inscriptionId,
+        sellerAddress: walletAddress,
+      });
+
+      alert("Pepemap unlisted successfully!");
+      // Refresh the wallet data
+      walletInfo();
+      window.location.reload();
+    } catch (error: any) {
+      console.error(error);
+      alert(
+        `Failed to unlist: ${error.response?.data?.message || error.message}`,
+      );
+    }
+  };
+
+  const handlePrcUnlist = async (inscriptionId: string) => {
+    try {
+      await apiClient.post("/prc20-listings/unlist", {
+        inscriptionId,
+        sellerAddress: walletAddress,
+      });
+
+      alert("Transfer unlisted successfully!");
+      // Refresh the wallet data
+      walletInfo();
+      window.location.reload();
+    } catch (error: any) {
+      console.error(error);
+      alert(
+        `Failed to unlist: ${error.response?.data?.message || error.message}`,
+      );
+    }
+  };
 
   const isValidAddress =
     recipient.startsWith("P") &&
@@ -697,12 +874,509 @@ export default function Wallet() {
                         </div>
                       </TabsList>
                       <TabsContent value="assets" className="flex flex-col">
-                        <div className="text-center">nothing here</div>
+                        {isLoading ? (
+                          <Spinner className="m-auto size-6" />
+                        ) : (
+                          myWalletPepemaps &&
+                          myWalletPrc20 &&
+                          myWalletNft && (
+                            <>
+                              {[...listingStatuses.values()].length != 0 ||
+                              myWalletPepemaps.length != 0 ||
+                              myWalletPrc20.length != 0 ? (
+                                <>
+                                  {([...listingStatuses.values()].length != 0 ||
+                                    myWalletPepemaps.length != 0) && (
+                                    <>
+                                      <div className="my-1 flex items-center justify-between px-1 font-bold">
+                                        <div>NFTs</div>
+                                        <div className="font-medium">
+                                          <div className="flex">
+                                            <Image
+                                              src="/assets/coin.gif"
+                                              alt="coin"
+                                              width={18}
+                                              height={18}
+                                              priority
+                                              className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                                            />
+                                            {totalNftValue}
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <>
+                                        {myWalletPepemaps.length != 0 && (
+                                          <Link
+                                            href={`/wallet/${walletAddress}?tab=pepemaps`}
+                                            className="mb-2 flex cursor-pointer items-center justify-start gap-3 rounded-[18px] border border-transparent bg-[#0000004d] px-3 py-2 text-[1.1rem] leading-[1.2] transition-all duration-200 ease-in-out hover:bg-[#00000080]"
+                                          >
+                                            <PepemapImage
+                                              item={inscriptions.find(
+                                                (i: any) =>
+                                                  i.inscription_id ==
+                                                  myWalletPepemaps[0]
+                                                    .inscription_id,
+                                              )}
+                                              sm
+                                            />
+                                            <div className="min-w-0">
+                                              <div className="mb-1 overflow-hidden text-[1.1rem] font-semibold text-ellipsis whitespace-nowrap text-white">
+                                                Pepemaps
+                                              </div>
+                                              <div className="flex items-center gap-[0.3rem] text-[0.9rem] font-medium">
+                                                <span className="rounded-[6px] bg-[#00c85345] px-[0.3rem] py-[0.03rem] text-[#00c853]">
+                                                  {myWalletPepemaps.length}
+                                                </span>
+                                                {[
+                                                  ...pepemapListingStatuses.values(),
+                                                ].filter(
+                                                  (v) => v.status === "listed",
+                                                ).length != 0 && (
+                                                  <span className="inline-flex items-center gap-[0.2rem] rounded-[6px] bg-[#1e90ff33] px-[0.3rem] py-[0.03rem] text-[#1e90ff]">
+                                                    <svg
+                                                      data-v-60c80848=""
+                                                      xmlns="http://www.w3.org/2000/svg"
+                                                      viewBox="0 0 24 24"
+                                                      fill="none"
+                                                      width="1em"
+                                                      height="1em"
+                                                    >
+                                                      <path
+                                                        stroke="currentColor"
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        strokeWidth="2"
+                                                        d="M3 11.172V5a2 2 0 0 1 2-2h6.172a2 2 0 0 1 1.414.586l8 8a2 2 0 0 1 0 2.828l-6.172 6.172a2 2 0 0 1-2.828 0l-8-8A2 2 0 0 1 3 11.172zM7 7h.001"
+                                                      ></path>
+                                                    </svg>
+                                                    {
+                                                      [
+                                                        ...pepemapListingStatuses.values(),
+                                                      ].filter(
+                                                        (v) =>
+                                                          v.status === "listed",
+                                                      ).length
+                                                    }
+                                                  </span>
+                                                )}
+                                              </div>
+                                            </div>
+                                            {pepemapInfo?.floorPrice != 0 && (
+                                              <div className="ml-auto text-right whitespace-nowrap">
+                                                <div className="flex">
+                                                  <Image
+                                                    src="/assets/coin.gif"
+                                                    alt="coin"
+                                                    width={18}
+                                                    height={18}
+                                                    priority
+                                                    className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                                                  />
+                                                  {pepemapInfo?.floorPrice *
+                                                    myWalletPepemaps.length}
+                                                </div>
+                                              </div>
+                                            )}
+                                          </Link>
+                                        )}
+                                        {[...listingStatuses.values()].length !=
+                                          0 && (
+                                          <>
+                                            {Object.values(grouped).map(
+                                              (item: any, index: number) => (
+                                                <Link
+                                                  key={index}
+                                                  href={`/wallet/${walletAddress}?tab=nfts`}
+                                                  className="mb-2 flex cursor-pointer items-center justify-start gap-3 rounded-[18px] border border-transparent bg-[#0000004d] px-3 py-2 text-[1.1rem] leading-[1.2] transition-all duration-200 ease-in-out hover:bg-[#00000080]"
+                                                >
+                                                  <Image
+                                                    src={`${ORD_API_BASE}/content/${item.collection.profileInscriptionId}`}
+                                                    alt={`Inscription #${item.collection.profileInscriptionId}`}
+                                                    width={32}
+                                                    height={32}
+                                                    className="h-12 w-12 shrink-0 rounded-xl object-cover [image-rendering:pixelated]"
+                                                    unoptimized
+                                                  />
+                                                  <div className="min-w-0">
+                                                    <div className="mb-1 overflow-hidden text-[1.1rem] font-semibold text-ellipsis whitespace-nowrap text-white">
+                                                      {item.collection.name}
+                                                    </div>
+                                                    <div className="flex items-center gap-[0.3rem] text-[0.9rem] font-medium">
+                                                      <span className="rounded-[6px] bg-[#00c85345] px-[0.3rem] py-[0.03rem] text-[#00c853]">
+                                                        {item.items.length}
+                                                      </span>
+                                                      {item.items.filter(
+                                                        (i: any) =>
+                                                          i.status === "listed",
+                                                      ).length != 0 && (
+                                                        <span className="inline-flex items-center gap-[0.2rem] rounded-[6px] bg-[#1e90ff33] px-[0.3rem] py-[0.03rem] text-[#1e90ff]">
+                                                          <svg
+                                                            data-v-60c80848=""
+                                                            xmlns="http://www.w3.org/2000/svg"
+                                                            viewBox="0 0 24 24"
+                                                            fill="none"
+                                                            width="1em"
+                                                            height="1em"
+                                                          >
+                                                            <path
+                                                              stroke="currentColor"
+                                                              strokeLinecap="round"
+                                                              strokeLinejoin="round"
+                                                              strokeWidth="2"
+                                                              d="M3 11.172V5a2 2 0 0 1 2-2h6.172a2 2 0 0 1 1.414.586l8 8a2 2 0 0 1 0 2.828l-6.172 6.172a2 2 0 0 1-2.828 0l-8-8A2 2 0 0 1 3 11.172zM7 7h.001"
+                                                            ></path>
+                                                          </svg>
+                                                          {
+                                                            item.items.filter(
+                                                              (i: any) =>
+                                                                i.status ===
+                                                                "listed",
+                                                            ).length
+                                                          }
+                                                        </span>
+                                                      )}
+                                                    </div>
+                                                  </div>
+                                                  {collectionInfo.find(
+                                                    (i: any) =>
+                                                      i.symbol ===
+                                                      item.collection.symbol,
+                                                  )?.floorPrice != 0 && (
+                                                    <div className="ml-auto text-right whitespace-nowrap">
+                                                      <div className="flex">
+                                                        <Image
+                                                          src="/assets/coin.gif"
+                                                          alt="coin"
+                                                          width={18}
+                                                          height={18}
+                                                          priority
+                                                          className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                                                        />
+                                                        {collectionInfo.find(
+                                                          (i: any) =>
+                                                            i.symbol ===
+                                                            item.collection
+                                                              .symbol,
+                                                        )?.floorPrice *
+                                                          item.items.length}
+                                                      </div>
+                                                    </div>
+                                                  )}
+                                                </Link>
+                                              ),
+                                            )}
+                                          </>
+                                        )}
+                                      </>
+                                    </>
+                                  )}
+
+                                  {myWalletPrc20.length != 0 && (
+                                    <>
+                                      <div className="my-1 flex items-center justify-between px-1 font-bold">
+                                        <div>Prc-20</div>
+                                        <div className="font-medium">
+                                          <div className="flex">
+                                            <Image
+                                              src="/assets/coin.gif"
+                                              alt="coin"
+                                              width={18}
+                                              height={18}
+                                              priority
+                                              className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                                            />
+                                            {totalPrcValue}
+                                          </div>
+                                        </div>
+                                      </div>
+                                      {myWalletPrc20.map(
+                                        (item: any, index: number) => {
+                                          // Calculate how many transfers are listed
+                                          const listedCount = (
+                                            item.transfers || []
+                                          ).filter((transfer: any) => {
+                                            const inscriptionId =
+                                              transfer.outpoint.split(":")[0] +
+                                              "i0";
+                                            const status =
+                                              prc20ListingStatuses.get(
+                                                inscriptionId,
+                                              );
+                                            return status?.status === "listed";
+                                          }).length;
+
+                                          return (
+                                            <Link
+                                              key={index}
+                                              href={`/wallet/${walletAddress}?tab=prc`}
+                                              className="mb-2 flex cursor-pointer items-center justify-start gap-3 rounded-[18px] border border-transparent bg-[#0000004d] px-3 py-2 text-[1.1rem] leading-[1.2] transition-all duration-200 ease-in-out hover:bg-[#00000080]"
+                                            >
+                                              <Avatar text={item.tick} />
+                                              <div className="min-w-0">
+                                                <div className="mb-1 overflow-hidden text-[1.1rem] font-semibold text-ellipsis whitespace-nowrap text-white">
+                                                  {item.tick}
+                                                </div>
+                                                <div className="flex items-center gap-[0.3rem] text-[0.9rem] font-medium">
+                                                  <span className="rounded-[6px] bg-[#00c85345] px-[0.3rem] py-[0.03rem] text-[#00c853]">
+                                                    {item.transfers_count}
+                                                  </span>
+                                                  {listedCount > 0 && (
+                                                    <span className="inline-flex items-center gap-[0.2rem] rounded-[6px] bg-[#1e90ff33] px-[0.3rem] py-[0.03rem] text-[#1e90ff]">
+                                                      <svg
+                                                        data-v-60c80848=""
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        viewBox="0 0 24 24"
+                                                        fill="none"
+                                                        width="1em"
+                                                        height="1em"
+                                                      >
+                                                        <path
+                                                          stroke="currentColor"
+                                                          strokeLinecap="round"
+                                                          strokeLinejoin="round"
+                                                          strokeWidth="2"
+                                                          d="M3 11.172V5a2 2 0 0 1 2-2h6.172a2 2 0 0 1 1.414.586l8 8a2 2 0 0 1 0 2.828l-6.172 6.172a2 2 0 0 1-2.828 0l-8-8A2 2 0 0 1 3 11.172zM7 7h.001"
+                                                        ></path>
+                                                      </svg>
+                                                      {listedCount}
+                                                    </span>
+                                                  )}
+                                                </div>
+                                              </div>
+                                              {prc20Info.find(
+                                                (i: any) =>
+                                                  i.tick === item.tick,
+                                              ) && (
+                                                <div className="ml-auto text-right whitespace-nowrap">
+                                                  <div className="flex">
+                                                    <Image
+                                                      src="/assets/coin.gif"
+                                                      alt="coin"
+                                                      width={18}
+                                                      height={18}
+                                                      priority
+                                                      className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                                                    />
+                                                    {prc20Info.find(
+                                                      (i: any) =>
+                                                        i.tick === item.tick,
+                                                    )?.floorPrice *
+                                                      (Number(item.balance) +
+                                                        Number(
+                                                          item.transferable_balance,
+                                                        ))}
+                                                  </div>
+                                                </div>
+                                              )}
+                                            </Link>
+                                          );
+                                        },
+                                      )}
+                                    </>
+                                  )}
+                                </>
+                              ) : (
+                                <div className="text-center">nothing here</div>
+                              )}
+                            </>
+                          )
+                        )}
                       </TabsContent>
                       <TabsContent value="listings" className="flex flex-col">
-                        <div className="text-center">
-                          you have no active listings at the moment
-                        </div>
+                        {isLoading ? (
+                          <Spinner className="m-auto size-6" />
+                        ) : !hasListings ? (
+                          <div className="text-center">
+                            you have no active listings at the moment
+                          </div>
+                        ) : (
+                          <>
+                            {/* Pepemaps Listings */}
+                            {listedPepemaps.length > 0 && (
+                              <>
+                                <div className="my-1 px-1 font-bold">
+                                  Pepemaps ({listedPepemaps.length})
+                                </div>
+                                {listedPepemaps.map((item: any) => {
+                                  const inscription = inscriptions.find(
+                                    (i: any) =>
+                                      i.inscription_id === item.inscriptionId,
+                                  );
+                                  return (
+                                    <div
+                                      key={item.inscriptionId}
+                                      className="my-2 flex items-center leading-[1.2]"
+                                    >
+                                      {inscription && (
+                                        <PepemapImage item={inscription} sm />
+                                      )}
+                                      <div className="ml-3">
+                                        <div className="text-[1.1rem] font-semibold">
+                                          {inscription?.content}
+                                        </div>
+                                        <div className="flex">
+                                          <Image
+                                            src="/assets/coin.gif"
+                                            alt="coin"
+                                            width={18}
+                                            height={18}
+                                            priority
+                                            className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                                          />
+                                          <span className="mr-2">
+                                            {item.listing?.priceSats}
+                                          </span>
+                                          <span className="text-[#fffc]">
+                                            ($
+                                            {(
+                                              item.listing?.priceSats *
+                                              pepecoinPrice
+                                            ).toFixed(2)}
+                                            )
+                                          </span>
+                                        </div>
+                                      </div>
+                                      <button
+                                        onClick={() =>
+                                          handlePepemapUnlist(item.inscriptionId)
+                                        }
+                                        className="ml-auto cursor-pointer rounded-[12px] border border-transparent bg-[#1a1a1a] px-4 py-2 text-[1em] font-medium transition-all duration-200 ease-in-out hover:bg-[#222]"
+                                      >
+                                        Unlist
+                                      </button>
+                                    </div>
+                                  );
+                                })}
+                              </>
+                            )}
+
+                            {/* NFTs Listings */}
+                            {listedNfts.length > 0 && (
+                              <>
+                                <div className="my-1 px-1 font-bold">
+                                  NFTs ({listedNfts.length})
+                                </div>
+                                {listedNfts.map((item: any) => {
+                                  const inscription = inscriptions.find(
+                                    (i: any) =>
+                                      i.inscription_id === item.inscriptionId,
+                                  );
+                                  return (
+                                    <div
+                                      key={item.inscriptionId}
+                                      className="my-2 flex items-center leading-[1.2]"
+                                    >
+                                      {inscription && (
+                                        <Image
+                                          src={`${ORD_API_BASE}/content/${item.inscriptionId}`}
+                                          alt={`Inscription #${item.inscriptionId}`}
+                                          width={48}
+                                          height={48}
+                                          className="mr-3 h-12 w-12 shrink-0 grow-0 basis-12 rounded-lg object-cover [image-rendering:pixelated]"
+                                          unoptimized
+                                        />
+                                      )}
+                                      <div>
+                                        <div className="text-[1.1rem] font-semibold">
+                                          {item.listing?.inscription?.name}
+                                        </div>
+                                        <div className="flex">
+                                          <Image
+                                            src="/assets/coin.gif"
+                                            alt="coin"
+                                            width={18}
+                                            height={18}
+                                            priority
+                                            className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                                          />
+                                          <span className="mr-2">
+                                            {item.listing?.priceSats}
+                                          </span>
+                                          <span className="text-[#fffc]">
+                                            ($
+                                            {(
+                                              item.listing?.priceSats *
+                                              pepecoinPrice
+                                            ).toFixed(2)}
+                                            )
+                                          </span>
+                                        </div>
+                                      </div>
+                                      <button
+                                        onClick={() =>
+                                          handleNftUnlist(item.inscriptionId)
+                                        }
+                                        className="ml-auto cursor-pointer rounded-[12px] border border-transparent bg-[#1a1a1a] px-4 py-2 text-[1em] font-medium transition-all duration-200 ease-in-out hover:bg-[#222]"
+                                      >
+                                        Unlist
+                                      </button>
+                                    </div>
+                                  );
+                                })}
+                              </>
+                            )}
+
+                            {/* PRC-20 Listings */}
+                            {listedPrc20s.length > 0 && (
+                              <>
+                                <div className="my-1 px-1 font-bold">
+                                  PRC-20 ({listedPrc20s.length})
+                                </div>
+                                {listedPrc20s.map((item: any) => {
+                                  // Find the token info from myWalletPrc20
+                                  const tick = item.listing?.prc20Label;
+                                  return (
+                                    <div
+                                      key={item.inscriptionId}
+                                      className="my-2 flex items-center leading-[1.2]"
+                                    >
+                                      <div className="mr-3">
+                                        <Avatar text={tick} />
+                                      </div>
+                                      <div>
+                                        <div className="text-[1.1rem] font-semibold">
+                                          <span>{tick}</span>
+                                          <span className="text-[0.9rem] text-[#fffc]">
+                                            {"(" + item.listing.amount + ")"}
+                                          </span>
+                                        </div>
+                                        <div className="flex">
+                                          <Image
+                                            src="/assets/coin.gif"
+                                            alt="coin"
+                                            width={18}
+                                            height={18}
+                                            priority
+                                            className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                                          />
+                                          <span className="mr-2">
+                                            {item.listing?.priceSats}
+                                          </span>
+                                          <span className="text-[#fffc]">
+                                            ($
+                                            {(
+                                              item.listing?.priceSats *
+                                              pepecoinPrice
+                                            ).toFixed(2)}
+                                            )
+                                          </span>
+                                        </div>
+                                      </div>
+                                      <button
+                                        onClick={() =>
+                                          handlePrcUnlist(item.inscriptionId)
+                                        }
+                                        className="ml-auto cursor-pointer rounded-[12px] border border-transparent bg-[#1a1a1a] px-4 py-2 text-[1em] font-medium transition-all duration-200 ease-in-out hover:bg-[#222]"
+                                      >
+                                        Unlist
+                                      </button>
+                                    </div>
+                                  );
+                                })}
+                              </>
+                            )}
+                          </>
+                        )}
                       </TabsContent>
                     </Tabs>
                   </>

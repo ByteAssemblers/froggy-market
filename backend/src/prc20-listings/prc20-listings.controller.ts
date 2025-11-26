@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Param, Query, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, Query } from '@nestjs/common';
 import { Prc20ListingsService } from './prc20-listings.service';
 
 @Controller('prc20-listings')
@@ -72,6 +72,24 @@ export class Prc20ListingsController {
   }
 
   /**
+   * POST /api/prc20-listings/inscribe
+   * Record a prc20 inscription (transfer status)
+   */
+  @Post('inscribe')
+  async handleInscribe(
+    @Body()
+    dto: {
+      inscriptionId: string;
+      prc20Label: string;
+      amount: number;
+      sellerAddress: string;
+      txid: string;
+    },
+  ) {
+    return this.prc20ListingsService.handleInscribe(dto);
+  }
+
+  /**
    * GET /api/prc20-listings/inscription/:inscriptionId
    * Get prc20 listing status
    */
@@ -91,13 +109,19 @@ export class Prc20ListingsController {
 
   /**
    * GET /api/prc20-listings/activity?tick=frog
-   * Get activity for a specific PRC20 token (listed, unlisted, sold)
+   * Get activity for a specific PRC20 token or all tokens (listed, unlisted, sold)
    */
   @Get('activity')
-  async getActivity(@Query('tick') tick: string) {
-    if (!tick) {
-      throw new BadRequestException('Query parameter "tick" is required');
-    }
+  async getActivity(@Query('tick') tick?: string) {
     return this.prc20ListingsService.getActivity(tick);
+  }
+
+  /**
+   * GET /api/prc20-listings/transaction?tick=frog
+   * Get transactions for a specific PRC20 token or all tokens (sold, transfer)
+   */
+  @Get('transaction')
+  async getTransactions(@Query('tick') tick?: string) {
+    return this.prc20ListingsService.getTransactions(tick);
   }
 }

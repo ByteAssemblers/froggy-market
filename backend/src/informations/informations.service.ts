@@ -1005,4 +1005,23 @@ export class InformationsService {
 
     return sortedHistory;
   }
+
+  /**
+   * Get wallet activity for a specific address (PRC20 only)
+   * Returns PRC20 listings where the address is sellerAddress or buyerAddress
+   * Only includes status: sold, transfer
+   */
+  async getWalletActivity(address: string) {
+    const prc20Activity = await this.prisma.prc20Listings.findMany({
+      where: {
+        OR: [{ sellerAddress: address }, { buyerAddress: address }],
+        status: {
+          in: ['sold', 'transfer'],
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return prc20Activity;
+  }
 }

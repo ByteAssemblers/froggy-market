@@ -48,6 +48,14 @@ import { useProfile } from "@/hooks/useProfile";
 import { getPepecoinBalance } from "@/lib/wallet/getBalance";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatPrice } from "@/components/page/PRCTwenty";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const ORD_API_BASE = process.env.NEXT_PUBLIC_ORD_API_BASE!;
 
@@ -75,9 +83,16 @@ export default function NftPage({
     collectionsError,
     collectionInfo,
     isCollectionInfoLoading,
+    collectionFloorPrice,
+    isCollectionFloorPriceLoading,
+    listingsActivity,
+    isListingsActivityLoading,
   } = useProfile();
 
-  const isLoading = isCollectionsLoading || isCollectionInfoLoading;
+  const isLoading =
+    isCollectionsLoading ||
+    isCollectionInfoLoading ||
+    isListingsActivityLoading;
 
   // Helper function to get collection stats by symbol
   const getCollectionStats = () => {
@@ -86,6 +101,29 @@ export default function NftPage({
   };
 
   const stats = getCollectionStats();
+
+  // Helper function to get collection floor price history by symbol
+  const getCollectionFloorPriceData = () => {
+    if (!collectionFloorPrice || !Array.isArray(collectionFloorPrice))
+      return null;
+    const collection = collectionFloorPrice.find(
+      (item: any) => item.symbol === nft,
+    );
+    return collection?.history || null;
+  };
+
+  const floorPriceData = getCollectionFloorPriceData();
+
+  // Helper function to get collection activity by symbol
+  const getCollectionActivityData = () => {
+    if (!listingsActivity || !Array.isArray(listingsActivity)) return null;
+    const collection = listingsActivity.find(
+      (item: any) => item.symbol === nft,
+    );
+    return collection?.activity || null;
+  };
+
+  const ActivityData = getCollectionActivityData();
 
   useEffect(() => {
     walletInfo();
@@ -764,10 +802,108 @@ export default function NftPage({
             </PaginationContent>
           </Pagination>
         </TabsContent>
-        <TabsContent value="activity">
-          <div className="mb-8">
-            <FloorPriceChart />
-          </div>
+        <TabsContent value="activity" className="mt-4">
+          <FloorPriceChart
+            data={floorPriceData}
+            isLoading={isCollectionFloorPriceLoading}
+          />
+          <Table className="w-full max-w-full border-separate border-spacing-0 p-8 leading-[1.2]">
+            <TableHeader className="text-left text-[0.95rem] font-normal text-[#8a939b]">
+              <TableRow className="">
+                <TableHead>Item</TableHead>
+                <TableHead>Action</TableHead>
+                <TableHead>Price</TableHead>
+                <TableHead>Seller</TableHead>
+                <TableHead>Buyer</TableHead>
+                <TableHead>Date</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <></>
+              ) : (
+                ActivityData.map((item: any, index: any) => (
+                  <TableRow key={index}>
+                    <TableCell>
+                      <div className="flex items-center gap-x-[1.2rem]">
+                        <Link
+                          href={`/inscription/${item.inscription.inscriptionId}`}
+                        >
+                          <Image
+                            src={`${ORD_API_BASE}/content/${item.inscription.inscriptionId}`}
+                            alt={`Inscription #${item.inscription.inscriptionId}`}
+                            width={32}
+                            height={32}
+                            className="h-12 w-12 shrink-0 rounded-xl object-cover [image-rendering:pixelated]"
+                            unoptimized
+                          />
+                        </Link>
+                        <div>
+                          <span className="leading-[1.1]">
+                            {item.inscription.name}
+                          </span>
+                          <div className="leading-none">
+                            <Link
+                              href={`/inscription/${item.inscription.inscriptionId}`}
+                              className="text-[0.7rem] text-[#dfc0fd]"
+                            >
+                              {item.inscription.inscriptionId.slice(0, 3) +
+                                "..." +
+                                item.inscription.inscriptionId.slice(-3)}
+                            </Link>
+                          </div>
+                        </div>
+                      </div>
+                    </TableCell>
+
+                    <TableCell>
+                      <span className="rounded-[6px] bg-[#00d1814d] px-1 py-0.5 text-[0.8rem] text-[#00d181]">
+                        sell
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex">
+                        <Image
+                          src="/assets/coin.gif"
+                          alt="coin"
+                          width={18}
+                          height={18}
+                          priority
+                          className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
+                        />
+                        {item.priceSats}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Link
+                        href={`/wallet/${item.sellerAddress}`}
+                        className="cursor-pointer font-medium text-[#c891ff] decoration-inherit"
+                      >
+                        {item.sellerAddress.slice(0, 5) +
+                          "..." +
+                          item.sellerAddress.slice(-5)}
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      <Link
+                        href={`/wallet/${item.buyerAddress}`}
+                        className="cursor-pointer font-medium text-[#c891ff] decoration-inherit"
+                      >
+                        {item.buyerAddress.slice(0, 5) +
+                          "..." +
+                          item.buyerAddress.slice(-5)}
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      {item.createdAt.slice(0, 10)}
+                      <br />
+                      {item.createdAt.slice(11, 19)}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </TabsContent>
       </Tabs>
       {/* <div className="fixed bottom-4 flex w-full justify-center">

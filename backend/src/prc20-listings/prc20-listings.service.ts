@@ -171,6 +171,37 @@ export class Prc20ListingsService {
   }
 
   /**
+   * Handle Inscribe - adds a row with status='transfer' when PRC-20 is inscribed
+   */
+  async handleInscribe(dto: {
+    inscriptionId: string;
+    prc20Label: string;
+    amount: number;
+    sellerAddress: string;
+    txid: string;
+  }) {
+    const { inscriptionId, prc20Label, amount, sellerAddress, txid } = dto;
+
+    // Create a new listing record with status='transfer'
+    const transferListing = await this.prisma.prc20Listings.create({
+      data: {
+        inscriptionId,
+        prc20Label,
+        amount,
+        status: 'transfer',
+        sellerAddress,
+        txid,
+      },
+    });
+
+    return {
+      success: true,
+      listing: transferListing,
+      message: 'Prc20 inscribed successfully',
+    };
+  }
+
+  /**
    * Get prc20 listing status by inscriptionId
    */
   async getPrc20Status(inscriptionId: string) {
@@ -218,19 +249,98 @@ export class Prc20ListingsService {
   }
 
   /**
-   * Get activity for a specific PRC20 token (listed, unlisted, sold - excluding sent)
+   * Get activity for a specific PRC20 token or all tokens (transfer, listed, unlisted, sold - excluding sent)
    */
-  async getActivity(tick: string) {
+  async getActivity(tick?: string) {
+    // If no tick provided, get all tokens' activity
+    if (!tick) {
+      return this.getAllActivity();
+    }
+
     const activityListings = await this.prisma.prc20Listings.findMany({
       where: {
         prc20Label: tick,
         status: {
-          in: ['listed', 'unlisted', 'sold'],
+          in: ['transfer', 'listed', 'unlisted', 'sold'],
         },
       },
       orderBy: { createdAt: 'desc' },
     });
 
     return activityListings;
+  }
+
+  /**
+   * Get all activity across all PRC20 tokens
+   */
+  private async getAllActivity() {
+    // Get all unique prc20Labels
+    const allListings = await this.prisma.prc20Listings.findMany({
+      select: { prc20Label: true },
+      distinct: ['prc20Label'],
+    });
+
+    const uniqueTicks = allListings.map((listing) => listing.prc20Label);
+
+    // Get activity for each tick
+    const prc20Activity = await Promise.all(
+      uniqueTicks.map(async (tick) => {
+        const activity = await this.getActivity(tick);
+        return {
+          tick,
+          activity,
+        };
+      }),
+    );
+
+    return prc20Activity;
+  }
+
+  /**
+   * Get transactions for a specific PRC20 token or all tokens (sold, transfer)
+   */
+  async getTransactions(tick?: string) {
+    // If no tick provided, get all tokens' transactions
+    if (!tick) {
+      return this.getAllTransactions();
+    }
+
+    const transactions = await this.prisma.prc20Listings.findMany({
+      where: {
+        prc20Label: tick,
+        status: {
+          in: ['sold', 'transfer'],
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return transactions;
+  }
+
+  /**
+   * Get all transactions across all PRC20 tokens
+   */
+  private async getAllTransactions() {
+    // Get all unique prc20Labels
+    const allListings = await this.prisma.prc20Listings.findMany({
+      select: { prc20Label: true },
+      distinct: ['prc20Label'],
+    });
+
+    const uniqueTicks = allListings.map((listing) => listing.prc20Label);
+
+    // Get transactions for each tick
+    const prc20Transactions = await Promise.all(
+      uniqueTicks.map(async (tick) => {
+        const transactions = await this.getTransactions(tick);
+        return {
+          tick,
+          transactions,
+        };
+      }),
+    );
+
+    return prc20Transactions;
   }
 }
