@@ -261,7 +261,7 @@ export class Prc20ListingsService {
       where: {
         prc20Label: tick,
         status: {
-          in: ['transfer', 'listed', 'unlisted', 'sold'],
+          in: ['listed', 'unlisted', 'sold'],
         },
       },
       orderBy: { createdAt: 'desc' },

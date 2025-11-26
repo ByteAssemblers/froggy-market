@@ -16,6 +16,7 @@ import { apiClient } from "@/lib/axios";
 import { completeBuyPSBT } from "@/lib/marketplace/psbt";
 import { useProfile } from "@/hooks/useProfile";
 import { getPepecoinBalance } from "@/lib/wallet/getBalance";
+import { toast } from "sonner";
 
 interface PepemapCardProps {
   item: {
@@ -61,12 +62,12 @@ const PepemapCard: React.FC<PepemapCardProps> = ({ item, pepecoinPrice }) => {
 
   const handlePepemapBuy = async () => {
     if (!walletAddress) {
-      alert("Please connect your wallet first");
+      toast.warning("Please connect your wallet first");
       return;
     }
 
     if (!privateKey) {
-      alert("Wallet not connected. Please unlock your wallet.");
+      toast.warning("Wallet not connected. Please unlock your wallet.");
       return;
     }
 
@@ -100,12 +101,12 @@ const PepemapCard: React.FC<PepemapCardProps> = ({ item, pepecoinPrice }) => {
         txid: txid,
       });
 
-      alert(`Pepemap purchased successfully! Transaction: ${txid}`);
+      toast.success(`Pepemap purchased successfully! Transaction: ${txid}`);
       // Refresh to show updated status
       window.location.reload();
     } catch (error: any) {
       console.error(error);
-      alert(
+      toast.error(
         `Failed to buy pepemap: ${error.response?.data?.message || error.message}`,
       );
     } finally {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 
 import { Button } from "@/components/ui/button";
@@ -44,10 +45,12 @@ import { apiClient } from "@/lib/axios";
 import Link from "next/link";
 import Avatar from "./Avatar";
 import { PepemapImage } from "@/app/wallet/[address]/page";
+import { toast } from "sonner";
 
 const ORD_API_BASE = process.env.NEXT_PUBLIC_ORD_API_BASE!;
 
 export default function Wallet() {
+  const queryClient = useQueryClient();
   const [wallet, setWallet] = useState<any>(null);
   const [mnemonic, setMnemonic] = useState("");
   const [privateKey, setPrivateKey] = useState("");
@@ -287,12 +290,12 @@ export default function Wallet() {
         recipient,
         parseFloat(amount),
       );
-      // alert(`✅ Transaction sent!\nTXID: ${txid}`);
+      toast.success(`Transaction sent!\nTXID: ${txid}`);
       setRecipient("");
       setAmount("");
       await handleGetBalance(); // refresh after sending
     } catch (err: any) {
-      // alert(`❌ Send failed: ${err.message}`);
+      toast.error(`Send failed: ${err.message}`);
     } finally {
       setSending(false);
     }
@@ -454,13 +457,15 @@ export default function Wallet() {
         sellerAddress: walletAddress,
       });
 
-      alert("NFT unlisted successfully!");
-      // Refresh the wallet data
-      walletInfo();
-      window.location.reload();
+      toast.success("NFT unlisted successfully!");
+      // Refresh the wallet data using React Query
+      await queryClient.invalidateQueries({
+        queryKey: ["myWalletNft", walletAddress],
+        refetchType: "active",
+      });
     } catch (error: any) {
       console.error(error);
-      alert(
+      toast.error(
         `Failed to unlist: ${error.response?.data?.message || error.message}`,
       );
     }
@@ -473,13 +478,15 @@ export default function Wallet() {
         sellerAddress: walletAddress,
       });
 
-      alert("Pepemap unlisted successfully!");
-      // Refresh the wallet data
-      walletInfo();
-      window.location.reload();
+      toast.success("Pepemap unlisted successfully!");
+      // Refresh the wallet data using React Query
+      await queryClient.invalidateQueries({
+        queryKey: ["myWalletPepemaps", walletAddress],
+        refetchType: "active",
+      });
     } catch (error: any) {
       console.error(error);
-      alert(
+      toast.error(
         `Failed to unlist: ${error.response?.data?.message || error.message}`,
       );
     }
@@ -492,13 +499,15 @@ export default function Wallet() {
         sellerAddress: walletAddress,
       });
 
-      alert("Transfer unlisted successfully!");
-      // Refresh the wallet data
-      walletInfo();
-      window.location.reload();
+      toast.success("Transfer unlisted successfully!");
+      // Refresh the wallet data using React Query
+      await queryClient.invalidateQueries({
+        queryKey: ["myWalletPrc20", walletAddress],
+        refetchType: "active",
+      });
     } catch (error: any) {
       console.error(error);
-      alert(
+      toast.error(
         `Failed to unlist: ${error.response?.data?.message || error.message}`,
       );
     }
@@ -530,16 +539,12 @@ export default function Wallet() {
       <PopoverTrigger asChild className="relative backdrop-blur-[20px]">
         <Button className="flex h-11 items-center gap-0 border border-transparent bg-[#ffffff1f] px-4 py-1 font-bold text-white hover:border-[#ffffff52] hover:bg-transparent">
           <span className="relative leading-none">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              height="30"
-              viewBox="0 -960 960 960"
-              width="30"
-              fill="currentColor"
-              style={{ width: "30px", height: "30px" }}
-            >
-              <path d="M240-180.001q-57.922 0-98.961-41.038-41.038-41.039-41.038-98.961v-320q0-57.922 41.038-98.961 41.039-41.038 98.961-41.038h480q57.922 0 98.961 41.038 41.038 41.039 41.038 98.961v320q0 57.922-41.038 98.961-41.039 41.038-98.961 41.038H240Zm0-442.691h480q27.846 0 52 9.577t42.615 26.962V-640q0-39.692-27.461-67.154-27.462-27.461-67.154-27.461H240q-39.692 0-67.154 27.461-27.461 27.462-27.461 67.154v53.847q18.461-17.385 42.615-26.962 24.154-9.577 52-9.577Zm-93.154 124.076 472.769 114.231q6.616 1.615 13.923.308 7.308-1.308 11.923-6.308l159.616-134q-11.462-23.769-34.269-38.346Q748-577.308 720-577.308H240q-35 0-61.231 22.461-26.23 22.462-31.923 56.231Z"></path>
-            </svg>
+            <Image
+              src="/assets/icons/wallet.svg"
+              width={30}
+              height={30}
+              alt="mail"
+            />
           </span>
           <span className="ml-2.5 hidden text-[16px] whitespace-nowrap md:flex">
             {walletAddress == ""
@@ -933,22 +938,12 @@ export default function Wallet() {
                                                   (v) => v.status === "listed",
                                                 ).length != 0 && (
                                                   <span className="inline-flex items-center gap-[0.2rem] rounded-[6px] bg-[#1e90ff33] px-[0.3rem] py-[0.03rem] text-[#1e90ff]">
-                                                    <svg
-                                                      data-v-60c80848=""
-                                                      xmlns="http://www.w3.org/2000/svg"
-                                                      viewBox="0 0 24 24"
-                                                      fill="none"
-                                                      width="1em"
-                                                      height="1em"
-                                                    >
-                                                      <path
-                                                        stroke="currentColor"
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                        strokeWidth="2"
-                                                        d="M3 11.172V5a2 2 0 0 1 2-2h6.172a2 2 0 0 1 1.414.586l8 8a2 2 0 0 1 0 2.828l-6.172 6.172a2 2 0 0 1-2.828 0l-8-8A2 2 0 0 1 3 11.172zM7 7h.001"
-                                                      ></path>
-                                                    </svg>
+                                                    <Image
+                                                      src="/assets/icons/arrow-tilt.svg"
+                                                      width={16}
+                                                      height={16}
+                                                      alt="arrow-tilt"
+                                                    />
                                                     {
                                                       [
                                                         ...pepemapListingStatuses.values(),
@@ -1010,22 +1005,12 @@ export default function Wallet() {
                                                           i.status === "listed",
                                                       ).length != 0 && (
                                                         <span className="inline-flex items-center gap-[0.2rem] rounded-[6px] bg-[#1e90ff33] px-[0.3rem] py-[0.03rem] text-[#1e90ff]">
-                                                          <svg
-                                                            data-v-60c80848=""
-                                                            xmlns="http://www.w3.org/2000/svg"
-                                                            viewBox="0 0 24 24"
-                                                            fill="none"
-                                                            width="1em"
-                                                            height="1em"
-                                                          >
-                                                            <path
-                                                              stroke="currentColor"
-                                                              strokeLinecap="round"
-                                                              strokeLinejoin="round"
-                                                              strokeWidth="2"
-                                                              d="M3 11.172V5a2 2 0 0 1 2-2h6.172a2 2 0 0 1 1.414.586l8 8a2 2 0 0 1 0 2.828l-6.172 6.172a2 2 0 0 1-2.828 0l-8-8A2 2 0 0 1 3 11.172zM7 7h.001"
-                                                            ></path>
-                                                          </svg>
+                                                          <Image
+                                                            src="/assets/icons/arrow-tilt.svg"
+                                                            width={16}
+                                                            height={16}
+                                                            alt="arrow-tilt"
+                                                          />
                                                           {
                                                             item.items.filter(
                                                               (i: any) =>
@@ -1122,22 +1107,12 @@ export default function Wallet() {
                                                   </span>
                                                   {listedCount > 0 && (
                                                     <span className="inline-flex items-center gap-[0.2rem] rounded-[6px] bg-[#1e90ff33] px-[0.3rem] py-[0.03rem] text-[#1e90ff]">
-                                                      <svg
-                                                        data-v-60c80848=""
-                                                        xmlns="http://www.w3.org/2000/svg"
-                                                        viewBox="0 0 24 24"
-                                                        fill="none"
-                                                        width="1em"
-                                                        height="1em"
-                                                      >
-                                                        <path
-                                                          stroke="currentColor"
-                                                          strokeLinecap="round"
-                                                          strokeLinejoin="round"
-                                                          strokeWidth="2"
-                                                          d="M3 11.172V5a2 2 0 0 1 2-2h6.172a2 2 0 0 1 1.414.586l8 8a2 2 0 0 1 0 2.828l-6.172 6.172a2 2 0 0 1-2.828 0l-8-8A2 2 0 0 1 3 11.172zM7 7h.001"
-                                                        ></path>
-                                                      </svg>
+                                                      <Image
+                                                        src="/assets/icons/arrow-tilt.svg"
+                                                        width={16}
+                                                        height={16}
+                                                        alt="arrow-tilt"
+                                                      />
                                                       {listedCount}
                                                     </span>
                                                   )}
@@ -1238,7 +1213,9 @@ export default function Wallet() {
                                       </div>
                                       <button
                                         onClick={() =>
-                                          handlePepemapUnlist(item.inscriptionId)
+                                          handlePepemapUnlist(
+                                            item.inscriptionId,
+                                          )
                                         }
                                         className="ml-auto cursor-pointer rounded-[12px] border border-transparent bg-[#1a1a1a] px-4 py-2 text-[1em] font-medium transition-all duration-200 ease-in-out hover:bg-[#222]"
                                       >

@@ -5,6 +5,7 @@ import { ChevronLeft } from "lucide-react";
 import Image from "next/image";
 import { useProfile } from "@/hooks/useProfile";
 import { apiClient } from "@/lib/axios";
+import { toast } from "sonner";
 
 const ORD_API_BASE = process.env.NEXT_PUBLIC_ORD_API_BASE!;
 
@@ -69,12 +70,12 @@ export default function Creators() {
       !collectionData.profileInscriptionId ||
       !collectionData.socialLink
     ) {
-      alert("Please fill out all required fields.");
+      toast.warning("Please fill out all required fields.");
       return;
     }
 
     if (collectionData.symbol.length < 4) {
-      alert("Collection symbol must be at least 4 characters long.");
+      toast.warning("Collection symbol must be at least 4 characters long.");
       return;
     }
 
@@ -84,7 +85,7 @@ export default function Creators() {
         throw new Error("Inscriptions list must be a valid JSON array.");
       }
     } catch (error) {
-      alert("Inscriptions list must be a valid JSON array.");
+      toast.error("Inscriptions list must be a valid JSON array.");
       return;
     }
 
@@ -101,11 +102,11 @@ export default function Creators() {
         wallet: walletAddress,
       });
 
-      alert("Collection created successfully!");
+      toast.success("Collection created successfully!");
       setCreatorState("dashboard");
     } catch (err) {
       console.error(err);
-      alert("Error creating collection");
+      toast.error("Error creating collection");
     }
   };
   console.log(hasSavedWallet, !isLocked);

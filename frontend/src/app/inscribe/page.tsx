@@ -215,7 +215,7 @@ export default function Inscribe() {
       // Update the state with the merged list
       setInscriptions(mergedList);
       console.log(
-        `✅ Loaded ${allInscriptions.length} completed + ${myActiveJobs.length} active inscriptions`,
+        `Loaded ${allInscriptions.length} completed + ${myActiveJobs.length} active inscriptions`,
       );
       setIsLoading(false);
     } catch (error) {
@@ -313,7 +313,7 @@ export default function Inscribe() {
       },
     );
 
-    console.log(`✅ Inscription complete for ${file.name}`);
+    console.log(`Inscription complete for ${file.name}`);
   };
 
   const handleInscribe = async () => {
@@ -480,7 +480,7 @@ export default function Inscribe() {
         );
 
         if (jobsToProcess.length === 0) {
-          console.log("✅ No jobs to resume");
+          console.log("No jobs to resume");
           return;
         }
 
@@ -838,13 +838,13 @@ export default function Inscribe() {
         {/* {isInscribing && (
         <div className="mb-4 rounded-lg border border-green-500/30 bg-green-500/10 p-4">
           <div className="text-sm text-green-200">
-            ✅ <strong>Your inscription is being saved automatically!</strong>
+            <strong>Your inscription is being saved automatically!</strong>
             <br />
             You can safely refresh the page or close the browser - the
             inscription will automatically resume when you return.
             <br />
             <br />
-            💡 <strong>Tip:</strong> You can navigate to other pages while
+            <strong>Tip:</strong> You can navigate to other pages while
             inscribing. Check the bottom-right corner to see progress after page
             refresh.
           </div>

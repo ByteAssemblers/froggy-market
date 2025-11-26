@@ -47,6 +47,7 @@ export const useProfile = () => {
           const response = await blockchainClient.get(
             `/inscriptions/balance/${walletAddress}/${page}`,
           );
+          
           const data = response.data.inscriptions;
 
           if (data && data.length > 0) {

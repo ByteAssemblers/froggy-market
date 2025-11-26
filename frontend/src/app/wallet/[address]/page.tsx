@@ -1,5 +1,6 @@
 "use client";
 import { use, useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
 import { blockchainClient, apiClient, baseClient } from "@/lib/axios";
@@ -43,6 +44,7 @@ import { PEPE_PER_KB_FEE, RECOMMENDED_FEE } from "@/constants/inscription";
 import { Spinner } from "@/components/ui/spinner";
 import { formatPrice } from "@/components/page/PRCTwenty";
 import { useSearchParams, useRouter } from "next/navigation";
+import { IconTag, IconTagOff, IconSend, IconSend2 } from "@tabler/icons-react";
 
 const ORD_API_BASE = process.env.NEXT_PUBLIC_ORD_API_BASE!;
 
@@ -90,6 +92,7 @@ export default function WalletAddress({
   const { address } = use(params);
   const searchParams = useSearchParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const tab = searchParams.get("tab") ?? "prc";
   const handleChange = (value: string) => {
     router.push(`?tab=${value}`);
@@ -295,12 +298,15 @@ export default function WalletAddress({
         sellerAddress: walletAddress,
       });
 
-      alert("NFT unlisted successfully!");
-      // Refresh the wallet data
-      window.location.reload();
+      toast.success("NFT unlisted successfully!");
+      // Refresh the wallet data using React Query
+      await queryClient.invalidateQueries({
+        queryKey: ["myWalletNft", walletAddress],
+        refetchType: "active",
+      });
     } catch (error: any) {
       console.error(error);
-      alert(
+      toast.error(
         `Failed to unlist: ${error.response?.data?.message || error.message}`,
       );
     }
@@ -313,12 +319,15 @@ export default function WalletAddress({
         sellerAddress: walletAddress,
       });
 
-      alert("Pepemap unlisted successfully!");
-      // Refresh the wallet data
-      window.location.reload();
+      toast.success("Pepemap unlisted successfully!");
+      // Refresh the wallet data using React Query
+      await queryClient.invalidateQueries({
+        queryKey: ["myWalletNft", walletAddress],
+        refetchType: "active",
+      });
     } catch (error: any) {
       console.error(error);
-      alert(
+      toast.error(
         `Failed to unlist: ${error.response?.data?.message || error.message}`,
       );
     }
@@ -330,12 +339,12 @@ export default function WalletAddress({
 
     async function handleList() {
       if (Number(price) <= 0) {
-        alert("Please enter a valid price");
+        toast.error("Please enter a valid price");
         return;
       }
 
       if (!privateKey) {
-        alert("Wallet not connected. Please unlock your wallet.");
+        toast.error("Wallet not connected. Please unlock your wallet.");
         return;
       }
 
@@ -364,14 +373,17 @@ export default function WalletAddress({
           psbtBase64: psbtBase64,
         });
 
-        alert("NFT listed successfully!");
+        toast.success("NFT listed successfully!");
         setLoading(false);
-        // Refresh the page to show updated status
-        window.location.reload();
+        // Refresh the wallet data using React Query
+        await queryClient.invalidateQueries({
+          queryKey: ["myWalletNft", walletAddress],
+          refetchType: "active",
+        });
       } catch (error: any) {
         setLoading(false);
         console.error(error);
-        alert(
+        toast.error(
           `Failed to list NFT: ${error.response?.data?.message || error.message}`,
         );
       }
@@ -625,12 +637,12 @@ export default function WalletAddress({
 
     async function handlePepemapList() {
       if (Number(price) <= 0) {
-        alert("Please enter a valid price");
+        toast.error("Please enter a valid price");
         return;
       }
 
       if (!privateKey) {
-        alert("Wallet not connected. Please unlock your wallet.");
+        toast.error("Wallet not connected. Please unlock your wallet.");
         return;
       }
 
@@ -660,14 +672,17 @@ export default function WalletAddress({
           psbtBase64: psbtBase64,
         });
 
-        alert("Pepemap listed successfully!");
+        toast.success("Pepemap listed successfully!");
         setLoading(false);
-        // Refresh the page to show updated status
-        window.location.reload();
+        // Refresh the wallet data using React Query
+        await queryClient.invalidateQueries({
+          queryKey: ["myWalletNft", walletAddress],
+          refetchType: "active",
+        });
       } catch (error: any) {
         setLoading(false);
         console.error(error);
-        alert(
+        toast.error(
           `Failed to list pepemap: ${error.response?.data?.message || error.message}`,
         );
       }
@@ -1260,11 +1275,15 @@ export default function WalletAddress({
             sellerAddress: walletAddress,
           });
 
-          alert("Transfer unlisted successfully!");
-          window.location.reload();
+          toast.success("Transfer unlisted successfully!");
+          // Refresh the wallet data using React Query
+          await queryClient.invalidateQueries({
+            queryKey: ["myWalletPrc20", walletAddress],
+            refetchType: "active",
+          });
         } catch (error: any) {
           console.error(error);
-          alert(
+          toast.error(
             `Failed to unlist: ${error.response?.data?.message || error.message}`,
           );
         }
@@ -1278,22 +1297,7 @@ export default function WalletAddress({
             {!isListed ? (
               <Dialog>
                 <DialogTrigger className="font-inherit inline-flex w-auto cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#8fc5ff] px-4 py-2 text-base font-bold text-[#007aff] transition-all duration-200 ease-in-out hover:bg-[#007aff] hover:text-white">
-                  <svg
-                    data-v-51cc9e0e=""
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    width="20"
-                    height="20"
-                  >
-                    <path
-                      stroke="currentColor"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M3 11.172V5a2 2 0 0 1 2-2h6.172a2 2 0 0 1 1.414.586l8 8a2 2 0 0 1 0 2.828l-6.172 6.172a2 2 0 0 1-2.828 0l-8-8A2 2 0 0 1 3 11.172zM7 7h.001"
-                    ></path>
-                  </svg>
+                  <IconTag size={20} stroke={2} className="text-current" />
                   <span className="ml-2">List</span>
                 </DialogTrigger>
                 <DialogContent className="my-[50px] box-border flex min-h-[500px] max-w-[calc(100%-1rem)] min-w-[700px] shrink-0 grow-0 scale-100 flex-col overflow-visible rounded-[12px] bg-[#ffffff1f] p-6 opacity-100 backdrop-blur-xl transition-opacity duration-200 ease-linear">
@@ -1312,22 +1316,7 @@ export default function WalletAddress({
                 onClick={handleUnlistTransfer}
                 className="font-inherit inline-flex w-auto cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#1a1a1a] px-4 py-2 text-base font-bold text-white transition-all duration-200 ease-in-out hover:bg-[#222]"
               >
-                <svg
-                  data-v-51cc9e0e=""
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  width="20"
-                  height="20"
-                >
-                  <path
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="m14 5-1.414-1.414A2 2 0 0 0 11.172 3H5a2 2 0 0 0-2 2v6.172a2 2 0 0 0 .586 1.414L5 14m14-4 1.586 1.586a2 2 0 0 1 0 2.828l-6.172 6.172a2 2 0 0 1-2.828 0L10 19M7 7h.001M21 3 3 21"
-                  ></path>
-                </svg>
+                <IconTagOff size={20} stroke={2} className="text-current" />
                 <span className="ml-2">Unlist</span>
               </button>
             )}
@@ -1340,22 +1329,7 @@ export default function WalletAddress({
                     : "cursor-pointer bg-[#3c1295] text-[#d94fff] hover:bg-[#9d12c8] hover:text-white"
                 }`}
               >
-                <svg
-                  data-v-51cc9e0e=""
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  width="20"
-                  height="20"
-                >
-                  <path
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="m6 12-3 9 18-9L3 3l3 9zm0 0h6"
-                  ></path>
-                </svg>
+                <IconSend size={20} stroke={2} className="text-current" />
               </DialogTrigger>
               <DialogContent className="my-[50px] box-border flex min-h-[500px] max-w-[calc(100%-1rem)] min-w-[700px] shrink-0 grow-0 scale-100 flex-col overflow-visible rounded-[12px] bg-[#ffffff1f] p-6 opacity-100 backdrop-blur-xl transition-opacity duration-200 ease-linear">
                 <DialogHeader>
@@ -1423,12 +1397,12 @@ export default function WalletAddress({
 
     async function handlePrc20List() {
       if (Number(price) <= 0) {
-        alert("Please enter a valid price");
+        toast.error("Please enter a valid price");
         return;
       }
 
       if (!privateKey) {
-        alert("Wallet not connected. Please unlock your wallet.");
+        toast.error("Wallet not connected. Please unlock your wallet.");
         return;
       }
 
@@ -1459,14 +1433,17 @@ export default function WalletAddress({
           psbtBase64: psbtBase64,
         });
 
-        alert("Prc20 listed successfully!");
+        toast.success("Prc20 listed successfully!");
         setLoading(false);
-        // Refresh the page to show updated status
-        window.location.reload();
+        // Refresh the wallet data using React Query
+        await queryClient.invalidateQueries({
+          queryKey: ["myWalletPrc20", walletAddress],
+          refetchType: "active",
+        });
       } catch (error: any) {
         setLoading(false);
         console.error(error);
-        alert(
+        toast.error(
           `Failed to list prc20: ${error.response?.data?.message || error.message}`,
         );
       }
@@ -2016,22 +1993,11 @@ export default function WalletAddress({
                                     }
                                     className="font-inherit inline-flex w-full cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#8fc5ff] px-4 py-2 text-base font-bold text-[#007aff] transition-all duration-200 ease-in-out hover:bg-[#007aff] hover:text-white disabled:cursor-auto disabled:bg-[#333] disabled:text-white"
                                   >
-                                    <svg
-                                      data-v-51cc9e0e=""
-                                      xmlns="http://www.w3.org/2000/svg"
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                      width="20"
-                                      height="20"
-                                    >
-                                      <path
-                                        stroke="currentColor"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth="2"
-                                        d="M3 11.172V5a2 2 0 0 1 2-2h6.172a2 2 0 0 1 1.414.586l8 8a2 2 0 0 1 0 2.828l-6.172 6.172a2 2 0 0 1-2.828 0l-8-8A2 2 0 0 1 3 11.172zM7 7h.001"
-                                      ></path>
-                                    </svg>
+                                    <IconTag
+                                      size={20}
+                                      stroke={2}
+                                      className="text-current"
+                                    />
                                     <span className="ml-2">List</span>
                                   </DialogTrigger>
                                   <DialogContent className="my-[50px] box-border flex min-h-[500px] max-w-[calc(100%-1rem)] min-w-[700px] shrink-0 grow-0 scale-100 flex-col overflow-visible rounded-[12px] bg-[#ffffff1f] p-6 opacity-100 backdrop-blur-xl transition-opacity duration-200 ease-linear">
@@ -2050,22 +2016,11 @@ export default function WalletAddress({
                                   onClick={() => handleUnlist(item)}
                                   className="font-inherit inline-flex w-full cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#1a1a1a] px-4 py-2 text-base font-bold text-white transition-all duration-200 ease-in-out hover:bg-[#222]"
                                 >
-                                  <svg
-                                    data-v-51cc9e0e=""
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    width="20"
-                                    height="20"
-                                  >
-                                    <path
-                                      stroke="currentColor"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth="2"
-                                      d="m14 5-1.414-1.414A2 2 0 0 0 11.172 3H5a2 2 0 0 0-2 2v6.172a2 2 0 0 0 .586 1.414L5 14m14-4 1.586 1.586a2 2 0 0 1 0 2.828l-6.172 6.172a2 2 0 0 1-2.828 0L10 19M7 7h.001M21 3 3 21"
-                                    ></path>
-                                  </svg>
+                                  <IconTagOff
+                                    size={20}
+                                    stroke={2}
+                                    className="text-current"
+                                  />
                                   <span className="ml-2">Unlist</span>
                                 </button>
                               )}
@@ -2077,22 +2032,11 @@ export default function WalletAddress({
                                   }
                                   className="font-inherit inline-flex grow-0 cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#3c1295] px-4 py-2 text-base font-bold text-[#d94fff] transition-all duration-200 ease-in-out hover:bg-[#9d12c8] hover:text-white disabled:cursor-auto disabled:bg-[#333] disabled:text-white"
                                 >
-                                  <svg
-                                    data-v-51cc9e0e=""
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    width="20"
-                                    height="20"
-                                  >
-                                    <path
-                                      stroke="currentColor"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth="2"
-                                      d="m6 12-3 9 18-9L3 3l3 9zm0 0h6"
-                                    ></path>
-                                  </svg>
+                                  <IconSend2
+                                    size={20}
+                                    stroke={2}
+                                    className="text-current"
+                                  />
                                 </DialogTrigger>
                                 <DialogContent className="my-[50px] box-border flex min-h-[500px] max-w-[calc(100%-1rem)] min-w-[700px] shrink-0 grow-0 scale-100 flex-col overflow-visible rounded-[12px] bg-[#ffffff1f] p-6 opacity-100 backdrop-blur-xl transition-opacity duration-200 ease-linear">
                                   <DialogHeader>
@@ -2180,22 +2124,11 @@ export default function WalletAddress({
                                     }
                                     className="font-inherit inline-flex w-full cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#8fc5ff] px-4 py-2 text-base font-bold text-[#007aff] transition-all duration-200 ease-in-out hover:bg-[#007aff] hover:text-white disabled:cursor-auto disabled:bg-[#333] disabled:text-white"
                                   >
-                                    <svg
-                                      data-v-51cc9e0e=""
-                                      xmlns="http://www.w3.org/2000/svg"
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                      width="20"
-                                      height="20"
-                                    >
-                                      <path
-                                        stroke="currentColor"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth="2"
-                                        d="M3 11.172V5a2 2 0 0 1 2-2h6.172a2 2 0 0 1 1.414.586l8 8a2 2 0 0 1 0 2.828l-6.172 6.172a2 2 0 0 1-2.828 0l-8-8A2 2 0 0 1 3 11.172zM7 7h.001"
-                                      ></path>
-                                    </svg>
+                                    <IconTag
+                                      size={20}
+                                      stroke={2}
+                                      className="text-current"
+                                    />
                                     <span className="ml-2">List</span>
                                   </DialogTrigger>
                                   <DialogContent className="my-[50px] box-border flex min-h-[500px] max-w-[calc(100%-1rem)] min-w-[700px] shrink-0 grow-0 scale-100 flex-col overflow-visible rounded-[12px] bg-[#ffffff1f] p-6 opacity-100 backdrop-blur-xl transition-opacity duration-200 ease-linear">
@@ -2214,22 +2147,11 @@ export default function WalletAddress({
                                   onClick={() => handlePepemapUnlist(item)}
                                   className="font-inherit inline-flex w-full cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#1a1a1a] px-4 py-2 text-base font-bold text-white transition-all duration-200 ease-in-out hover:bg-[#222]"
                                 >
-                                  <svg
-                                    data-v-51cc9e0e=""
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    width="20"
-                                    height="20"
-                                  >
-                                    <path
-                                      stroke="currentColor"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth="2"
-                                      d="m14 5-1.414-1.414A2 2 0 0 0 11.172 3H5a2 2 0 0 0-2 2v6.172a2 2 0 0 0 .586 1.414L5 14m14-4 1.586 1.586a2 2 0 0 1 0 2.828l-6.172 6.172a2 2 0 0 1-2.828 0L10 19M7 7h.001M21 3 3 21"
-                                    ></path>
-                                  </svg>
+                                  <IconTagOff
+                                    size={20}
+                                    stroke={2}
+                                    className="text-current"
+                                  />
                                   <span className="ml-2">Unlist</span>
                                 </button>
                               )}
@@ -2245,22 +2167,11 @@ export default function WalletAddress({
                                   }
                                   className="font-inherit inline-flex grow-0 cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#3c1295] px-4 py-2 text-base font-bold text-[#d94fff] transition-all duration-200 ease-in-out hover:bg-[#9d12c8] hover:text-white disabled:cursor-auto disabled:bg-[#333] disabled:text-white"
                                 >
-                                  <svg
-                                    data-v-51cc9e0e=""
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    width="20"
-                                    height="20"
-                                  >
-                                    <path
-                                      stroke="currentColor"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth="2"
-                                      d="m6 12-3 9 18-9L3 3l3 9zm0 0h6"
-                                    ></path>
-                                  </svg>
+                                  <IconSend2
+                                    size={20}
+                                    stroke={2}
+                                    className="text-current"
+                                  />
                                 </DialogTrigger>
                                 <DialogContent className="my-[50px] box-border flex min-h-[500px] max-w-[calc(100%-1rem)] min-w-[700px] shrink-0 grow-0 scale-100 flex-col overflow-visible rounded-[12px] bg-[#ffffff1f] p-6 opacity-100 backdrop-blur-xl transition-opacity duration-200 ease-linear">
                                   <DialogHeader>

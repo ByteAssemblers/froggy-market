@@ -50,7 +50,7 @@ export default function RootLayout({
               </div>
             </ClientProvider>
           </ThemeProvider>
-          <Toaster />
+          <Toaster richColors />
         </QueryProvider>
       </body>
     </html>
