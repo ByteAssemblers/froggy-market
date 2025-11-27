@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -29,6 +30,7 @@ import { toast } from "sonner";
 export default function PRC({ params }: { params: Promise<{ tick: string }> }) {
   const { tick } = use(params);
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [isPageValid, setIsPageValid] = useState<boolean | null>(null);
   const [info, setInfo] = useState<any>();
   const [holders, setHolders] = useState<any[]>([]);
@@ -176,8 +178,11 @@ export default function PRC({ params }: { params: Promise<{ tick: string }> }) {
       });
 
       toast.success(`PRC-20 purchased successfully! Transaction: ${txid}`);
-      // Refresh to show updated status
-      window.location.reload();
+
+      await queryClient.invalidateQueries({
+        queryKey: ["walletNft", walletAddress],
+        refetchType: "active",
+      });
     } catch (error: any) {
       console.error(error);
       toast.error(
@@ -301,7 +306,6 @@ export default function PRC({ params }: { params: Promise<{ tick: string }> }) {
                             alt="arrow-down"
                           />
                           <span>
-                            -
                             {Number(
                               prc20Info?.filter(
                                 (i: any) =>

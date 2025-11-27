@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
 import { Card } from "./ui/card";
@@ -31,6 +32,7 @@ interface PepemapCardProps {
 }
 
 const PepemapCard: React.FC<PepemapCardProps> = ({ item, pepecoinPrice }) => {
+  const queryClient = useQueryClient();
   const [imgError, setImgError] = useState(false);
   const [balance, setBalance] = useState<number | null>(null);
   const [loadingBalance, setLoadingBalance] = useState(false);
@@ -102,8 +104,11 @@ const PepemapCard: React.FC<PepemapCardProps> = ({ item, pepecoinPrice }) => {
       });
 
       toast.success(`Pepemap purchased successfully! Transaction: ${txid}`);
-      // Refresh to show updated status
-      window.location.reload();
+
+      await queryClient.invalidateQueries({
+        queryKey: ["walletNft", walletAddress],
+        refetchType: "active",
+      });
     } catch (error: any) {
       console.error(error);
       toast.error(
@@ -147,10 +152,12 @@ const PepemapCard: React.FC<PepemapCardProps> = ({ item, pepecoinPrice }) => {
           <div className="flex justify-between">
             <div>Seller:</div>
             <Link
-              href={`/wallet/${item.sellerAddress || ''}`}
+              href={`/wallet/${item.sellerAddress || ""}`}
               className="cursor-pointer font-medium text-[#c891ff] no-underline"
             >
-              {item.sellerAddress ? `${item.sellerAddress.slice(0, 5)}...${item.sellerAddress.slice(-5)}` : 'Unknown'}
+              {item.sellerAddress
+                ? `${item.sellerAddress.slice(0, 5)}...${item.sellerAddress.slice(-5)}`
+                : "Unknown"}
             </Link>
           </div>
         </div>
@@ -264,13 +271,16 @@ const PepemapCard: React.FC<PepemapCardProps> = ({ item, pepecoinPrice }) => {
                   {loadingBalance ? "..." : (balance || 0).toFixed(2)}
                 </div>
                 <span className="mt-2 ml-4 text-right text-[0.9rem] text-[#fffc]">
-                  ${loadingBalance ? "..." : ((balance || 0) * pepecoinPrice).toFixed(2)}
+                  $
+                  {loadingBalance
+                    ? "..."
+                    : ((balance || 0) * pepecoinPrice).toFixed(2)}
                 </span>
               </div>
               <button
                 onClick={handlePepemapBuy}
                 disabled={!balance || balance < totalCost || isBuying}
-                className="font-inherit mt-4 flex w-full justify-center rounded-[12px] border border-transparent px-4 py-2 text-[1em] font-bold text-white transition-all duration-200 ease-in-out disabled:bg-[#1a1a1a] enabled:bg-[#007aff] enabled:hover:bg-[#0056b3]"
+                className="font-inherit mt-4 flex w-full justify-center rounded-[12px] border border-transparent px-4 py-2 text-[1em] font-bold text-white transition-all duration-200 ease-in-out enabled:bg-[#007aff] enabled:hover:bg-[#0056b3] disabled:bg-[#1a1a1a]"
               >
                 {isBuying
                   ? "Processing..."

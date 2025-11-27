@@ -40,7 +40,7 @@ import {
 import { encryptWallet, decryptWallet } from "@/lib/wallet/storage";
 import { getPepecoinBalance } from "@/lib/wallet/getBalance";
 import { sendPepeTransaction } from "@/lib/wallet/sendPepe";
-import { useProfile } from "@/hooks/useProfile";
+import { useProfile, useWalletData } from "@/hooks/useProfile";
 import { apiClient } from "@/lib/axios";
 import Link from "next/link";
 import Avatar from "./Avatar";
@@ -83,23 +83,26 @@ export default function Wallet() {
   const {
     pepecoinPrice,
     walletInfo,
-    myWalletNft,
-    inscriptions,
-    listingStatuses,
-    pepemapListingStatuses,
-    myWalletPrc20,
-    myWalletPepemaps,
-    isMyWalletNftLoading,
-    isMyWalletPrc20Loading,
-    isMyWalletPepemapsLoading,
     pepemapInfo,
     isPepemapInfoLoading,
     prc20Info,
     isPrc20InfoLoading,
     collectionInfo,
     isCollectionInfoLoading,
-    prc20ListingStatuses,
   } = useProfile();
+
+  const {
+    walletNft,
+    walletPrc20,
+    walletPepemaps,
+    inscriptions,
+    listingStatuses,
+    pepemapListingStatuses,
+    prc20ListingStatuses,
+    isWalletNftLoading,
+    isWalletPrc20Loading,
+    isWalletPepemapsLoading,
+  } = useWalletData(walletAddress);
 
   const grouped = [...listingStatuses.values()].reduce((groups, item) => {
     const collection = item.listing?.inscription?.collection;
@@ -121,16 +124,15 @@ export default function Wallet() {
   }, {});
 
   const isLoading =
-    isMyWalletNftLoading ||
-    isMyWalletPrc20Loading ||
-    isMyWalletPepemapsLoading ||
+    isWalletNftLoading ||
+    isWalletPrc20Loading ||
+    isWalletPepemapsLoading ||
     isPepemapInfoLoading ||
     isPrc20InfoLoading ||
     isCollectionInfoLoading;
 
   // pepemaps total
-  const pepemapTotal =
-    (pepemapInfo?.floorPrice || 0) * myWalletPepemaps?.length;
+  const pepemapTotal = (pepemapInfo?.floorPrice || 0) * walletPepemaps?.length;
 
   // nft collections total
   const collectionsTotal = Object.values(grouped).reduce(
@@ -147,7 +149,7 @@ export default function Wallet() {
   // final total
   const totalNftValue = pepemapTotal + collectionsTotal;
 
-  const totalPrcValue = myWalletPrc20?.reduce((sum: any, item: any) => {
+  const totalPrcValue = walletPrc20?.reduce((sum: any, item: any) => {
     const info = prc20Info?.find((i: any) => i.tick === item.tick);
     if (!info) return sum;
 
@@ -460,7 +462,7 @@ export default function Wallet() {
       toast.success("NFT unlisted successfully!");
       // Refresh the wallet data using React Query
       await queryClient.invalidateQueries({
-        queryKey: ["myWalletNft", walletAddress],
+        queryKey: ["walletNft", walletAddress],
         refetchType: "active",
       });
     } catch (error: any) {
@@ -481,7 +483,7 @@ export default function Wallet() {
       toast.success("Pepemap unlisted successfully!");
       // Refresh the wallet data using React Query
       await queryClient.invalidateQueries({
-        queryKey: ["myWalletPepemaps", walletAddress],
+        queryKey: ["walletPepemaps", walletAddress],
         refetchType: "active",
       });
     } catch (error: any) {
@@ -502,7 +504,7 @@ export default function Wallet() {
       toast.success("Transfer unlisted successfully!");
       // Refresh the wallet data using React Query
       await queryClient.invalidateQueries({
-        queryKey: ["myWalletPrc20", walletAddress],
+        queryKey: ["walletPrc20", walletAddress],
         refetchType: "active",
       });
     } catch (error: any) {
@@ -882,16 +884,16 @@ export default function Wallet() {
                         {isLoading ? (
                           <Spinner className="m-auto size-6" />
                         ) : (
-                          myWalletPepemaps &&
-                          myWalletPrc20 &&
-                          myWalletNft && (
+                          walletPepemaps &&
+                          walletPrc20 &&
+                          walletNft && (
                             <>
                               {[...listingStatuses.values()].length != 0 ||
-                              myWalletPepemaps.length != 0 ||
-                              myWalletPrc20.length != 0 ? (
+                              walletPepemaps.length != 0 ||
+                              walletPrc20.length != 0 ? (
                                 <>
                                   {([...listingStatuses.values()].length != 0 ||
-                                    myWalletPepemaps.length != 0) && (
+                                    walletPepemaps.length != 0) && (
                                     <>
                                       <div className="my-1 flex items-center justify-between px-1 font-bold">
                                         <div>NFTs</div>
@@ -910,7 +912,7 @@ export default function Wallet() {
                                         </div>
                                       </div>
                                       <>
-                                        {myWalletPepemaps.length != 0 && (
+                                        {walletPepemaps.length != 0 && (
                                           <Link
                                             href={`/wallet/${walletAddress}?tab=pepemaps`}
                                             className="mb-2 flex cursor-pointer items-center justify-start gap-3 rounded-[18px] border border-transparent bg-[#0000004d] px-3 py-2 text-[1.1rem] leading-[1.2] transition-all duration-200 ease-in-out hover:bg-[#00000080]"
@@ -919,7 +921,7 @@ export default function Wallet() {
                                               item={inscriptions.find(
                                                 (i: any) =>
                                                   i.inscription_id ==
-                                                  myWalletPepemaps[0]
+                                                  walletPepemaps[0]
                                                     .inscription_id,
                                               )}
                                               sm
@@ -930,7 +932,7 @@ export default function Wallet() {
                                               </div>
                                               <div className="flex items-center gap-[0.3rem] text-[0.9rem] font-medium">
                                                 <span className="rounded-[6px] bg-[#00c85345] px-[0.3rem] py-[0.03rem] text-[#00c853]">
-                                                  {myWalletPepemaps.length}
+                                                  {walletPepemaps.length}
                                                 </span>
                                                 {[
                                                   ...pepemapListingStatuses.values(),
@@ -968,7 +970,7 @@ export default function Wallet() {
                                                     className="mr-[0.4em] mb-[-0.2em] h-[1.1em] w-[1.1em]"
                                                   />
                                                   {pepemapInfo?.floorPrice *
-                                                    myWalletPepemaps.length}
+                                                    walletPepemaps.length}
                                                 </div>
                                               </div>
                                             )}
@@ -1056,7 +1058,7 @@ export default function Wallet() {
                                     </>
                                   )}
 
-                                  {myWalletPrc20.length != 0 && (
+                                  {walletPrc20.length != 0 && (
                                     <>
                                       <div className="my-1 flex items-center justify-between px-1 font-bold">
                                         <div>Prc-20</div>
@@ -1074,7 +1076,7 @@ export default function Wallet() {
                                           </div>
                                         </div>
                                       </div>
-                                      {myWalletPrc20.map(
+                                      {walletPrc20.map(
                                         (item: any, index: number) => {
                                           // Calculate how many transfers are listed
                                           const listedCount = (

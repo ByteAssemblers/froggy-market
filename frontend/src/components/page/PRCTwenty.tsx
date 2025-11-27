@@ -306,14 +306,9 @@ export default function PRCTwenty() {
                               width={24}
                               height={24}
                               alt="arrow-down"
-                              style={{
-                                width: "1.5em",
-                                marginBottom: "-0.35em",
-                              }}
                             />
                             <span className="pt-1">
                               <span>
-                                -
                                 {Number(
                                   prc20Info?.filter(
                                     (i: any) =>

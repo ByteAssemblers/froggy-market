@@ -23,7 +23,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { EllipsisVertical, Filter } from "lucide-react";
-import { useProfile } from "@/hooks/useProfile";
+import { useProfile, useWalletData } from "@/hooks/useProfile";
 import { createListingPSBT, findInscriptionUTXO } from "@/lib/marketplace/psbt";
 import {
   getPepemapBlockNumber,
@@ -97,20 +97,6 @@ export default function WalletAddress({
   const handleChange = (value: string) => {
     router.push(`?tab=${value}`);
   };
-  const [inscriptions, setInscriptions] = useState<any[]>([]);
-  const [pepemaps, setPepemaps] = useState<any[]>([]);
-  const [ticks, setTicks] = useState<any[]>([]);
-  const [listingStatuses, setListingStatuses] = useState<Map<string, any>>(
-    new Map(),
-  );
-  const [pepemapListingStatuses, setPepemapListingStatuses] = useState<
-    Map<string, any>
-  >(new Map());
-  const [isLoadingInscriptions, setIsLoadingInscriptions] = useState(false);
-  const [history, setHistory] = useState<[]>([]);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
-  const [activity, setActivity] = useState<[]>([]);
-  const [isLoadingActivity, setIsLoadingActivity] = useState(false);
   const {
     wallet,
     walletInfo,
@@ -122,6 +108,33 @@ export default function WalletAddress({
     collectionsError,
   } = useProfile();
 
+  // Fetch wallet data using the new hook
+  const {
+    walletNft,
+    walletPrc20,
+    walletPepemaps,
+    walletHistory,
+    walletActivity,
+    inscriptions,
+    listingStatuses,
+    pepemapListingStatuses,
+    prc20ListingStatuses,
+    isWalletNftLoading,
+    isWalletPrc20Loading,
+    isWalletPepemapsLoading,
+    isWalletHistoryLoading,
+    isWalletActivityLoading,
+  } = useWalletData(address);
+
+  // Map data to component variables for compatibility
+  const ticks = walletPrc20 || [];
+  const pepemaps = walletPepemaps || [];
+  const history = walletHistory || [];
+  const activity = walletActivity || [];
+  const isLoadingInscriptions = isWalletNftLoading;
+  const isLoadingHistory = isWalletHistoryLoading;
+  const isLoadingActivity = isWalletActivityLoading;
+
   useEffect(() => {
     walletInfo();
   }, []);
@@ -131,161 +144,6 @@ export default function WalletAddress({
     collections?.flatMap((collection: any) =>
       collection.inscriptions.map((ins: any) => ins.inscriptionId),
     ) || [];
-
-  useEffect(() => {
-    const fetchWalletNft = async () => {
-      setIsLoadingInscriptions(true);
-      try {
-        let page = 1;
-        let allInscriptions: any = [];
-        let continueFetching = true;
-
-        while (continueFetching) {
-          const response = await blockchainClient.get(
-            `/inscriptions/balance/${address}/${page}`,
-          );
-          const data = response.data.inscriptions;
-
-          if (data && data.length > 0) {
-            allInscriptions = [...allInscriptions, ...data];
-            page++;
-          } else {
-            continueFetching = false;
-          }
-        }
-
-        allInscriptions.sort((a: any, b: any) => b.timestamp - a.timestamp);
-        setInscriptions(allInscriptions);
-
-        // Fetch listing status for each inscription
-        const statusMap = new Map();
-        const pepemapStatusMap = new Map();
-
-        for (const inscription of allInscriptions) {
-          // Check if it's a pepemap
-          const isPepemap =
-            typeof inscription.content === "string" &&
-            inscription.content.endsWith(".pepemap");
-
-          if (isPepemap) {
-            // Fetch pepemap listing status
-            try {
-              const statusResponse = await apiClient.get(
-                `/pepemap-listings/inscription/${inscription.inscription_id}`,
-              );
-              pepemapStatusMap.set(
-                inscription.inscription_id,
-                statusResponse.data,
-              );
-            } catch (err) {
-              pepemapStatusMap.set(inscription.inscription_id, {
-                status: null,
-                listing: null,
-              });
-            }
-          } else {
-            // Fetch regular NFT listing status
-            try {
-              const statusResponse = await apiClient.get(
-                `/listings/inscription/${inscription.inscription_id}`,
-              );
-              statusMap.set(inscription.inscription_id, statusResponse.data);
-            } catch (err) {
-              statusMap.set(inscription.inscription_id, {
-                status: null,
-                listing: null,
-              });
-            }
-          }
-        }
-
-        setListingStatuses(statusMap);
-        setPepemapListingStatuses(pepemapStatusMap);
-      } catch (error) {
-        console.error("Error fetching inscriptions:", error);
-      } finally {
-        setIsLoadingInscriptions(false);
-      }
-    };
-
-    if (address) {
-      fetchWalletNft();
-    }
-  }, [address]);
-
-  useEffect(() => {
-    const fetchWalletPrc = async () => {
-      try {
-        const response = await fetch(`/api/belindex/address/${address}`);
-        const data = await response.json();
-        setTicks(data);
-      } catch (error) {
-        console.error("Error fetching prc-20:", error);
-      }
-    };
-
-    if (address) {
-      fetchWalletPrc();
-    }
-  }, [address]);
-
-  useEffect(() => {
-    const fetchWalletPepemap = async () => {
-      try {
-        const response = await blockchainClient.get(
-          `pepemap/address/${address}`,
-        );
-        const data = response.data;
-        setPepemaps(data);
-      } catch (error) {
-        console.error("Error fetching pepemap:", error);
-      }
-    };
-
-    if (address) {
-      fetchWalletPepemap();
-    }
-  }, [address]);
-
-  useEffect(() => {
-    const fetchWalletPrcHistory = async () => {
-      try {
-        setIsLoadingHistory(true);
-        const response = await apiClient.get(
-          `/informations/wallet-history?address=${address}`,
-        );
-        setHistory(response.data);
-      } catch (error) {
-        console.error("Error fetching prc-20 history", error);
-      } finally {
-        setIsLoadingHistory(false);
-      }
-    };
-
-    if (address) {
-      fetchWalletPrcHistory();
-    }
-  }, [address]);
-
-  useEffect(() => {
-    const fetchWalletPrcActivity = async () => {
-      try {
-        setIsLoadingActivity(true);
-        const response = await apiClient.get(
-          `/informations/wallet-activity?address=${address}`,
-        );
-        setActivity(response.data);
-      } catch (error) {
-        console.error("Error fetching prc-20 activity", error);
-      } finally {
-        setIsLoadingActivity(false);
-      }
-    };
-
-    if (address) {
-      fetchWalletPrcActivity();
-    }
-  }, [address]);
 
   // Get all inscription IDs from pepemaps
   const inscriptionIdsInPepemaps =
@@ -301,7 +159,7 @@ export default function WalletAddress({
       toast.success("NFT unlisted successfully!");
       // Refresh the wallet data using React Query
       await queryClient.invalidateQueries({
-        queryKey: ["myWalletNft", walletAddress],
+        queryKey: ["walletNft", walletAddress],
         refetchType: "active",
       });
     } catch (error: any) {
@@ -322,7 +180,7 @@ export default function WalletAddress({
       toast.success("Pepemap unlisted successfully!");
       // Refresh the wallet data using React Query
       await queryClient.invalidateQueries({
-        queryKey: ["myWalletNft", walletAddress],
+        queryKey: ["walletNft", walletAddress],
         refetchType: "active",
       });
     } catch (error: any) {
@@ -377,7 +235,7 @@ export default function WalletAddress({
         setLoading(false);
         // Refresh the wallet data using React Query
         await queryClient.invalidateQueries({
-          queryKey: ["myWalletNft", walletAddress],
+          queryKey: ["walletNft", walletAddress],
           refetchType: "active",
         });
       } catch (error: any) {
@@ -552,10 +410,10 @@ export default function WalletAddress({
           `✅ NFT sent successfully!\n\nTransaction ID: ${txid.slice(0, 8)}...${txid.slice(-8)}`,
         );
 
-        // Wait 2 seconds then reload
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
+        await queryClient.invalidateQueries({
+          queryKey: ["walletNft", walletAddress],
+          refetchType: "active",
+        });
       } catch (error: any) {
         console.error("Send error:", error);
         setMessage(`❌ Failed to send: ${error.message}`);
@@ -676,7 +534,7 @@ export default function WalletAddress({
         setLoading(false);
         // Refresh the wallet data using React Query
         await queryClient.invalidateQueries({
-          queryKey: ["myWalletNft", walletAddress],
+          queryKey: ["walletNft", walletAddress],
           refetchType: "active",
         });
       } catch (error: any) {
@@ -770,7 +628,7 @@ export default function WalletAddress({
 
         <button
           onClick={handlePepemapList}
-          disabled={loading || Number(price) <= 0}
+          disabled={isLoadingInscriptions || loading || Number(price) <= 0}
           className={`font-inherit mt-4 flex w-full justify-center rounded-xl border border-transparent px-4 py-2 text-base font-bold transition-all duration-200 ease-in-out ${
             loading || Number(price) <= 0
               ? "bg-[#1a1a1a]"
@@ -846,10 +704,10 @@ export default function WalletAddress({
           `✅ Pepemap sent successfully!\n\nTransaction ID: ${txid.slice(0, 8)}...${txid.slice(-8)}`,
         );
 
-        // Wait 2 seconds then reload
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
+        await queryClient.invalidateQueries({
+          queryKey: ["walletNft", walletAddress],
+          refetchType: "active",
+        });
       } catch (error: any) {
         console.error("Send error:", error);
         setMessage(`❌ Failed to send: ${error.message}`);
@@ -999,15 +857,19 @@ export default function WalletAddress({
           return bTime - aTime;
         });
 
-        // Update the state with the merged list
-        setInscriptions(mergedList);
+        // Invalidate query to refresh wallet data
+        await queryClient.invalidateQueries({
+          queryKey: ["walletNft", address],
+        });
         console.log(
-          `✅ Loaded ${allInscriptions.length} completed + ${myActiveJobs.length} active inscriptions`,
+          `Loaded ${allInscriptions.length} completed + ${myActiveJobs.length} active inscriptions`,
         );
         setIsLoading(false);
       } catch (error) {
-        console.error("❌ Failed to fetch inscriptions:", error);
-        setInscriptions([]);
+        console.error("Failed to fetch inscriptions:", error);
+        await queryClient.invalidateQueries({
+          queryKey: ["walletNft", address],
+        });
         setIsLoading(false);
       }
     };
@@ -1314,7 +1176,7 @@ export default function WalletAddress({
             ) : (
               <button
                 onClick={handleUnlistTransfer}
-                className="font-inherit inline-flex w-auto cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#1a1a1a] px-4 py-2 text-base font-bold text-white transition-all duration-200 ease-in-out hover:bg-[#222]"
+                className="font-inherit inline-flex w-auto cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#1a1a1a] p-2 text-base font-bold text-white transition-all duration-200 ease-in-out hover:bg-[#222]"
               >
                 <IconTagOff size={20} stroke={2} className="text-current" />
                 <span className="ml-2">Unlist</span>
@@ -1617,10 +1479,10 @@ export default function WalletAddress({
           `✅ Prc20 sent successfully!\n\nTransaction ID: ${txid.slice(0, 8)}...${txid.slice(-8)}`,
         );
 
-        // Wait 2 seconds then reload
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
+        await queryClient.invalidateQueries({
+          queryKey: ["walletNft", walletAddress],
+          refetchType: "active",
+        });
       } catch (error: any) {
         console.error("Send error:", error);
         setMessage(`❌ Failed to send: ${error.message}`);
@@ -1751,7 +1613,7 @@ export default function WalletAddress({
               </TableRow>
             </TableHeader>
             <TableBody className="text-[16px]">
-              {ticks.map((item, index) => (
+              {ticks.map((item: any, index: number) => (
                 <TableRow key={index}>
                   <TableCell className="px-auto w-auto text-center">
                     <Link href={`/${item.tick}`}>
@@ -1852,7 +1714,7 @@ export default function WalletAddress({
               <>
                 {activity ? (
                   <TableBody className="text-[16px]">
-                    {activity.map((item: any, index) => (
+                    {activity.map((item: any, index: number) => (
                       <TableRow
                         key={index}
                         className="cursor-pointer text-[16px] text-white transition-all duration-150 ease-in-out"
@@ -2014,7 +1876,7 @@ export default function WalletAddress({
                               ) : (
                                 <button
                                   onClick={() => handleUnlist(item)}
-                                  className="font-inherit inline-flex w-full cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#1a1a1a] px-4 py-2 text-base font-bold text-white transition-all duration-200 ease-in-out hover:bg-[#222]"
+                                  className="font-inherit inline-flex w-full cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#1a1a1a] p-2 text-base font-bold text-white transition-all duration-200 ease-in-out hover:bg-[#222]"
                                 >
                                   <IconTagOff
                                     size={20}
@@ -2086,10 +1948,8 @@ export default function WalletAddress({
                   )}
                   <div className="grid grid-cols-[repeat(auto-fill,minmax(12rem,1fr))] gap-5">
                     {inscriptions
-                      .filter(
-                        (item) =>
-                          typeof item.content === "string" &&
-                          item.content.endsWith(".pepemap"),
+                      .filter((item) =>
+                        inscriptionIdsInPepemaps.includes(item.inscription_id),
                       )
                       .map((item, index) => (
                         <div
@@ -2145,7 +2005,7 @@ export default function WalletAddress({
                               ) : (
                                 <button
                                   onClick={() => handlePepemapUnlist(item)}
-                                  className="font-inherit inline-flex w-full cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#1a1a1a] px-4 py-2 text-base font-bold text-white transition-all duration-200 ease-in-out hover:bg-[#222]"
+                                  className="font-inherit inline-flex w-full cursor-pointer items-center justify-center rounded-xl border border-transparent bg-[#1a1a1a] p-2 text-base font-bold text-white transition-all duration-200 ease-in-out hover:bg-[#222]"
                                 >
                                   <IconTagOff
                                     size={20}
@@ -2218,7 +2078,7 @@ export default function WalletAddress({
               <>
                 {history ? (
                   <TableBody>
-                    {history.map((item: any, index) => (
+                    {history.map((item: any, index: number) => (
                       <TableRow
                         key={index}
                         className="cursor-pointer text-[16px] text-white transition-all duration-150 ease-in-out"
